@@ -1,0 +1,220 @@
+import React, {useState} from "react";
+import {View, StyleSheet, Switch, Platform} from "react-native";
+import {
+  Users,
+  Tag,
+  ShoppingCart,
+  Calendar,
+  Bell,
+  Info,
+} from "lucide-react-native";
+import Header from "~components/Header";
+import {ScrollView, Text} from "~components/Common";
+import {RFValue} from "react-native-responsive-fontsize";
+import {FontFamily} from "~theme/fonts";
+
+const NotificationRow = ({
+  icon: Icon,
+  color,
+  title,
+  description,
+  isEnabled,
+  onToggle,
+  isLast,
+}) => {
+  return (
+    <View style={[styles.rowContainer, !isLast && styles.separator]}>
+      {/* Icon */}
+      <View style={[styles.iconBox, {backgroundColor: color}]}>
+        <Icon size={RFValue(18)} color="#fff" strokeWidth={1.5} />
+      </View>
+
+      {/* Text Content */}
+      <View style={styles.textContainer}>
+        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.description} numberOfLines={2}>
+          {description}
+        </Text>
+      </View>
+
+      {/* Switch */}
+      <Switch
+        trackColor={{false: "#E5E7EB", true: "#0ea5e9"}}
+        thumbColor={"#ffffff"}
+        ios_backgroundColor="#E5E7EB"
+        onValueChange={onToggle}
+        value={isEnabled}
+        style={styles.switch}
+      />
+    </View>
+  );
+};
+
+const NotificationsScreen = ({onQuickAction, navigation}) => {
+  const [toggles, setToggles] = useState({
+    sharedList: true,
+    priceDrop: true,
+    newItems: true,
+    weekly: false,
+    promotions: true,
+  });
+
+  const handleToggle = key => {
+    setToggles(prev => ({...prev, [key]: !prev[key]}));
+  };
+
+  return (
+    <View style={styles.container}>
+      <Header
+        variant="screen"
+        title={"Notifications"}
+        onBack={() => navigation.goBack()}
+      />
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
+        {/* Main Settings Card */}
+        <View style={styles.card}>
+          <NotificationRow
+            icon={Users}
+            color="#a855f7" // Purple
+            title="Shared List Updates"
+            description="When members add or check items"
+            isEnabled={toggles.sharedList}
+            onToggle={() => handleToggle("sharedList")}
+          />
+          <NotificationRow
+            icon={Tag}
+            color="#22c55e" // Green
+            title="Price Drop Alerts"
+            description="Notify when watched items go on sale"
+            isEnabled={toggles.priceDrop}
+            onToggle={() => handleToggle("priceDrop")}
+          />
+          <NotificationRow
+            icon={ShoppingCart}
+            color="#f97316" // Orange
+            title="New Items Added"
+            description="Alerts when someone adds to your lists"
+            isEnabled={toggles.newItems}
+            onToggle={() => handleToggle("newItems")}
+          />
+          <NotificationRow
+            icon={Calendar}
+            color="#3b82f6" // Blue
+            title="Weekly Reminders"
+            description="Remind me to shop on weekends"
+            isEnabled={toggles.weekly}
+            onToggle={() => handleToggle("weekly")}
+          />
+          <NotificationRow
+            icon={Bell}
+            color="#ec4899" // Pink
+            title="Promotions & Tips"
+            description="News, updates, and shopping tips"
+            isEnabled={toggles.promotions}
+            onToggle={() => handleToggle("promotions")}
+            isLast
+          />
+        </View>
+
+        {/* Info Box */}
+        <View style={styles.infoBox}>
+          <Info size={RFValue(18)} color="#3b82f6" style={styles.infoIcon} />
+          <Text style={styles.infoText}>
+            You can also manage system-level notifications for BuyList in your
+            device settings.
+          </Text>
+        </View>
+
+        <View style={{height: 40}} />
+      </ScrollView>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#f9fafb", // Light Gray Background
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  card: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    paddingVertical: 8,
+    // Soft Shadow
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 3.84,
+    elevation: 2,
+  },
+  rowContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+  },
+  separator: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#f3f4f6",
+  },
+  iconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 14,
+  },
+  textContainer: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  title: {
+    fontSize: RFValue(12),
+    fontFamily: FontFamily.bold,
+    color: "#111827",
+    marginBottom: 2,
+  },
+  description: {
+    fontSize: RFValue(10),
+    fontFamily: FontFamily.regular,
+    color: "#6b7280",
+    lineHeight: RFValue(14),
+  },
+  switch: {
+    transform: Platform.OS === "ios" ? [{scaleX: 0.8}, {scaleY: 0.8}] : [],
+  },
+
+  // Info Box Styles
+  infoBox: {
+    marginTop: 24,
+    backgroundColor: "#eff6ff", // Blue-50
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  infoIcon: {
+    marginTop: 2,
+    marginRight: 10,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: RFValue(9),
+    fontFamily: FontFamily.regular,
+    color: "#2563eb", // Blue-600
+    lineHeight: RFValue(16),
+  },
+});
+
+export default NotificationsScreen;
