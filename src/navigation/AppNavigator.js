@@ -10,6 +10,8 @@ import SecurityScreen from "~screens/settings/AccountSecurity";
 import CircleSettingsScreen from "~screens/settings/CircleSettings";
 import SharedListsScreen from "~screens/settings/SharedLists";
 
+import LegalScreen from "~screens/settings/Legal";
+
 const Stack = createNativeStackNavigator();
 
 export default () => {
@@ -49,6 +51,12 @@ export default () => {
         <Stack.Screen
           name="SharedLists"
           component={SharedListsScreen}
+          options={{headerShown: false}}
+        />
+
+        <Stack.Screen
+          name="Legal"
+          component={LegalScreen}
           options={{headerShown: false}}
         />
       </Stack.Navigator>

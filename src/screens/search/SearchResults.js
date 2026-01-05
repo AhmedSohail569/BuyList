@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from "react";
+import {useState, useEffect} from "react";
 import {
   View,
   TouchableOpacity,
@@ -8,25 +8,22 @@ import {
 } from "react-native";
 import {
   Plus,
-  ArrowLeft,
-  Search,
-  Mic,
-  ScanLine,
-  X,
   MapPin,
   Truck,
   Filter,
   ChevronDown,
   Star,
   Share,
-  Clock, // For local stock time
+  Clock,
 } from "lucide-react-native";
 import Header from "~components/Header";
 import SearchBar from "~components/SearchBar";
 import {ScrollView, Text} from "~components/Common";
 import {RFValue} from "react-native-responsive-fontsize";
 import {FontFamily} from "~theme/fonts";
+import {FilterSortModal} from "~containers/modals/FilterSortModal";
 
+// --- Mock Data ---
 const MOCK_ONLINE_RESULTS = [
   {
     id: 1,
@@ -49,7 +46,7 @@ const MOCK_ONLINE_RESULTS = [
     price: 18.5,
     tag: "2-Day Shipping",
     image:
-      "https://images.unsplash.com/photo-1627485937980-221c88ac04f9?auto=format&fit=crop&q=80&w=200", // Almond milk like image
+      "https://images.unsplash.com/photo-1627485937980-221c88ac04f9?auto=format&fit=crop&q=80&w=200",
   },
   {
     id: 3,
@@ -60,7 +57,7 @@ const MOCK_ONLINE_RESULTS = [
     price: 3.99,
     tag: "Pickup in 2h",
     image:
-      "https://images.unsplash.com/photo-1600788886242-5c96aabe3757?auto=format&fit=crop&q=80&w=200", // Soy milk like image
+      "https://images.unsplash.com/photo-1600788886242-5c96aabe3757?auto=format&fit=crop&q=80&w=200",
   },
 ];
 
@@ -79,25 +76,25 @@ const MOCK_LOCAL_RESULTS = [
   },
   {
     id: 2,
-    title: "Almond Milk Unsweetened", // Adjusted title from screenshot for consistency
+    title: "Almond Milk Unsweetened",
     store: "Trader Joe's",
     distance: "1.2 km",
     price: 3.49,
     tag: "Low Stock",
     isLowStock: true,
     image:
-      "https://images.unsplash.com/photo-1627485937980-221c88ac04f9?auto=format&fit=crop&q=80&w=200", // Almond milk like image
+      "https://images.unsplash.com/photo-1627485937980-221c88ac04f9?auto=format&fit=crop&q=80&w=200",
   },
   {
     id: 3,
-    title: "Soy Milk Vanilla", // Adjusted title from screenshot for consistency
+    title: "Soy Milk Vanilla",
     store: "Good Foods",
     distance: "2.5 km",
     price: 2.99,
     tag: "In Stock",
     isLowStock: false,
     image:
-      "https://images.unsplash.com/photo-1600788886242-5c96aabe3757?auto=format&fit=crop&q=80&w=200", // Soy milk like image
+      "https://images.unsplash.com/photo-1600788886242-5c96aabe3757?auto=format&fit=crop&q=80&w=200",
   },
 ];
 
@@ -106,10 +103,10 @@ const SearchResultsScreen = ({onQuickAction, navigation}) => {
   const [searchQuery, setSearchQuery] = useState("Milk 1L");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isFilterModalVisible, setFilterModalVisible] = useState(false);
 
   useEffect(() => {
     setLoading(true);
-    // Simulate API call delay
     const timer = setTimeout(() => {
       if (activeTab === "Online Stores") {
         setResults(MOCK_ONLINE_RESULTS);
@@ -117,7 +114,7 @@ const SearchResultsScreen = ({onQuickAction, navigation}) => {
         setResults(MOCK_LOCAL_RESULTS);
       }
       setLoading(false);
-    }, 500); // Simulate network latency
+    }, 500);
 
     return () => clearTimeout(timer);
   }, [activeTab]);
@@ -125,7 +122,6 @@ const SearchResultsScreen = ({onQuickAction, navigation}) => {
   const renderResultCard = item => {
     return (
       <View key={item.id} style={styles.card}>
-        {/* Image & Badge */}
         <View style={styles.imageContainer}>
           <Image source={{uri: item.image}} style={styles.productImage} />
           {(item.badge ||
@@ -143,7 +139,6 @@ const SearchResultsScreen = ({onQuickAction, navigation}) => {
           )}
         </View>
 
-        {/* Content */}
         <View style={styles.cardContent}>
           <Text style={styles.productTitle} numberOfLines={2}>
             {item.title}
@@ -192,7 +187,6 @@ const SearchResultsScreen = ({onQuickAction, navigation}) => {
               )}
             </View>
 
-            {/* Actions */}
             <View style={styles.actionsColumn}>
               {activeTab === "Online Stores" && (
                 <TouchableOpacity style={styles.shareButton}>
@@ -227,16 +221,13 @@ const SearchResultsScreen = ({onQuickAction, navigation}) => {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        {/* Tab Toggle */}
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[
               styles.tabButton,
               activeTab === "Local Stores" && styles.activeTabButton,
             ]}
-            onPress={() => {
-              setActiveTab("Local Stores");
-            }}>
+            onPress={() => setActiveTab("Local Stores")}>
             <MapPin
               size={16}
               color={activeTab === "Local Stores" ? "#111827" : "#6b7280"}
@@ -254,9 +245,7 @@ const SearchResultsScreen = ({onQuickAction, navigation}) => {
               styles.tabButton,
               activeTab === "Online Stores" && styles.activeTabButton,
             ]}
-            onPress={() => {
-              setActiveTab("Online Stores");
-            }}>
+            onPress={() => setActiveTab("Online Stores")}>
             <Truck
               size={16}
               color={activeTab === "Online Stores" ? "#111827" : "#6b7280"}
@@ -271,22 +260,26 @@ const SearchResultsScreen = ({onQuickAction, navigation}) => {
           </TouchableOpacity>
         </View>
 
-        {/* Filters & Results Count */}
         <View style={styles.filterRow}>
-          <Text style={styles.resultsCount}>3 results found</Text>
+          <Text style={styles.resultsCount}>
+            {results.length} results found
+          </Text>
           <View style={styles.filterButtons}>
-            <TouchableOpacity style={styles.filterButton}>
+            <TouchableOpacity
+              style={styles.filterButton}
+              onPress={() => setFilterModalVisible(true)}>
               <Filter size={14} color="#374151" />
               <Text style={styles.filterButtonText}>Filters</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.filterButton}>
+            <TouchableOpacity
+              style={styles.filterButton}
+              onPress={() => setFilterModalVisible(true)}>
               <Text style={styles.filterButtonText}>Sort</Text>
               <ChevronDown size={14} color="#374151" />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Product List */}
         {loading ? (
           <ActivityIndicator
             size="large"
@@ -308,6 +301,13 @@ const SearchResultsScreen = ({onQuickAction, navigation}) => {
           </View>
         )}
       </ScrollView>
+
+      {/* Include Modal */}
+      <FilterSortModal
+        isVisible={isFilterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        onApply={data => console.log("Filters Applied:", data)}
+      />
     </View>
   );
 };
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 0,
   },
   purpleBadge: {
-    backgroundColor: "#9333ea", // Purple badge
+    backgroundColor: "#9333ea",
   },
   badgeText: {
     color: "#fff",
@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: RFValue(12),
     fontFamily: FontFamily.bold,
-    color: "#0ea5e9", // Blue price
+    color: "#0ea5e9",
   },
   distance: {
     fontSize: RFValue(10),
@@ -476,10 +476,10 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.regular,
   },
   lowStockTag: {
-    backgroundColor: "#fee2e2", // Light red for low stock
+    backgroundColor: "#fee2e2",
   },
   lowStockText: {
-    color: "#dc2626", // Red text for low stock
+    color: "#dc2626",
   },
   actionsColumn: {
     flexDirection: "row",
@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
-    marginTop: "auto", // Pushes content to the bottom if card height is larger
+    marginTop: "auto",
   },
   loader: {
     marginTop: 50,

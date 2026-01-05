@@ -1,4 +1,3 @@
-import React from "react";
 import {View, TouchableOpacity, StyleSheet} from "react-native";
 import {
   User,
@@ -18,6 +17,9 @@ import Header from "~components/Header";
 import {ScrollView, Text} from "~components/Common";
 import {RFValue} from "react-native-responsive-fontsize";
 import {FontFamily} from "~theme/fonts";
+import {useState} from "react";
+import SelectionModal from "~components/SelectionModal";
+import {DISTANCE_OPTIONS, LANGUAGE_OPTIONS, THEME_OPTIONS} from "~constants";
 
 /**
  * Reusable component for a single setting row
@@ -54,6 +56,27 @@ const SettingsSection = ({title, children}) => (
 );
 
 const SettingsTab = ({onQuickAction, navigation}) => {
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalType, setModalType] = useState(null); // 'theme' | 'language'
+
+  // Value State
+  const [theme, setTheme] = useState("Light");
+  const [language, setLanguage] = useState("English");
+  const [distance, setDistance] = useState("Miles");
+
+  // Helper to open specific modal
+  const openModal = type => {
+    setModalType(type);
+    setModalVisible(true);
+  };
+
+  const handleSave = newValue => {
+    if (modalType === "theme") setTheme(newValue);
+    if (modalType === "language") setLanguage(newValue);
+    if (modalType === "distance") setDistance(newValue);
+    console.log(`Saved ${modalType}:`, newValue);
+  };
+
   return (
     <View style={styles.container}>
       <Header
@@ -95,13 +118,15 @@ const SettingsTab = ({onQuickAction, navigation}) => {
             icon={Moon}
             color="#A855F7" // Purple
             label="Theme"
-            value="Light"
+            value={theme}
+            onPress={() => openModal("theme")}
           />
           <SettingsOption
             icon={Globe}
             color="#6366F1" // Indigo
             label="Language"
-            value="English"
+            value={language}
+            onPress={() => openModal("language")}
             isLast
           />
         </SettingsSection>
@@ -129,7 +154,8 @@ const SettingsTab = ({onQuickAction, navigation}) => {
             icon={MapPin}
             color="#6B7280" // Slate
             label="Distance"
-            value="Kilometers"
+            value={distance}
+            onPress={() => openModal("distance")}
             isLast
           />
         </SettingsSection>
@@ -145,6 +171,7 @@ const SettingsTab = ({onQuickAction, navigation}) => {
             icon={FileText}
             color="#60A5FA" // Blue
             label="Legal"
+            onPress={() => navigation.navigate("Legal")}
             isLast
           />
         </SettingsSection>
@@ -162,6 +189,32 @@ const SettingsTab = ({onQuickAction, navigation}) => {
         {/* Bottom Padding */}
         <View style={{height: 40}} />
       </ScrollView>
+      <SelectionModal
+        isVisible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSave={handleSave}
+        title={
+          modalType === "theme"
+            ? "Select Theme"
+            : modalType === "language"
+            ? "Select Language"
+            : "Select Distance"
+        }
+        initialValue={
+          modalType === "theme"
+            ? theme
+            : modalType === "language"
+            ? language
+            : distance
+        }
+        options={
+          modalType === "theme"
+            ? THEME_OPTIONS
+            : modalType === "language"
+            ? LANGUAGE_OPTIONS
+            : DISTANCE_OPTIONS
+        }
+      />
     </View>
   );
 };

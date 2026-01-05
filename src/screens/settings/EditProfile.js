@@ -1,11 +1,5 @@
-import React, {useState} from "react";
-import {
-  View,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
-  Platform,
-} from "react-native";
+import {useState} from "react";
+import {View, TouchableOpacity, Image, StyleSheet} from "react-native";
 // Lucide is only used for the Camera icon on the avatar now
 import {Camera} from "lucide-react-native";
 import Header from "~components/Header";
