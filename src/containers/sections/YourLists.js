@@ -101,11 +101,11 @@ const YourLists = ({navigation}) => {
   ]);
 
   const handleListPress = listId => {
-    navigation.navigate("ListDetail", {listId});
+    // navigation.navigate("ListDetail", {listId});
   };
 
   const handleViewAllLists = () => {
-    navigation.navigate("AllLists");
+    navigation.navigate("Lists");
   };
 
   return (

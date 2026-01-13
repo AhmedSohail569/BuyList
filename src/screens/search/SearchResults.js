@@ -18,10 +18,9 @@ import {
 } from "lucide-react-native";
 import Header from "~components/Header";
 import SearchBar from "~components/SearchBar";
-import {ScrollView, Text} from "~components/Common";
+import {Modal, ScrollView, Text} from "~components/Common";
 import {RFValue} from "react-native-responsive-fontsize";
 import {FontFamily} from "~theme/fonts";
-import {FilterSortModal} from "~containers/modals/FilterSortModal";
 
 // --- Mock Data ---
 const MOCK_ONLINE_RESULTS = [
@@ -303,7 +302,7 @@ const SearchResultsScreen = ({onQuickAction, navigation}) => {
       </ScrollView>
 
       {/* Include Modal */}
-      <FilterSortModal
+      <Modal
         isVisible={isFilterModalVisible}
         onClose={() => setFilterModalVisible(false)}
         onApply={data => console.log("Filters Applied:", data)}

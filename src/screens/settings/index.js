@@ -12,13 +12,14 @@ import {
   FileText,
   LogOut,
   ChevronRight,
+  DollarSign,
 } from "lucide-react-native";
 import Header from "~components/Header";
 import {ScrollView, Text} from "~components/Common";
 import {RFValue} from "react-native-responsive-fontsize";
 import {FontFamily} from "~theme/fonts";
 import {useState} from "react";
-import SelectionModal from "~components/SelectionModal";
+import SelectionModal from "~containers/modals/SelectionModal";
 import {DISTANCE_OPTIONS, LANGUAGE_OPTIONS, THEME_OPTIONS} from "~constants";
 
 /**
@@ -91,6 +92,12 @@ const SettingsTab = ({onQuickAction, navigation}) => {
         showsVerticalScrollIndicator={false}>
         {/* ACCOUNT */}
         <SettingsSection title="ACCOUNT">
+          {/* <SettingsOption
+            icon={DollarSign}
+            color="#FF3F3F" // Red
+            label="Edit Subscription"
+            onPress={() => navigation.navigate("EditSubscription")}
+          /> */}
           <SettingsOption
             icon={User}
             color="#3B82F6" // Blue

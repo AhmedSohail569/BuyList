@@ -1,6 +1,8 @@
 import {createStackNavigator} from "@react-navigation/stack";
+import CircleTab from "~screens/circle";
 
 import HomeTab from "~screens/home";
+import ListsTab from "~screens/lists";
 import SearchTab from "~screens/search";
 import SettingsTab from "~screens/settings";
 
@@ -12,6 +14,30 @@ export const HomeStackNavigator = () => {
       <Stack.Screen
         name="HomeTab"
         component={HomeTab}
+        options={{headerShown: false}}
+      />
+    </Stack.Navigator>
+  );
+};
+
+export const CircleStackNavigator = () => {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="CircleTab"
+        component={CircleTab}
+        options={{headerShown: false}}
+      />
+    </Stack.Navigator>
+  );
+};
+
+export const ListsStackNavigator = () => {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="ListsTab"
+        component={ListsTab}
         options={{headerShown: false}}
       />
     </Stack.Navigator>

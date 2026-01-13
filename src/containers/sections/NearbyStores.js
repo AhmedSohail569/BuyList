@@ -69,11 +69,11 @@ const NearbyStores = ({navigation}) => {
   ]);
 
   const handleMapPress = () => {
-    navigation.navigate("NearbyStoresMap");
+    // navigation.navigate("NearbyStoresMap");
   };
 
   const handleStorePress = storeId => {
-    navigation.navigate("StoreDetail", {storeId});
+    // navigation.navigate("StoreDetail", {storeId});
   };
 
   return (

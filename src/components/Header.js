@@ -1,4 +1,3 @@
-import React from "react";
 import {View, StyleSheet, Image, TouchableOpacity} from "react-native";
 import {useSafeAreaInsets} from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Ionicons";
@@ -31,6 +30,9 @@ const Header = ({
 
   // Badge
   notificationBadge = false,
+
+  // Components
+  showTabs,
 }) => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
@@ -69,7 +71,10 @@ const Header = ({
               {title}
             </Text>
             {subtitle && (
-              <Text variant="bodySmall" color="muted">
+              <Text
+                variant="bodySmall"
+                color="muted"
+                style={{fontSize: RFValue(10)}}>
                 {subtitle}
               </Text>
             )}
@@ -80,6 +85,8 @@ const Header = ({
               <Icon name={rightIcon} size={20} color="#2F80ED" />
             </TouchableOpacity>
           )}
+
+          {rightAction && rightAction}
         </View>
       )}
 
@@ -183,6 +190,8 @@ const Header = ({
           </TouchableOpacity>
         </View>
       )}
+
+      {showTabs && showTabs}
     </View>
   );
 };
@@ -212,8 +221,8 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   title: {
-    fontSize: RFValue(22),
-    fontWeight: "600",
+    fontSize: RFValue(16),
+    fontFamily: FontFamily.bold,
   },
   iconButton: {
     width: 36,

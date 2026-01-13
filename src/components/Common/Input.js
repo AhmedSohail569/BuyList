@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import PropTypes from "prop-types";
 import {RFValue} from "react-native-responsive-fontsize";
-import Icon from "react-native-vector-icons/Feather";
+import Icon from "react-native-vector-icons/FontAwesome6";
 import CountryPickerButton from "~components/CountryPickerButton";
 
 const Input = ({

@@ -13,8 +13,10 @@
 		4BDDF86D8B5242D89F6010A6 /* Poppins-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 18AA1E04B9C54A78BC8E32B5 /* Poppins-Medium.ttf */; };
 		5DC28D04E3DB457D9EBD2DCC /* Poppins-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 34F77B4275FF45329BB59F88 /* Poppins-Bold.ttf */; };
 		679C6EC77FB84B549785B16B /* Poppins-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 6B47D7FED70F49EEB25890C6 /* Poppins-Regular.ttf */; };
+		6E83FDA817BF4AEA8AA94E48 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DA85F8F0576445C78C816B19 /* Colors.xcassets */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		A5BD7217B09D49D287EFAC1A /* BootSplash.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 37B2D4BE06154071A2DFF255 /* BootSplash.storyboard */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -24,12 +26,14 @@
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = BuyList/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		18AA1E04B9C54A78BC8E32B5 /* Poppins-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Poppins-Medium.ttf"; path = "../src/assets/fonts/Poppins-Medium.ttf"; sourceTree = "<group>"; };
 		34F77B4275FF45329BB59F88 /* Poppins-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Poppins-Bold.ttf"; path = "../src/assets/fonts/Poppins-Bold.ttf"; sourceTree = "<group>"; };
+		37B2D4BE06154071A2DFF255 /* BootSplash.storyboard */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = BootSplash.storyboard; path = BuyList/BootSplash.storyboard; sourceTree = "<group>"; };
 		3B4392A12AC88292D35C810B /* Pods-BuyList.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BuyList.debug.xcconfig"; path = "Target Support Files/Pods-BuyList/Pods-BuyList.debug.xcconfig"; sourceTree = "<group>"; };
 		5709B34CF0A7D63546082F79 /* Pods-BuyList.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BuyList.release.xcconfig"; path = "Target Support Files/Pods-BuyList/Pods-BuyList.release.xcconfig"; sourceTree = "<group>"; };
 		5DCACB8F33CDC322A6C60F78 /* libPods-BuyList.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-BuyList.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6B47D7FED70F49EEB25890C6 /* Poppins-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Poppins-Regular.ttf"; path = "../src/assets/fonts/Poppins-Regular.ttf"; sourceTree = "<group>"; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = BuyList/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = BuyList/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		DA85F8F0576445C78C816B19 /* Colors.xcassets */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = folder.assetcatalog; name = Colors.xcassets; path = BuyList/Colors.xcassets; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -53,6 +57,8 @@
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
+				37B2D4BE06154071A2DFF255 /* BootSplash.storyboard */,
+				DA85F8F0576445C78C816B19 /* Colors.xcassets */,
 			);
 			name = BuyList;
 			sourceTree = "<group>";
@@ -182,6 +188,8 @@
 				679C6EC77FB84B549785B16B /* Poppins-Regular.ttf in Resources */,
 				5DC28D04E3DB457D9EBD2DCC /* Poppins-Bold.ttf in Resources */,
 				09777F60DE14F50DBD16EABE /* PrivacyInfo.xcprivacy in Resources */,
+				A5BD7217B09D49D287EFAC1A /* BootSplash.storyboard in Resources */,
+				6E83FDA817BF4AEA8AA94E48 /* Colors.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

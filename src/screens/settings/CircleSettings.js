@@ -20,6 +20,8 @@ import Header from "~components/Header";
 import {ScrollView, Text} from "~components/Common";
 import {RFValue} from "react-native-responsive-fontsize";
 import {FontFamily} from "~theme/fonts";
+import SelectionModal from "~containers/modals/SelectionModal";
+import {DEFAULT_ROLES} from "~constants";
 
 const SettingsRow = ({
   icon: Icon,
@@ -64,7 +66,24 @@ const SettingsRow = ({
 };
 
 const CircleSettingsScreen = ({onQuickAction, navigation}) => {
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalType, setModalType] = useState(null);
+
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+
+  const [defaultRole, setDefaultRole] = useState("Editor");
+  const [circleName, setCircleName] = useState("");
+
+  const openModal = type => {
+    setModalType(type);
+    setModalVisible(true);
+  };
+
+  const handleSave = newValue => {
+    if (modalType === "defaultRole") setDefaultRole(newValue);
+    if (modalType === "circleName") setCircleName(newValue);
+    console.log(`Saved ${modalType}:`, newValue);
+  };
 
   return (
     <View style={styles.container}>
@@ -87,6 +106,7 @@ const CircleSettingsScreen = ({onQuickAction, navigation}) => {
             title="Circle Name"
             subtitle="Family Home"
             rightElement={<Pencil size={RFValue(16)} color="#9ca3af" />}
+            onPress={() => openModal("circleName")}
           />
           <SettingsRow
             icon={MapPin}
@@ -107,6 +127,7 @@ const CircleSettingsScreen = ({onQuickAction, navigation}) => {
             iconColor="#a855f7" // Purple
             title="Default Role"
             subtitle="New connections join as Editors"
+            onPress={() => openModal("defaultRole")}
           />
           <SettingsRow
             icon={Bell}
@@ -140,7 +161,7 @@ const CircleSettingsScreen = ({onQuickAction, navigation}) => {
             title="Leave Circle"
             titleStyle={{fontFamily: FontFamily.medium}}
             rightElement={<View />}
-            // The screenshot doesn't show a subtitle for Leave Circle
+            onPress={() => openModal("leave")}
           />
           <SettingsRow
             icon={Trash2}
@@ -149,6 +170,7 @@ const CircleSettingsScreen = ({onQuickAction, navigation}) => {
             title="Delete Circle"
             titleStyle={{color: "#ef4444"}} // Red text
             rightElement={<View />} // No chevron for delete usually, or empty view
+            onPress={() => openModal("delete")}
             isLast
           />
         </View>
@@ -161,6 +183,35 @@ const CircleSettingsScreen = ({onQuickAction, navigation}) => {
 
         <View style={{height: 40}} />
       </ScrollView>
+      <SelectionModal
+        isVisible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSave={handleSave}
+        type={
+          modalType === "defaultRole"
+            ? "selection"
+            : modalType === "circleName"
+            ? "input"
+            : "confirmation"
+        }
+        title={
+          modalType === "defaultRole"
+            ? "Change Default Role"
+            : modalType === "leave"
+            ? "Leave Circle"
+            : modalType === "delete"
+            ? "Delete Circle"
+            : "Edit Circle Name"
+        }
+        initialValue={modalType === "defaultRole" ? defaultRole : circleName}
+        description={
+          modalType === "leave"
+            ? "Leaving this circle will remove you from all shared lists. Do you want to continue?"
+            : "Deleting this circle will permanently remove all shared lists and connections."
+        }
+        danger={modalType === "leave" || modalType === "delete" ? true : false}
+        options={DEFAULT_ROLES}
+      />
     </View>
   );
 };

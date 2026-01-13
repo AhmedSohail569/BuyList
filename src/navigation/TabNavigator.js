@@ -4,6 +4,8 @@ import CustomTabBar from "~components/CustomTabBar";
 
 import {
   HomeStackNavigator,
+  CircleStackNavigator,
+  ListsStackNavigator,
   SearchStackNavigator,
   SettingsStackNavigator,
 } from "./StackNavigator";
@@ -19,8 +21,8 @@ export default function BottomTabs() {
       tabBar={renderCustomTabBar}
       screenOptions={{headerShown: false}}>
       <Tab.Screen name="Home" component={HomeStackNavigator} />
-      <Tab.Screen name="Circle" component={HomeStackNavigator} />
-      <Tab.Screen name="Lists" component={HomeStackNavigator} />
+      <Tab.Screen name="Circle" component={CircleStackNavigator} />
+      <Tab.Screen name="Lists" component={ListsStackNavigator} />
       <Tab.Screen name="Search" component={SearchStackNavigator} />
       <Tab.Screen name="Settings" component={SettingsStackNavigator} />
     </Tab.Navigator>

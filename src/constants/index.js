@@ -14,3 +14,8 @@ export const DISTANCE_OPTIONS = [
   {label: "Kilometers", value: "Kilometers"},
   {label: "Miles", value: "Miles"},
 ];
+
+export const DEFAULT_ROLES = [
+  {label: "Editor", value: "Editor"},
+  {label: "Viewer", value: "Viewer"},
+];

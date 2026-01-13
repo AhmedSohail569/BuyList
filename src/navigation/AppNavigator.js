@@ -11,6 +11,11 @@ import CircleSettingsScreen from "~screens/settings/CircleSettings";
 import SharedListsScreen from "~screens/settings/SharedLists";
 
 import LegalScreen from "~screens/settings/Legal";
+import ListDetailsScreen from "~screens/lists/ListDetails";
+import ManageConnectionsScreen from "~screens/circle/ManageConnections";
+import EditSubscriptionScreen from "~screens/settings/EditSubscription";
+import PriceCheckScreen from "~screens/home/PriceCheckScreen";
+import AIRecommendationsScreen from "~screens/home/AIRecommendations";
 
 const Stack = createNativeStackNavigator();
 
@@ -28,6 +33,23 @@ export default () => {
           component={SearchResultsScreen}
           options={{headerShown: false}}
         />
+
+        <Stack.Screen
+          name="PriceCheck"
+          component={PriceCheckScreen}
+          options={{headerShown: false}}
+        />
+        <Stack.Screen
+          name="AIRecommendations"
+          component={AIRecommendationsScreen}
+          options={{headerShown: false}}
+        />
+
+        <Stack.Screen
+          name="EditSubscription"
+          component={EditSubscriptionScreen}
+          options={{headerShown: false}}
+        />
         <Stack.Screen
           name="EditProfile"
           component={EditProfileScreen}
@@ -43,9 +65,21 @@ export default () => {
           component={SecurityScreen}
           options={{headerShown: false}}
         />
+
+        <Stack.Screen
+          name="ManageConnections"
+          component={ManageConnectionsScreen}
+          options={{headerShown: false}}
+        />
         <Stack.Screen
           name="CircleSettings"
           component={CircleSettingsScreen}
+          options={{headerShown: false}}
+        />
+
+        <Stack.Screen
+          name="ListDetails"
+          component={ListDetailsScreen}
           options={{headerShown: false}}
         />
         <Stack.Screen
