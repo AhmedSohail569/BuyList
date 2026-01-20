@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "465807316908",
+    "project_id": "buylist-d2dcb",
+    "storage_bucket": "buylist-d2dcb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:465807316908:android:7be02486d05a6b42f18c09",
+        "android_client_info": {
+          "package_name": "com.buylist"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "465807316908-i4jiijq5klue6k6rq5i4asttp870iflq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA9RP5WAXWmeOF305hxqyQjpap21m3DWKo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "465807316908-i4jiijq5klue6k6rq5i4asttp870iflq.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "465807316908-l4ifn4d7pvq9bvl7fe3krbchuo1kmvbd.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.ios.buylist"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

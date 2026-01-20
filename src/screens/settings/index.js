@@ -12,7 +12,6 @@ import {
   FileText,
   LogOut,
   ChevronRight,
-  DollarSign,
 } from "lucide-react-native";
 import Header from "~components/Header";
 import {ScrollView, Text} from "~components/Common";
@@ -21,6 +20,10 @@ import {FontFamily} from "~theme/fonts";
 import {useState} from "react";
 import SelectionModal from "~containers/modals/SelectionModal";
 import {DISTANCE_OPTIONS, LANGUAGE_OPTIONS, THEME_OPTIONS} from "~constants";
+import {logout} from "~redux/reducers/authReducer";
+import {clearAccessToken} from "~utils";
+import {useDispatch} from "react-redux";
+import {useAlert} from "~context/AlertContext";
 
 /**
  * Reusable component for a single setting row
@@ -57,6 +60,8 @@ const SettingsSection = ({title, children}) => (
 );
 
 const SettingsTab = ({onQuickAction, navigation}) => {
+  const {showAlert, showError} = useAlert();
+  const dispatch = useDispatch();
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState(null); // 'theme' | 'language'
 
@@ -76,6 +81,38 @@ const SettingsTab = ({onQuickAction, navigation}) => {
     if (modalType === "language") setLanguage(newValue);
     if (modalType === "distance") setDistance(newValue);
     console.log(`Saved ${modalType}:`, newValue);
+  };
+
+  const handleLogout = () => {
+    showAlert({
+      title: "Logout",
+      message: "Are you sure you want to logout?",
+      type: "confirm",
+      buttons: [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Logout",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // Clear token from AsyncStorage
+              await clearAccessToken();
+
+              // Clear Redux state (this will also set hasLoggedOut flag)
+              // RootNavigator will automatically switch to OnboardingNavigator
+              // OnboardingNavigator will start at Login due to hasLoggedOut flag
+              dispatch(logout());
+            } catch (err) {
+              console.error("Logout error:", err);
+              showError("Error", "Failed to logout. Please try again.");
+            }
+          },
+        },
+      ],
+    });
   };
 
   return (
@@ -184,7 +221,7 @@ const SettingsTab = ({onQuickAction, navigation}) => {
         </SettingsSection>
 
         {/* LOGOUT BUTTON */}
-        <TouchableOpacity style={styles.logoutButton}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <LogOut
             size={RFValue(18)}
             color="#EF4444"

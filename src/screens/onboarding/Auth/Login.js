@@ -7,12 +7,25 @@ import {Images} from "~assets";
 import OnboardingLayout from "~containers/layouts/OnboardingLayout";
 import {useState} from "react";
 import {CommonActions} from "@react-navigation/native";
+import {useDispatch, useSelector} from "react-redux";
+import {loginUser, registerUser} from "~redux/actions/authActions";
 
 const LoginScreen = ({navigation}) => {
   const insets = useSafeAreaInsets();
+  const {loading} = useSelector(state => state.auth);
+  const dispatch = useDispatch();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  const handleLogin = () => {
+    dispatch(
+      loginUser({
+        email: email,
+        password: password,
+      }),
+    );
+  };
 
   return (
     <OnboardingLayout>
@@ -71,14 +84,16 @@ const LoginScreen = ({navigation}) => {
           {/* Button */}
           <Button
             title="Log in"
-            onPress={() =>
-              navigation.dispatch(
-                CommonActions.reset({
-                  index: 0,
-                  routes: [{name: "AppNavigator"}],
-                }),
-              )
-            }
+            // onPress={() =>
+            //   navigation.dispatch(
+            //     CommonActions.reset({
+            //       index: 0,
+            //       routes: [{name: "AppNavigator"}],
+            //     }),
+            //   )
+            // }
+            onPress={() => handleLogin()}
+            loading={loading}
           />
 
           <View style={{flexDirection: "row", alignSelf: "center"}}>

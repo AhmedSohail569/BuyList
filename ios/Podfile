@@ -8,11 +8,17 @@ require Pod::Executable.execute_command('node', ['-p',
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
-linkage = ENV['USE_FRAMEWORKS']
-if linkage != nil
-  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
-  use_frameworks! :linkage => linkage.to_sym
-end
+# linkage = ENV['USE_FRAMEWORKS']
+# if linkage != nil
+#   Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
+#   use_frameworks! :linkage => linkage.to_sym
+# end
+use_frameworks! :linkage => :static
+use_modular_headers!
+
+
+
+$RNFirebaseAsStaticFramework = true
 
 target 'BuyList' do
   config = use_native_modules!
@@ -20,8 +26,13 @@ target 'BuyList' do
   use_react_native!(
     :path => config[:reactNativePath],
     # An absolute path to your application root.
-    :app_path => "#{Pod::Config.instance.installation_root}/.."
+    :app_path => "#{Pod::Config.instance.installation_root}/..",
+    :hermes_enabled => true
   )
+
+   pod 'gRPC-Core', :modular_headers => true
+  pod 'gRPC-C++', :modular_headers => true
+
 
   post_install do |installer|
     react_native_post_install(

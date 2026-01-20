@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import PropTypes from "prop-types";
 import {RFValue} from "react-native-responsive-fontsize";
-import Icon from "react-native-vector-icons/FontAwesome6";
+import Icon from "react-native-vector-icons/Feather";
 import CountryPickerButton from "~components/CountryPickerButton";
 
 const Input = ({
@@ -39,6 +39,19 @@ const Input = ({
     countryCode: "PK",
   });
 
+  const handleChangeText = text => {
+    if (type === 3) {
+      onChangeText({
+        phoneNumber: text,
+        callingCode: country.callingCode,
+        countryCode: country.countryCode,
+        fullPhone: `+${country.callingCode}${text}`,
+      });
+    } else {
+      onChangeText(text);
+    }
+  };
+
   return (
     <View style={[styles.container, containerStyle]}>
       {label && <Text style={styles.label}>{label}</Text>}
@@ -65,16 +78,17 @@ const Input = ({
         <TextInput
           value={value}
           maxLength={maxLength}
-          onChangeText={onChangeText}
+          onChangeText={handleChangeText}
           placeholder={placeholder}
           placeholderTextColor="#9AA0A6"
-          keyboardType={type === 3 ? "phone-pad" : keyboardType}
+          keyboardType={type === 3 ? "numeric" : keyboardType}
           autoCapitalize={autoCapitalize}
           secureTextEntry={isPassword && !showPassword}
           editable={editable}
           multiline={multiline}
           numberOfLines={numberOfLines}
           style={[styles.input, multiline && styles.multiline, inputStyle]}
+          returnKeyType="done"
         />
 
         {(isPassword || rightIcon) && (

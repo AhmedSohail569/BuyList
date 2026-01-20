@@ -131,9 +131,7 @@ const SearchResultsScreen = ({onQuickAction, navigation}) => {
                 (item.badge === "Bulk Save" || item.badge === "Best Price") &&
                   styles.purpleBadge,
               ]}>
-              <Text style={styles.badgeText}>
-                {item.badge || (activeTab === "Local Stores" && item.tag)}
-              </Text>
+              <Text style={styles.badgeText}>{item.badge}</Text>
             </View>
           )}
         </View>

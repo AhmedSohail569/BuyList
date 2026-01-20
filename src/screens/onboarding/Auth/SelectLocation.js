@@ -7,11 +7,12 @@ import {Images} from "~assets";
 import OnboardingLayout from "~containers/layouts/OnboardingLayout";
 import {useState} from "react";
 
-const SelectLocationScreen = ({navigation}) => {
+const SelectLocationScreen = ({navigation, route}) => {
+  const {phone} = route?.params || {};
   const insets = useSafeAreaInsets();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [zone, setZone] = useState("");
+  const [area, setArea] = useState("");
 
   return (
     <OnboardingLayout>
@@ -48,24 +49,26 @@ const SelectLocationScreen = ({navigation}) => {
         <View>
           <TextInput
             label="Your Zone"
-            placeholder="samrana@example.com"
-            value={email}
-            onChangeText={setEmail}
+            placeholder="Lahore"
+            value={zone}
+            onChangeText={setZone}
+            maxLength={20}
             type={2}
           />
 
           <TextInput
             label="Your Area"
             placeholder="Types of your area"
-            value={password}
-            onChangeText={setPassword}
+            value={area}
+            onChangeText={setArea}
+            maxLength={20}
             type={2}
           />
 
           {/* Button */}
           <Button
             title="Submit"
-            onPress={() => navigation.navigate("Signup")}
+            onPress={() => navigation.navigate("Signup", {phone, zone, area})}
           />
         </View>
       </View>

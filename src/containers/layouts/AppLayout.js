@@ -7,7 +7,7 @@ export default ({
   children,
   style,
   safeArea = true,
-  statusBarColor = "f9fafb",
+  statusBarColor = "#f9fafb",
   statusBarStyle,
 }) => {
   const isDarkMode = useColorScheme() === "dark";

@@ -13,7 +13,7 @@ const GetStartedScreen = ({navigation}) => {
 
   const [phone, setPhone] = useState("");
 
-  const showFab = phone.trim().length > 0;
+  const showFab = phone?.phoneNumber?.trim().length > 0;
 
   return (
     <OnboardingLayout>
@@ -35,6 +35,7 @@ const GetStartedScreen = ({navigation}) => {
           keyboardType="phone-pad"
           value={phone}
           onChangeText={setPhone}
+          maxLength={15}
         />
 
         {/* Subtitle */}
@@ -84,7 +85,7 @@ const GetStartedScreen = ({navigation}) => {
               bottom: insets.bottom + RFValue(20),
             },
           ]}
-          onPress={() => navigation.navigate("OTPVerification", {phone})}>
+          onPress={() => navigation.navigate("SelectLocation", {phone})}>
           <Icon name="chevron-right" size={20} color="#FFFFFF" />
         </TouchableOpacity>
       )}

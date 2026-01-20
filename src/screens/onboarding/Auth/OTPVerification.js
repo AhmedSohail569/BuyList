@@ -1,19 +1,49 @@
-import React, {useState} from "react";
+import React, {useEffect, useState} from "react";
 import {
   View,
   StyleSheet,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 
 import {RFPercentage, RFValue} from "react-native-responsive-fontsize";
 import {Text, TextInput} from "~components/Common";
 import OnboardingLayout from "~containers/layouts/OnboardingLayout";
 import Icon from "react-native-vector-icons/FontAwesome";
+import {useDispatch, useSelector} from "react-redux";
+import {verifyEmail} from "~redux/actions/authActions";
+import {clearVerifyEmailState} from "~redux/reducers/authReducer";
 
-const OTPVerficationScreen = ({navigation}) => {
+const OTPVerficationScreen = ({navigation, route}) => {
+  const {email} = route?.params || {};
+
+  const {emailVerified, loading} = useSelector(state => state.auth);
+
+  const dispatch = useDispatch();
+
   const [code, setCode] = useState("");
+
+  useEffect(() => {
+    if (emailVerified) {
+      navigation.navigate("Login", {
+        email,
+        otp: code || "0000",
+      });
+
+      dispatch(clearVerifyEmailState());
+    }
+  }, [emailVerified, navigation]);
+
+  const handleVerify = () => {
+    dispatch(
+      verifyEmail({
+        email: email,
+        otp: code,
+      }),
+    );
+  };
 
   const showFab = code.length === 4;
 
@@ -58,8 +88,13 @@ const OTPVerficationScreen = ({navigation}) => {
             <TouchableOpacity
               activeOpacity={0.8}
               style={styles.fab}
-              onPress={() => navigation.navigate("SelectLocation")}>
-              <Icon name="chevron-right" size={20} color="#FFFFFF" />
+              onPress={() => handleVerify()}
+              disabled={loading}>
+              {loading ? (
+                <ActivityIndicator color={"#FFFFFF"} />
+              ) : (
+                <Icon name="chevron-right" size={20} color="#FFFFFF" />
+              )}
             </TouchableOpacity>
           )}
         </View>

@@ -111,8 +111,6 @@ const HomeTab = ({onQuickAction, navigation}) => {
       {/* Top Bar */}
 
       <ScrollView>
-        {/* Search Bar */}
-
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           <ActionIcon
@@ -121,7 +119,7 @@ const HomeTab = ({onQuickAction, navigation}) => {
             label="Create"
             color="#DBEAFE"
             iconColor="#2563EB"
-            onPress={onQuickAction}
+            onPress={() => {}}
           />
           <ActionIcon
             id="lists"
@@ -129,7 +127,7 @@ const HomeTab = ({onQuickAction, navigation}) => {
             label="Lists"
             color="#F3E8FF"
             iconColor="#9333EA"
-            onPress={onQuickAction}
+            onPress={() => {}}
           />
           <ActionIcon
             id="circle"
@@ -137,7 +135,7 @@ const HomeTab = ({onQuickAction, navigation}) => {
             label="Circle"
             color="#FFEDD5"
             iconColor="#EA580C"
-            onPress={onQuickAction}
+            onPress={() => {}}
           />
           <ActionIcon
             id="compare"
@@ -145,7 +143,7 @@ const HomeTab = ({onQuickAction, navigation}) => {
             label="Compare"
             color="#DCFCE7"
             iconColor="#16A34A"
-            onPress={onQuickAction}
+            onPress={() => {}}
           />
         </View>
 

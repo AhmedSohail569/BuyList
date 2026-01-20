@@ -1,87 +1,150 @@
+import {useEffect, useState} from "react";
 import {View, StyleSheet, Image, TouchableOpacity, Alert} from "react-native";
+
+import {useDispatch, useSelector} from "react-redux";
 import {useSafeAreaInsets} from "react-native-safe-area-context";
 import {RFPercentage, RFValue} from "react-native-responsive-fontsize";
+import Icon from "react-native-vector-icons/Ionicons";
+
 import {Button, Text, TextInput} from "~components/Common";
 import {Images} from "~assets";
 import OnboardingLayout from "~containers/layouts/OnboardingLayout";
-import Icon from "react-native-vector-icons/Ionicons";
-import {useState} from "react";
+import {
+  clearError,
+  clearForgotPassword,
+  clearResetPasswordState,
+  clearVerifyTokenMessage,
+} from "~redux/reducers/authReducer";
+import {
+  forgotPassword,
+  resetPassword,
+  verifyResetToken,
+} from "~redux/actions/authActions";
 
 const ForgotPasswordScreen = ({navigation}) => {
   const insets = useSafeAreaInsets();
+  const dispatch = useDispatch();
 
-  // Step states: 0 = email, 1 = otp, 2 = new password, 3 = success
+  const {
+    loading,
+    error,
+    forgotPasswordMessage,
+    resetTokenValid,
+    verifyTokenMessage,
+    resetPasswordMessage,
+  } = useSelector(state => state.auth);
+
+  // --- Local State ---
+  // Step 0: Email Input
+  // Step 1: OTP Verification
+  // Step 2: New Password Input
+  // Step 3: Success Screen
   const [step, setStep] = useState(0);
+
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleSendOTP = async () => {
-    if (!email.trim()) {
-      Alert.alert("Error", "Please enter your email address");
-      return;
-    }
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      setStep(1);
-    }, 1500);
-  };
+  // --- Lifecycle: Cleanup on Mount ---
+  useEffect(() => {
+    dispatch(clearError());
+    dispatch(clearForgotPassword());
+    dispatch(clearResetPasswordState());
+    dispatch(clearVerifyTokenMessage());
+  }, [dispatch]);
 
-  const handleVerifyOTP = async () => {
-    if (!otp.trim()) {
-      Alert.alert("Error", "Please enter the verification code");
-      return;
+  // --- Step 0: Handle Forgot Password Response ---
+  useEffect(() => {
+    if (step === 0 && forgotPasswordMessage) {
+      Alert.alert("Success", forgotPasswordMessage, [
+        {text: "OK", onPress: () => setStep(1)},
+      ]);
+      dispatch(clearForgotPassword());
     }
-    if (otp.length < 4) {
-      Alert.alert("Error", "Verification code must be at least 4 characters");
-      return;
-    }
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
+  }, [forgotPasswordMessage, step, dispatch]);
+
+  // --- Step 1: Handle Verify Token Response ---
+  useEffect(() => {
+    if (step === 1 && resetTokenValid === true) {
+      // Only move to next step if token validation was explicitly successful
       setStep(2);
-    }, 1500);
+      dispatch(clearVerifyTokenMessage()); // prevent re-trigger
+    }
+  }, [resetTokenValid, step, dispatch]);
+
+  // --- Step 2: Handle Reset Password Response ---
+  useEffect(() => {
+    if (step === 2 && resetPasswordMessage) {
+      setStep(3); // Move to Success Screen
+      dispatch(clearResetPasswordState());
+    }
+  }, [resetPasswordMessage, step, dispatch]);
+
+  // --- Global Error Handling ---
+  useEffect(() => {
+    if (error) {
+      Alert.alert(
+        "Error",
+        typeof error === "string" ? error : "Something went wrong",
+      );
+      dispatch(clearError());
+    }
+  }, [error, dispatch]);
+
+  // --- Handlers ---
+
+  const handleSendOTP = () => {
+    if (!email.trim()) {
+      Alert.alert("Validation", "Please enter your email address");
+      return;
+    }
+    // Dispatch Forgot Password Action
+    dispatch(forgotPassword({email}));
   };
 
-  const handleUpdatePassword = async () => {
+  const handleVerifyOTP = () => {
+    if (!otp.trim() || otp.length < 4) {
+      Alert.alert(
+        "Validation",
+        "Please enter a valid 4-digit verification code",
+      );
+      return;
+    }
+    // Dispatch Verify Token Action
+    dispatch(verifyResetToken({email, otp}));
+  };
+
+  const handleUpdatePassword = () => {
     if (!newPassword.trim() || !confirmPassword.trim()) {
-      Alert.alert("Error", "Please fill in all password fields");
+      Alert.alert("Validation", "Please fill in all password fields");
       return;
     }
     if (newPassword.length < 8) {
-      Alert.alert("Error", "Password must be at least 8 characters");
+      Alert.alert("Validation", "Password must be at least 8 characters");
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match");
+      Alert.alert("Validation", "Passwords do not match");
       return;
     }
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      setStep(3);
-    }, 1500);
-  };
-
-  const handleContinue = () => {
-    navigation.navigate("Login");
+    // Dispatch Reset Password Action
+    dispatch(resetPassword({email, otp, newPassword, confirmPassword}));
   };
 
   const handleResendOTP = () => {
-    Alert.alert("Resend OTP", "A new OTP has been sent to " + email);
+    // Re-trigger the email logic
+    dispatch(forgotPassword({email}));
   };
 
   const goBack = () => {
-    if (step > 0) {
+    if (step > 0 && step < 3) {
+      // Allow going back to edit email or otp if not yet finished
       setStep(step - 1);
+      dispatch(clearError());
     } else {
       navigation.goBack();
     }
@@ -123,6 +186,8 @@ const ForgotPasswordScreen = ({navigation}) => {
                 value={email}
                 onChangeText={setEmail}
                 leftIcon="mail"
+                keyboardType="email-address"
+                autoCapitalize="none"
                 type={2}
               />
               <Button
@@ -150,6 +215,11 @@ const ForgotPasswordScreen = ({navigation}) => {
                 onChangeText={setOtp}
                 maxLength={4}
                 keyboardType="numeric"
+                inputStyle={{
+                  letterSpacing: 8,
+                  textAlign: "center",
+                  fontWeight: "bold",
+                }}
               />
               <Button
                 title="Verify"
@@ -232,7 +302,7 @@ const ForgotPasswordScreen = ({navigation}) => {
               </Text>
               <Button
                 title="Continue"
-                onPress={handleContinue}
+                onPress={() => navigation.navigate("Login")}
                 loading={loading}
               />
             </View>

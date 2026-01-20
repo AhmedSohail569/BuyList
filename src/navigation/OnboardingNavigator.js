@@ -2,11 +2,11 @@ import {createNativeStackNavigator} from "@react-navigation/native-stack";
 
 import Onboarding from "~screens/onboarding";
 import GetStartedScreen from "~screens/onboarding/GetStarted";
-import OTPVerficationScreen from "~screens/onboarding/OTPVerification";
-import SelectLocationScreen from "~screens/onboarding/SelectLocation";
 
 import LoginScreen from "~screens/onboarding/Auth/Login";
 import SignupScreen from "~screens/onboarding/Auth/Signup";
+import OTPVerficationScreen from "~screens/onboarding/Auth/OTPVerification";
+import SelectLocationScreen from "~screens/onboarding/Auth/SelectLocation";
 import ForgotPasswordScreen from "~screens/onboarding/Auth/ForgotPassword";
 
 const Stack = createNativeStackNavigator();

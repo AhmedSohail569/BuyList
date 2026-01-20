@@ -1,18 +1,46 @@
+import {useEffect, useState} from "react";
 import {View, StyleSheet, Image} from "react-native";
+import {useDispatch, useSelector} from "react-redux";
 import {useSafeAreaInsets} from "react-native-safe-area-context";
 
+import OnboardingLayout from "~containers/layouts/OnboardingLayout";
 import {RFPercentage, RFValue} from "react-native-responsive-fontsize";
 import {Button, Text, TextInput} from "~components/Common";
 import {Images} from "~assets";
-import OnboardingLayout from "~containers/layouts/OnboardingLayout";
-import {useState} from "react";
+import {signupUser} from "~redux/actions/authActions";
+import {clearSignupState} from "~redux/reducers/authReducer";
 
-const SignupScreen = ({navigation}) => {
+const SignupScreen = ({navigation, route}) => {
+  const {phone, zone, area} = route?.params || {};
+  const {loading, signupSuccess} = useSelector(state => state.auth);
   const insets = useSafeAreaInsets();
+  const dispatch = useDispatch();
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  useEffect(() => {
+    if (signupSuccess) {
+      navigation.navigate("OTPVerification", {
+        email,
+      });
+      dispatch(clearSignupState());
+    }
+  }, [signupSuccess, navigation]);
+
+  const handleSignUp = () => {
+    dispatch(
+      signupUser({
+        email: email,
+        password: password,
+        username: username,
+        phone: phone?.fullPhone,
+        zone: zone,
+        area: area,
+      }),
+    );
+  };
 
   return (
     <OnboardingLayout>
@@ -82,7 +110,11 @@ const SignupScreen = ({navigation}) => {
         </Text>
 
         {/* Button */}
-        <Button title="Sign Up" onPress={() => navigation.navigate("Login")} />
+        <Button
+          title="Sign Up"
+          onPress={() => handleSignUp()}
+          loading={loading}
+        />
 
         <View style={{flexDirection: "row", alignSelf: "center"}}>
           <Text variant="bodySmall" style={styles.textStyle}>
