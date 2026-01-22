@@ -2,17 +2,19 @@ import {useEffect, useState} from "react";
 import {View, StyleSheet, Image} from "react-native";
 import {useDispatch, useSelector} from "react-redux";
 import {useSafeAreaInsets} from "react-native-safe-area-context";
+import Toast from "react-native-toast-message";
 
 import OnboardingLayout from "~containers/layouts/OnboardingLayout";
 import {RFPercentage, RFValue} from "react-native-responsive-fontsize";
 import {Button, Text, TextInput} from "~components/Common";
 import {Images} from "~assets";
 import {signupUser} from "~redux/actions/authActions";
-import {clearSignupState} from "~redux/reducers/authReducer";
+import {clearSignupState, clearError} from "~redux/reducers/authReducer";
+import {validateEmail, validatePassword, validateUsername} from "~utils/validation";
 
 const SignupScreen = ({navigation, route}) => {
   const {phone, zone, area} = route?.params || {};
-  const {loading, signupSuccess} = useSelector(state => state.auth);
+  const {loading, signupSuccess, error} = useSelector(state => state.auth);
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
 
@@ -20,21 +22,91 @@ const SignupScreen = ({navigation, route}) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  // Field-level errors
+  const [errors, setErrors] = useState({
+    username: null,
+    email: null,
+    password: null,
+  });
+
+  // Handle successful signup
   useEffect(() => {
     if (signupSuccess) {
+      Toast.show({
+        type: "success",
+        text1: "Account Created",
+        text2: "Please verify your email to continue",
+      });
       navigation.navigate("OTPVerification", {
         email,
       });
       dispatch(clearSignupState());
     }
-  }, [signupSuccess, navigation]);
+  }, [signupSuccess, navigation, email, dispatch]);
+
+  // Handle API errors with toast
+  useEffect(() => {
+    if (error) {
+      Toast.show({
+        type: "error",
+        text1: "Signup Failed",
+        text2: typeof error === "string" ? error : "Something went wrong",
+      });
+      dispatch(clearError());
+    }
+  }, [error, dispatch]);
+
+  // Clear field error when user starts typing
+  const handleUsernameChange = value => {
+    setUsername(value);
+    if (errors.username) {
+      setErrors(prev => ({...prev, username: null}));
+    }
+  };
+
+  const handleEmailChange = value => {
+    setEmail(value);
+    if (errors.email) {
+      setErrors(prev => ({...prev, email: null}));
+    }
+  };
+
+  const handlePasswordChange = value => {
+    setPassword(value);
+    if (errors.password) {
+      setErrors(prev => ({...prev, password: null}));
+    }
+  };
+
+  const validateForm = () => {
+    const usernameError = validateUsername(username);
+    const emailError = validateEmail(email);
+    const passwordError = validatePassword(password, false); // false = not login, enforce min length
+
+    setErrors({
+      username: usernameError,
+      email: emailError,
+      password: passwordError,
+    });
+
+    return !usernameError && !emailError && !passwordError;
+  };
 
   const handleSignUp = () => {
+    if (!validateForm()) {
+      Toast.show({
+        type: "error",
+        text1: "Validation Error",
+        text2: "Please fill in all fields correctly",
+      });
+      return;
+    }
+
     dispatch(
       signupUser({
-        email: email,
+        email: email.trim(),
         password: password,
-        username: username,
+        username: username.trim(),
         phone: phone?.fullPhone,
         zone: zone,
         area: area,
@@ -71,16 +143,21 @@ const SignupScreen = ({navigation, route}) => {
           label="Username"
           placeholder="Samrana Shoukat"
           value={username}
-          onChangeText={setUsername}
+          onChangeText={handleUsernameChange}
           type={2}
+          autoCapitalize="words"
+          error={errors.username}
         />
 
         <TextInput
           label="Email"
           placeholder="samrana@example.com"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={handleEmailChange}
           type={2}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          error={errors.email}
         />
 
         <TextInput
@@ -88,8 +165,9 @@ const SignupScreen = ({navigation, route}) => {
           placeholder="••••••••"
           secureTextEntry
           value={password}
-          onChangeText={setPassword}
+          onChangeText={handlePasswordChange}
           type={2}
+          error={errors.password}
         />
 
         <Text

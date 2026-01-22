@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
   },
 
   errorBorder: {
-    borderColor: "#EF4444",
+    // borderColor: "#EF4444",
   },
 
   disabled: {

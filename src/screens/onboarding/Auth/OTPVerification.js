@@ -13,20 +13,30 @@ import {Text, TextInput} from "~components/Common";
 import OnboardingLayout from "~containers/layouts/OnboardingLayout";
 import Icon from "react-native-vector-icons/FontAwesome";
 import {useDispatch, useSelector} from "react-redux";
+import Toast from "react-native-toast-message";
+
 import {verifyEmail} from "~redux/actions/authActions";
-import {clearVerifyEmailState} from "~redux/reducers/authReducer";
+import {clearVerifyEmailState, clearError} from "~redux/reducers/authReducer";
+import {validateOTP} from "~utils/validation";
 
 const OTPVerficationScreen = ({navigation, route}) => {
   const {email} = route?.params || {};
 
-  const {emailVerified, loading} = useSelector(state => state.auth);
+  const {emailVerified, loading, error} = useSelector(state => state.auth);
 
   const dispatch = useDispatch();
 
   const [code, setCode] = useState("");
+  const [codeError, setCodeError] = useState(null);
 
+  // Handle successful email verification
   useEffect(() => {
     if (emailVerified) {
+      Toast.show({
+        type: "success",
+        text1: "Email Verified",
+        text2: "Your email has been verified successfully",
+      });
       navigation.navigate("Login", {
         email,
         otp: code || "0000",
@@ -34,15 +44,57 @@ const OTPVerficationScreen = ({navigation, route}) => {
 
       dispatch(clearVerifyEmailState());
     }
-  }, [emailVerified, navigation]);
+  }, [emailVerified, navigation, email, code, dispatch]);
+
+  // Handle API errors with toast
+  useEffect(() => {
+    if (error) {
+      Toast.show({
+        type: "error",
+        text1: "Verification Failed",
+        text2: typeof error === "string" ? error : "Invalid verification code",
+      });
+      dispatch(clearError());
+    }
+  }, [error, dispatch]);
+
+  // Clear error when user starts typing
+  const handleCodeChange = value => {
+    // Only allow numeric input
+    const numericValue = value.replace(/[^0-9]/g, "");
+    setCode(numericValue);
+    if (codeError) {
+      setCodeError(null);
+    }
+  };
 
   const handleVerify = () => {
+    const otpError = validateOTP(code);
+    if (otpError) {
+      setCodeError(otpError);
+      Toast.show({
+        type: "error",
+        text1: "Validation Error",
+        text2: otpError,
+      });
+      return;
+    }
+
     dispatch(
       verifyEmail({
         email: email,
         otp: code,
       }),
     );
+  };
+
+  const handleResendCode = () => {
+    Toast.show({
+      type: "info",
+      text1: "Code Resent",
+      text2: "A new verification code has been sent to your email",
+    });
+    console.log("Resend Code");
   };
 
   const showFab = code.length === 4;
@@ -58,26 +110,27 @@ const OTPVerficationScreen = ({navigation, route}) => {
             Enter your 4-digit code
           </Text>
 
+          <Text variant="bodySmall" color="muted" style={styles.subtitle}>
+            We've sent a verification code to{" "}
+            <Text style={{color: "#1E9DF1"}}>{email}</Text>
+          </Text>
+
           <TextInput
             label="Code"
             placeholder="- - - -"
             value={code}
-            onChangeText={setCode}
+            onChangeText={handleCodeChange}
             keyboardType="number-pad"
             maxLength={4}
             type={2}
+            error={codeError}
           />
         </View>
 
         {/* BOTTOM ACTIONS */}
         <View style={styles.bottomActions}>
           {/* Resend Code */}
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => {
-              // 🔁 resend OTP logic
-              console.log("Resend Code");
-            }}>
+          <TouchableOpacity activeOpacity={0.7} onPress={handleResendCode}>
             <Text variant="link" color="primary">
               Resend code
             </Text>
@@ -112,8 +165,13 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    marginBottom: RFValue(12),
+    marginBottom: RFValue(8),
     fontSize: RFValue(20),
+  },
+
+  subtitle: {
+    marginBottom: RFValue(16),
+    lineHeight: RFValue(18),
   },
 
   bottomActions: {

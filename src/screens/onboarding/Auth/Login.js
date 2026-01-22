@@ -1,27 +1,83 @@
+import {useEffect, useState} from "react";
 import {View, StyleSheet, Image} from "react-native";
 import {useSafeAreaInsets} from "react-native-safe-area-context";
-
 import {RFPercentage, RFValue} from "react-native-responsive-fontsize";
+import {useDispatch, useSelector} from "react-redux";
+import Toast from "react-native-toast-message";
+
 import {Button, Text, TextInput} from "~components/Common";
 import {Images} from "~assets";
 import OnboardingLayout from "~containers/layouts/OnboardingLayout";
-import {useState} from "react";
-import {CommonActions} from "@react-navigation/native";
-import {useDispatch, useSelector} from "react-redux";
-import {loginUser, registerUser} from "~redux/actions/authActions";
+import {loginUser} from "~redux/actions/authActions";
+import {clearError} from "~redux/reducers/authReducer";
+import {validateEmail, validatePassword} from "~utils/validation";
 
 const LoginScreen = ({navigation}) => {
   const insets = useSafeAreaInsets();
-  const {loading} = useSelector(state => state.auth);
+  const {loading, error} = useSelector(state => state.auth);
   const dispatch = useDispatch();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  // Field-level errors
+  const [errors, setErrors] = useState({
+    email: null,
+    password: null,
+  });
+
+  // Handle API errors with toast
+  useEffect(() => {
+    if (error) {
+      Toast.show({
+        type: "error",
+        text1: "Login Failed",
+        text2: typeof error === "string" ? error : "Something went wrong",
+      });
+      dispatch(clearError());
+    }
+  }, [error, dispatch]);
+
+  // Clear field error when user starts typing
+  const handleEmailChange = value => {
+    setEmail(value);
+    if (errors.email) {
+      setErrors(prev => ({...prev, email: null}));
+    }
+  };
+
+  const handlePasswordChange = value => {
+    setPassword(value);
+    if (errors.password) {
+      setErrors(prev => ({...prev, password: null}));
+    }
+  };
+
+  const validateForm = () => {
+    const emailError = validateEmail(email);
+    const passwordError = validatePassword(password, true); // true = isLogin
+
+    setErrors({
+      email: emailError,
+      password: passwordError,
+    });
+
+    return !emailError && !passwordError;
+  };
+
   const handleLogin = () => {
+    if (!validateForm()) {
+      Toast.show({
+        type: "error",
+        text1: "Validation Error",
+        text2: "Please fill in all fields correctly",
+      });
+      return;
+    }
+
     dispatch(
       loginUser({
-        email: email,
+        email: email.trim(),
         password: password,
       }),
     );
@@ -57,9 +113,12 @@ const LoginScreen = ({navigation}) => {
             label="Email"
             placeholder="samrana@example.com"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={handleEmailChange}
             leftIcon="mail"
             type={2}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            error={errors.email}
           />
 
           <TextInput
@@ -67,9 +126,10 @@ const LoginScreen = ({navigation}) => {
             placeholder="••••••••"
             secureTextEntry
             value={password}
-            onChangeText={setPassword}
+            onChangeText={handlePasswordChange}
             leftIcon="lock"
             type={2}
+            error={errors.password}
           />
 
           <Text
@@ -84,14 +144,6 @@ const LoginScreen = ({navigation}) => {
           {/* Button */}
           <Button
             title="Log in"
-            // onPress={() =>
-            //   navigation.dispatch(
-            //     CommonActions.reset({
-            //       index: 0,
-            //       routes: [{name: "AppNavigator"}],
-            //     }),
-            //   )
-            // }
             onPress={() => handleLogin()}
             loading={loading}
           />

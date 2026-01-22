@@ -1,10 +1,11 @@
 import {useEffect, useState} from "react";
-import {View, StyleSheet, Image, TouchableOpacity, Alert} from "react-native";
+import {View, StyleSheet, Image, TouchableOpacity} from "react-native";
 
 import {useDispatch, useSelector} from "react-redux";
 import {useSafeAreaInsets} from "react-native-safe-area-context";
 import {RFPercentage, RFValue} from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/Ionicons";
+import Toast from "react-native-toast-message";
 
 import {Button, Text, TextInput} from "~components/Common";
 import {Images} from "~assets";
@@ -20,6 +21,12 @@ import {
   resetPassword,
   verifyResetToken,
 } from "~redux/actions/authActions";
+import {
+  validateEmail,
+  validateOTP,
+  validatePassword,
+  validateConfirmPassword,
+} from "~utils/validation";
 
 const ForgotPasswordScreen = ({navigation}) => {
   const insets = useSafeAreaInsets();
@@ -30,7 +37,6 @@ const ForgotPasswordScreen = ({navigation}) => {
     error,
     forgotPasswordMessage,
     resetTokenValid,
-    verifyTokenMessage,
     resetPasswordMessage,
   } = useSelector(state => state.auth);
 
@@ -49,6 +55,14 @@ const ForgotPasswordScreen = ({navigation}) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Field-level errors
+  const [errors, setErrors] = useState({
+    email: null,
+    otp: null,
+    newPassword: null,
+    confirmPassword: null,
+  });
+
   // --- Lifecycle: Cleanup on Mount ---
   useEffect(() => {
     dispatch(clearError());
@@ -60,9 +74,12 @@ const ForgotPasswordScreen = ({navigation}) => {
   // --- Step 0: Handle Forgot Password Response ---
   useEffect(() => {
     if (step === 0 && forgotPasswordMessage) {
-      Alert.alert("Success", forgotPasswordMessage, [
-        {text: "OK", onPress: () => setStep(1)},
-      ]);
+      Toast.show({
+        type: "success",
+        text1: "OTP Sent",
+        text2: forgotPasswordMessage,
+      });
+      setStep(1);
       dispatch(clearForgotPassword());
     }
   }, [forgotPasswordMessage, step, dispatch]);
@@ -70,16 +87,20 @@ const ForgotPasswordScreen = ({navigation}) => {
   // --- Step 1: Handle Verify Token Response ---
   useEffect(() => {
     if (step === 1 && resetTokenValid === true) {
-      // Only move to next step if token validation was explicitly successful
+      Toast.show({
+        type: "success",
+        text1: "Code Verified",
+        text2: "Please create a new password",
+      });
       setStep(2);
-      dispatch(clearVerifyTokenMessage()); // prevent re-trigger
+      dispatch(clearVerifyTokenMessage());
     }
   }, [resetTokenValid, step, dispatch]);
 
   // --- Step 2: Handle Reset Password Response ---
   useEffect(() => {
     if (step === 2 && resetPasswordMessage) {
-      setStep(3); // Move to Success Screen
+      setStep(3);
       dispatch(clearResetPasswordState());
     }
   }, [resetPasswordMessage, step, dispatch]);
@@ -87,64 +108,126 @@ const ForgotPasswordScreen = ({navigation}) => {
   // --- Global Error Handling ---
   useEffect(() => {
     if (error) {
-      Alert.alert(
-        "Error",
-        typeof error === "string" ? error : "Something went wrong",
-      );
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: typeof error === "string" ? error : "Something went wrong",
+      });
       dispatch(clearError());
     }
   }, [error, dispatch]);
 
-  // --- Handlers ---
+  // --- Input Handlers with error clearing ---
+  const handleEmailChange = value => {
+    setEmail(value);
+    if (errors.email) {
+      setErrors(prev => ({...prev, email: null}));
+    }
+  };
+
+  const handleOtpChange = value => {
+    // Only allow numeric input
+    const numericValue = value.replace(/[^0-9]/g, "");
+    setOtp(numericValue);
+    if (errors.otp) {
+      setErrors(prev => ({...prev, otp: null}));
+    }
+  };
+
+  const handleNewPasswordChange = value => {
+    setNewPassword(value);
+    if (errors.newPassword) {
+      setErrors(prev => ({...prev, newPassword: null}));
+    }
+  };
+
+  const handleConfirmPasswordChange = value => {
+    setConfirmPassword(value);
+    if (errors.confirmPassword) {
+      setErrors(prev => ({...prev, confirmPassword: null}));
+    }
+  };
+
+  // --- Action Handlers ---
 
   const handleSendOTP = () => {
-    if (!email.trim()) {
-      Alert.alert("Validation", "Please enter your email address");
+    const emailError = validateEmail(email);
+    if (emailError) {
+      setErrors(prev => ({...prev, email: emailError}));
+      Toast.show({
+        type: "error",
+        text1: "Validation Error",
+        text2: emailError,
+      });
       return;
     }
-    // Dispatch Forgot Password Action
-    dispatch(forgotPassword({email}));
+    dispatch(forgotPassword({email: email.trim()}));
   };
 
   const handleVerifyOTP = () => {
-    if (!otp.trim() || otp.length < 4) {
-      Alert.alert(
-        "Validation",
-        "Please enter a valid 4-digit verification code",
-      );
+    const otpError = validateOTP(otp);
+    if (otpError) {
+      setErrors(prev => ({...prev, otp: otpError}));
+      Toast.show({
+        type: "error",
+        text1: "Validation Error",
+        text2: otpError,
+      });
       return;
     }
-    // Dispatch Verify Token Action
-    dispatch(verifyResetToken({email, otp}));
+    dispatch(verifyResetToken({email: email.trim(), otp}));
   };
 
   const handleUpdatePassword = () => {
-    if (!newPassword.trim() || !confirmPassword.trim()) {
-      Alert.alert("Validation", "Please fill in all password fields");
+    const newPasswordError = validatePassword(newPassword, false);
+    const confirmPasswordError = validateConfirmPassword(
+      newPassword,
+      confirmPassword,
+    );
+
+    if (newPasswordError || confirmPasswordError) {
+      setErrors(prev => ({
+        ...prev,
+        newPassword: newPasswordError,
+        confirmPassword: confirmPasswordError,
+      }));
+      Toast.show({
+        type: "error",
+        text1: "Validation Error",
+        text2: newPasswordError || confirmPasswordError,
+      });
       return;
     }
-    if (newPassword.length < 8) {
-      Alert.alert("Validation", "Password must be at least 8 characters");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      Alert.alert("Validation", "Passwords do not match");
-      return;
-    }
-    // Dispatch Reset Password Action
-    dispatch(resetPassword({email, otp, newPassword, confirmPassword}));
+
+    dispatch(
+      resetPassword({
+        email: email.trim(),
+        otp,
+        newPassword,
+        confirmPassword,
+      }),
+    );
   };
 
   const handleResendOTP = () => {
-    // Re-trigger the email logic
-    dispatch(forgotPassword({email}));
+    dispatch(forgotPassword({email: email.trim()}));
+    Toast.show({
+      type: "info",
+      text1: "Code Resent",
+      text2: "A new verification code has been sent",
+    });
   };
 
   const goBack = () => {
     if (step > 0 && step < 3) {
-      // Allow going back to edit email or otp if not yet finished
       setStep(step - 1);
       dispatch(clearError());
+      // Clear errors for the step we're going back to
+      if (step === 1) {
+        setErrors(prev => ({...prev, otp: null}));
+      } else if (step === 2) {
+        setErrors(prev => ({...prev, newPassword: null, confirmPassword: null}));
+      }
     } else {
       navigation.goBack();
     }
@@ -184,11 +267,12 @@ const ForgotPasswordScreen = ({navigation}) => {
                 label="Email"
                 placeholder="samrana@example.com"
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={handleEmailChange}
                 leftIcon="mail"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 type={2}
+                error={errors.email}
               />
               <Button
                 title="Send OTP"
@@ -212,7 +296,7 @@ const ForgotPasswordScreen = ({navigation}) => {
                 label="Code"
                 placeholder="- - - -"
                 value={otp}
-                onChangeText={setOtp}
+                onChangeText={handleOtpChange}
                 maxLength={4}
                 keyboardType="numeric"
                 inputStyle={{
@@ -220,6 +304,7 @@ const ForgotPasswordScreen = ({navigation}) => {
                   textAlign: "center",
                   fontWeight: "bold",
                 }}
+                error={errors.otp}
               />
               <Button
                 title="Verify"
@@ -253,22 +338,24 @@ const ForgotPasswordScreen = ({navigation}) => {
                 label="Set new password"
                 placeholder="••••••••"
                 value={newPassword}
-                onChangeText={setNewPassword}
+                onChangeText={handleNewPasswordChange}
                 secureTextEntry={!showPassword}
                 rightIcon={showPassword ? "eye-off" : "eye"}
                 onRightIconPress={() => setShowPassword(!showPassword)}
+                error={errors.newPassword}
               />
               <TextInput
                 label="Confirm new password"
                 placeholder="••••••••"
                 value={confirmPassword}
-                onChangeText={setConfirmPassword}
+                onChangeText={handleConfirmPasswordChange}
                 secureTextEntry={!showConfirmPassword}
                 rightIcon={showConfirmPassword ? "eye-off" : "eye"}
                 onRightIconPress={() =>
                   setShowConfirmPassword(!showConfirmPassword)
                 }
                 style={{marginTop: RFValue(16)}}
+                error={errors.confirmPassword}
               />
               <Button
                 title="Update"
