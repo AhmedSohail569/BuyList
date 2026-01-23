@@ -1,4 +1,6 @@
 import {View, TouchableOpacity, StyleSheet} from "react-native";
+import {useDispatch} from "react-redux";
+
 import {
   User,
   ShieldCheck,
@@ -22,7 +24,6 @@ import SelectionModal from "~containers/modals/SelectionModal";
 import {DISTANCE_OPTIONS, LANGUAGE_OPTIONS, THEME_OPTIONS} from "~constants";
 import {logout} from "~redux/reducers/authReducer";
 import {clearAccessToken} from "~utils";
-import {useDispatch} from "react-redux";
 import {useAlert} from "~context/AlertContext";
 
 /**

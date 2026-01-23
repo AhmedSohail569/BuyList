@@ -1,10 +1,9 @@
-import React from "react";
+import { useEffect } from "react";
 import {
   View,
   StyleSheet,
   TouchableOpacity,
   Image,
-  Platform,
   ScrollView as ReactScrollView,
 } from "react-native";
 import {
@@ -21,39 +20,65 @@ import {ScrollView, Text} from "~components/Common";
 import {RFValue} from "react-native-responsive-fontsize";
 import {FontFamily} from "~theme/fonts";
 import Header from "~components/Header";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchOwnedCircle } from "~redux/actions/circleActions";
 
-// --- Mock Data ---
-const CONNECTIONS = [
-  {
-    id: 1,
-    name: "Samrana",
-    role: "Owner",
-    image:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80",
-    isOnline: true,
-  },
-  {
-    id: 2,
-    name: "Alex",
-    role: "Editor",
-    image:
-      "https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=100&q=80",
-  },
-  {
-    id: 3,
-    name: "Jordan",
-    role: "Viewer",
-    image:
-      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80",
-  },
-  {
-    id: 4,
-    name: "Casey",
-    role: "Editor",
-    image:
-      "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=100&q=80",
-  },
-];
+// Helper function to get default avatar if profilePicture is missing
+const getAvatarUri = (profilePicture) => {
+  if (profilePicture && profilePicture.trim() !== "") {
+    return { uri: profilePicture };
+  }
+  // Return a placeholder image URI
+  return {
+    uri: "https://ui-avatars.com/api/?name=User&background=e0f2fe&color=0ea5e9&size=200",
+  };
+};
+
+// Helper function to format role for display
+const formatRole = (role) => {
+  if (!role) return "Member";
+  // Capitalize first letter
+  return role.charAt(0).toUpperCase() + role.slice(1);
+};
+
+// Build connections list from ownedCircle data
+const buildConnections = (ownedCircle) => {
+  if (!ownedCircle) return [];
+
+  const connections = [];
+
+  // Always add owner first
+  if (ownedCircle.owner) {
+    connections.push({
+      id: ownedCircle.owner._id || ownedCircle.owner.id,
+      name: ownedCircle.owner.username || ownedCircle.owner.email || "Owner",
+      role: "Owner",
+      image: ownedCircle.owner.profilePicture,
+      isOwner: true,
+    });
+  }
+
+  // Add members if they exist
+  if (ownedCircle.members && Array.isArray(ownedCircle.members)) {
+    ownedCircle.members.forEach((member) => {
+      if (member.userId) {
+        connections.push({
+          id: member.userId._id || member.userId.id,
+          name: member.userId.username || member.userId.email || "Member",
+          role: formatRole(member.role),
+          image: member.userId.profilePicture,
+          isOwner: false,
+        });
+      }
+    });
+  }
+
+  return connections;
+};
+
+// Placeholder avatar for mock data
+const PLACEHOLDER_AVATAR =
+  "https://ui-avatars.com/api/?name=User&background=e0f2fe&color=0ea5e9&size=200";
 
 const SHARED_LISTS = [
   {
@@ -61,14 +86,14 @@ const SHARED_LISTS = [
     title: "Weekly Groceries",
     progress: 75,
     updated: "Updated 2m ago",
-    avatars: [CONNECTIONS[1].image, CONNECTIONS[2].image],
+    avatars: [PLACEHOLDER_AVATAR, PLACEHOLDER_AVATAR],
   },
   {
     id: 2,
     title: "Weekend BBQ",
     progress: 17,
     updated: "Updated 1h ago",
-    avatars: [CONNECTIONS[1].image, CONNECTIONS[3].image],
+    avatars: [PLACEHOLDER_AVATAR, PLACEHOLDER_AVATAR],
   },
 ];
 
@@ -76,7 +101,7 @@ const ACTIVITY = [
   {
     id: 1,
     user: "Alex",
-    userAvatar: CONNECTIONS[1].image,
+    userAvatar: PLACEHOLDER_AVATAR,
     action: "added 3 items to",
     target: "Weekly Groceries",
     time: "2 min ago",
@@ -84,7 +109,7 @@ const ACTIVITY = [
   {
     id: 2,
     user: "Casey",
-    userAvatar: CONNECTIONS[3].image,
+    userAvatar: PLACEHOLDER_AVATAR,
     action: "marked 5 items purchased in",
     target: "Weekly Groceries",
     time: "15 min ago",
@@ -92,7 +117,7 @@ const ACTIVITY = [
   {
     id: 3,
     user: "Jordan",
-    userAvatar: CONNECTIONS[2].image,
+    userAvatar: PLACEHOLDER_AVATAR,
     action: "joined the circle",
     target: "",
     time: "11:20 AM",
@@ -141,6 +166,19 @@ const ProgressBar = ({percentage}) => (
 );
 
 const CircleTab = ({navigation}) => {
+  const dispatch = useDispatch();
+  const {ownedCircle} = useSelector(state => state.circles);
+
+  useEffect(() => {
+    dispatch(fetchOwnedCircle());
+  }, [dispatch]);
+
+  // Build connections from ownedCircle data
+  const connections = buildConnections(ownedCircle);
+  
+  // Get circle name or default
+  const circleName = ownedCircle?.name || "Family Home";
+
   return (
     <View style={styles.container}>
       <Header
@@ -179,7 +217,7 @@ const CircleTab = ({navigation}) => {
               <ShoppingBag size={20} color="#0ea5e9" />
             </View>
             <View style={styles.familyTitleContainer}>
-              <Text style={styles.familyTitle}>Family Home</Text>
+              <Text style={styles.familyTitle}>{circleName}</Text>
               <View style={styles.ownerBadge}>
                 <Text style={styles.ownerText}>Owner</Text>
               </View>
@@ -203,16 +241,15 @@ const CircleTab = ({navigation}) => {
 
           <View style={styles.familyFooter}>
             <AvatarStack
-              images={[
-                CONNECTIONS[0].image,
-                CONNECTIONS[1].image,
-                CONNECTIONS[2].image,
-              ]}
+              images={connections
+                .slice(0, 3)
+                .map(conn => conn.image)
+                .filter(Boolean)}
               size={32}
             />
             <TouchableOpacity
               style={styles.manageBtn}
-              onPress={() => navigation.navigate("ManageConnections")} // Assuming route name
+              onPress={() => navigation.navigate("ManageConnections")}
             >
               <Text style={styles.manageBtnText}>Manage Circle</Text>
             </TouchableOpacity>
@@ -234,19 +271,21 @@ const CircleTab = ({navigation}) => {
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.connectionsScroll}>
-          {CONNECTIONS.map(user => (
+          {connections.map(user => (
             <View key={user.id} style={styles.connectionItem}>
               <View style={styles.avatarWrapper}>
                 <Image
-                  source={{uri: user.image}}
+                  source={getAvatarUri(user.image)}
                   style={styles.connectionAvatar}
                 />
-                {user.isOnline && <View style={styles.onlineDot} />}
+                {/* Only show online dot for owner if needed */}
+                {user.isOwner && <View style={styles.onlineDot} />}
               </View>
               <Text style={styles.connectionName}>{user.name}</Text>
               <Text style={styles.connectionRole}>{user.role}</Text>
             </View>
           ))}
+          {/* Always show invite button */}
           <TouchableOpacity
             style={styles.inviteItem}
             onPress={() =>

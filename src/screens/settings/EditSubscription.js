@@ -7,7 +7,7 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage"; // Import AsyncStorage
+import AsyncStorage from "@react-native-async-storage/async-storage"; 
 import {CircleDollarSignIcon} from "lucide-react-native";
 import SubscriptionHeader from "~components/SubscriptionHeader";
 import {Text} from "~components/Common";

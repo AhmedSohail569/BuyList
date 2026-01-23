@@ -23,6 +23,7 @@ import NearbyStores from "~containers/sections/NearbyStores";
 import YourLists from "~containers/sections/YourLists";
 import {RFValue} from "react-native-responsive-fontsize";
 import {FontFamily} from "~theme/fonts";
+import { useSelector } from "react-redux";
 // import {fetchAIRecommendations} from "../services/geminiService.js";
 
 const {width} = Dimensions.get("window");
@@ -87,12 +88,13 @@ const FOR_YOU = [
 ];
 
 const HomeTab = ({onQuickAction, navigation}) => {
+  const {user} = useSelector(state => state.auth);
   return (
     <View style={styles.container}>
       <Header
         variant="home"
         greeting="Good Morning,"
-        userName="Samrana"
+        userName={user?.username || "Samrana"}
         avatar={{uri: "https://i.pravatar.cc/150"}}
         rightIcon="notifications-outline"
         notificationBadge

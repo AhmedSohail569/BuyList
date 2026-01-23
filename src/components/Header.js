@@ -6,6 +6,7 @@ import {RFValue} from "react-native-responsive-fontsize";
 import {Text} from "~components/Common";
 import {FontFamily} from "~theme/fonts";
 import {useNavigation} from "@react-navigation/native";
+import { useSelector } from "react-redux";
 
 const Header = ({
   variant = "title",
@@ -36,6 +37,8 @@ const Header = ({
 }) => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+
+  const {user} = useSelector(state => state.auth);
 
   return (
     <View style={[styles.container, {paddingTop: insets.top + RFValue(12)}]}>
@@ -154,7 +157,7 @@ const Header = ({
                   fontSize: RFValue(11),
                   lineHeight: 20,
                 }}>
-                Samrana
+                {user?.username || "Samrana"}
               </Text>
               <Text
                 variant="bodySmall"
@@ -163,7 +166,7 @@ const Header = ({
                   fontSize: RFValue(8),
                   lineHeight: 20,
                 }}>
-                samrana@example.com
+                {user?.email || "samrana@example.com"}
               </Text>
             </View>
           </View>
