@@ -1,4 +1,4 @@
-import {useState} from "react";
+import {useState, useEffect} from "react";
 import {
   View,
   StyleSheet,
@@ -16,12 +16,16 @@ import {
   ChevronRight,
   Pencil,
 } from "lucide-react-native";
+import {useDispatch, useSelector} from "react-redux";
+import Toast from "react-native-toast-message";
 import Header from "~components/Header";
 import {ScrollView, Text} from "~components/Common";
 import {RFValue} from "react-native-responsive-fontsize";
 import {FontFamily} from "~theme/fonts";
 import SelectionModal from "~containers/modals/SelectionModal";
 import {DEFAULT_ROLES} from "~constants";
+import {editCircleName} from "~redux/actions/circleActions";
+import {clearCircleError} from "~redux/reducers/circleReducer";
 
 const SettingsRow = ({
   icon: Icon,
@@ -66,22 +70,123 @@ const SettingsRow = ({
 };
 
 const CircleSettingsScreen = ({onQuickAction, navigation}) => {
+  const dispatch = useDispatch();
+  const {ownedCircle, loading, error} = useSelector(state => state.circles);
+
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState(null);
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-
   const [defaultRole, setDefaultRole] = useState("Editor");
-  const [circleName, setCircleName] = useState("");
+  
+  // Initialize circle name from Redux state
+  const [circleName, setCircleName] = useState(
+    ownedCircle?.name || "Family Home",
+  );
+
+  // Update circle name when ownedCircle changes
+  useEffect(() => {
+    if (ownedCircle?.name) {
+      setCircleName(ownedCircle.name);
+    }
+  }, [ownedCircle?.name]);
+
+  // Handle API errors with toast
+  useEffect(() => {
+    if (error) {
+      Toast.show({
+        type: "error",
+        text1: "Update Failed",
+        text2: typeof error === "string" ? error : "Failed to update circle name",
+      });
+      dispatch(clearCircleError());
+    }
+  }, [error, dispatch]);
 
   const openModal = type => {
     setModalType(type);
     setModalVisible(true);
   };
 
-  const handleSave = newValue => {
-    if (modalType === "defaultRole") setDefaultRole(newValue);
-    if (modalType === "circleName") setCircleName(newValue);
+  // Validate circle name
+  const validateCircleName = name => {
+    const trimmedName = name?.trim();
+    if (!trimmedName) {
+      return "Circle name cannot be empty";
+    }
+    if (trimmedName.length < 2) {
+      return "Circle name must be at least 2 characters";
+    }
+    if (trimmedName.length > 50) {
+      return "Circle name must be less than 50 characters";
+    }
+    return null;
+  };
+
+  const handleSave = async newValue => {
+    if (modalType === "defaultRole") {
+      setDefaultRole(newValue);
+      return;
+    }
+
+    if (modalType === "circleName") {
+      // Validate circle name
+      const validationError = validateCircleName(newValue);
+      if (validationError) {
+        Toast.show({
+          type: "error",
+          text1: "Validation Error",
+          text2: validationError,
+        });
+        return;
+      }
+
+      // Check if name actually changed
+      const trimmedName = newValue.trim();
+      if (trimmedName === ownedCircle?.name) {
+        // No change, just close modal
+        setModalVisible(false);
+        return;
+      }
+
+      // Get circle ID
+      const circleId = ownedCircle?._id || ownedCircle?.id;
+      if (!circleId) {
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: "Circle not found",
+        });
+        return;
+      }
+
+      // Dispatch edit action
+      try {
+        await dispatch(
+          editCircleName({
+            circleId,
+            name: trimmedName,
+          }),
+        ).unwrap();
+
+        // Show success toast
+        Toast.show({
+          type: "success",
+          text1: "Circle Updated",
+          text2: "Circle name updated successfully",
+        });
+
+        // Update local state
+        setCircleName(trimmedName);
+        setModalVisible(false);
+      } catch (err) {
+        // Error is handled by useEffect above
+        // Don't close modal on error so user can retry
+      }
+      return;
+    }
+
+    // Handle other modal types (leave, delete)
     console.log(`Saved ${modalType}:`, newValue);
   };
 
@@ -104,7 +209,7 @@ const CircleSettingsScreen = ({onQuickAction, navigation}) => {
             iconBgColor="#e0f2fe" // Light Blue
             iconColor="#0ea5e9" // Blue
             title="Circle Name"
-            subtitle="Family Home"
+            subtitle={circleName || "Family Home"}
             rightElement={<Pencil size={RFValue(16)} color="#9ca3af" />}
             onPress={() => openModal("circleName")}
           />
@@ -185,7 +290,13 @@ const CircleSettingsScreen = ({onQuickAction, navigation}) => {
       </ScrollView>
       <SelectionModal
         isVisible={modalVisible}
-        onClose={() => setModalVisible(false)}
+        onClose={() => {
+          setModalVisible(false);
+          // Clear any errors when closing
+          if (error) {
+            dispatch(clearCircleError());
+          }
+        }}
         onSave={handleSave}
         type={
           modalType === "defaultRole"
@@ -207,10 +318,15 @@ const CircleSettingsScreen = ({onQuickAction, navigation}) => {
         description={
           modalType === "leave"
             ? "Leaving this circle will remove you from all shared lists. Do you want to continue?"
-            : "Deleting this circle will permanently remove all shared lists and connections."
+            : modalType === "delete"
+            ? "Deleting this circle will permanently remove all shared lists and connections."
+            : ""
         }
         danger={modalType === "leave" || modalType === "delete" ? true : false}
         options={DEFAULT_ROLES}
+        confirmLabel={
+          modalType === "circleName" && loading ? "Saving..." : "Save"
+        }
       />
     </View>
   );

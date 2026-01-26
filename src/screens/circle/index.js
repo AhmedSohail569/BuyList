@@ -23,15 +23,27 @@ import Header from "~components/Header";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchOwnedCircle } from "~redux/actions/circleActions";
 
-// Helper function to get default avatar if profilePicture is missing
-const getAvatarUri = (profilePicture) => {
-  if (profilePicture && profilePicture.trim() !== "") {
-    return { uri: profilePicture };
+// Helper function to get initials from a name
+const getInitials = (name) => {
+  if (!name || typeof name !== "string") return "U";
+  
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 0) return "U";
+  
+  if (parts.length === 1) {
+    // Single name - take first 2 letters
+    return parts[0].substring(0, 2).toUpperCase();
   }
-  // Return a placeholder image URI
-  return {
-    uri: "https://ui-avatars.com/api/?name=User&background=e0f2fe&color=0ea5e9&size=200",
-  };
+  
+  // Multiple names - take first letter of first and last name
+  const firstInitial = parts[0].charAt(0).toUpperCase();
+  const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
+  return `${firstInitial}${lastInitial}`;
+};
+
+// Helper function to check if profile picture is available
+const hasProfilePicture = (profilePicture) => {
+  return profilePicture && profilePicture.trim() !== "";
 };
 
 // Helper function to format role for display
@@ -76,24 +88,20 @@ const buildConnections = (ownedCircle) => {
   return connections;
 };
 
-// Placeholder avatar for mock data
-const PLACEHOLDER_AVATAR =
-  "https://ui-avatars.com/api/?name=User&background=e0f2fe&color=0ea5e9&size=200";
-
 const SHARED_LISTS = [
   {
     id: 1,
     title: "Weekly Groceries",
     progress: 75,
     updated: "Updated 2m ago",
-    avatars: [PLACEHOLDER_AVATAR, PLACEHOLDER_AVATAR],
+    avatars: [null, null], // Will show initials
   },
   {
     id: 2,
     title: "Weekend BBQ",
     progress: 17,
     updated: "Updated 1h ago",
-    avatars: [PLACEHOLDER_AVATAR, PLACEHOLDER_AVATAR],
+    avatars: [null, null], // Will show initials
   },
 ];
 
@@ -101,7 +109,7 @@ const ACTIVITY = [
   {
     id: 1,
     user: "Alex",
-    userAvatar: PLACEHOLDER_AVATAR,
+    userAvatar: null, // Will show initials
     action: "added 3 items to",
     target: "Weekly Groceries",
     time: "2 min ago",
@@ -109,7 +117,7 @@ const ACTIVITY = [
   {
     id: 2,
     user: "Casey",
-    userAvatar: PLACEHOLDER_AVATAR,
+    userAvatar: null, // Will show initials
     action: "marked 5 items purchased in",
     target: "Weekly Groceries",
     time: "15 min ago",
@@ -117,7 +125,7 @@ const ACTIVITY = [
   {
     id: 3,
     user: "Jordan",
-    userAvatar: PLACEHOLDER_AVATAR,
+    userAvatar: null, // Will show initials
     action: "joined the circle",
     target: "",
     time: "11:20 AM",
@@ -126,32 +134,87 @@ const ACTIVITY = [
 
 // --- Sub Components ---
 
-const AvatarStack = ({images, size = 24, limit = 3}) => {
+// Avatar Component with initials fallback
+const Avatar = ({image, name, size = 56, style}) => {
+  const hasImage = hasProfilePicture(image);
+  const initials = getInitials(name || "User");
+  
+  if (hasImage) {
+    return (
+      <Image
+        source={{uri: image}}
+        style={[
+          {
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+          },
+          style,
+        ]}
+      />
+    );
+  }
+  
+  return (
+    <View
+      style={[
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          backgroundColor: "#e0f2fe",
+          justifyContent: "center",
+          alignItems: "center",
+        },
+        style,
+      ]}>
+      <Text
+        style={{
+          fontSize: RFValue(size * 0.30),    
+          color: "#0ea5e9",
+          lineHeight: size * 0.30,
+        
+        }}>
+        {initials}
+      </Text>
+    </View>
+  );
+};
+
+// Avatar Stack Component
+const AvatarStack = ({items, size = 24, limit = 3}) => {
+  // items can be array of {image, name} objects or array of image strings (for backward compatibility)
+  const avatarItems = items.map((item, index) => {
+    if (typeof item === "string") {
+      // Backward compatibility: if it's a string, treat as image
+      return {image: item, name: "User"};
+    }
+    return item;
+  });
+  
   return (
     <View style={styles.avatarStack}>
-      {images.slice(0, limit).map((uri, index) => (
-        <Image
+      {avatarItems.slice(0, limit).map((item, index) => (
+        <View
           key={index}
-          source={{uri}}
-          style={[
-            styles.stackAvatar,
-            {
-              width: size,
-              height: size,
-              borderRadius: size / 2,
-              marginLeft: index === 0 ? 0 : -8,
-              zIndex: limit - index,
-            },
-          ]}
-        />
+          style={{
+            marginLeft: index === 0 ? 0 : -8,
+            zIndex: limit - index,
+          }}>
+          <Avatar
+            image={item.image}
+            name={item.name}
+            size={size}
+            style={styles.stackAvatar}
+          />
+        </View>
       ))}
       {/* Fake "+1" badge for the Family Card */}
-      {limit === 3 && images.length >= 2 && (
-        // Logic tweaked just to match screenshot visual exactly
+      {/* {limit === 3 && avatarItems.length >= 2 && (
         <View style={[styles.plusOneBadge, {marginLeft: -8, zIndex: 0}]}>
           <Text style={styles.plusOneText}>+1</Text>
         </View>
-      )}
+      )} */}
     </View>
   );
 };
@@ -179,6 +242,9 @@ const CircleTab = ({navigation}) => {
   // Get circle name or default
   const circleName = ownedCircle?.name || "Family Home";
 
+  console.log("ownedCircle", ownedCircle);
+  console.log("connections", connections);
+
   return (
     <View style={styles.container}>
       <Header
@@ -191,18 +257,7 @@ const CircleTab = ({navigation}) => {
           </TouchableOpacity>
         }
       />
-      {/* Top Header Area */}
-      {/* <View style={styles.topHeader}>
-        <View>
-          <Text style={styles.screenTitle}>Your Circle</Text>
-          <Text style={styles.screenSubtitle}>
-            Shared shopping with your household
-          </Text>
-        </View>
-        <TouchableOpacity style={styles.addUserButton}>
-          <UserPlus size={20} color="#0ea5e9" />
-        </TouchableOpacity>
-      </View> */}
+   
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -241,10 +296,10 @@ const CircleTab = ({navigation}) => {
 
           <View style={styles.familyFooter}>
             <AvatarStack
-              images={connections
-                .slice(0, 3)
-                .map(conn => conn.image)
-                .filter(Boolean)}
+              items={connections.map(conn => ({
+                image: conn.image,
+                name: conn.name,
+              }))}
               size={32}
             />
             <TouchableOpacity
@@ -274,9 +329,10 @@ const CircleTab = ({navigation}) => {
           {connections.map(user => (
             <View key={user.id} style={styles.connectionItem}>
               <View style={styles.avatarWrapper}>
-                <Image
-                  source={getAvatarUri(user.image)}
-                  style={styles.connectionAvatar}
+                <Avatar
+                  image={user.image}
+                  name={user.name}
+                  size={56}
                 />
                 {/* Only show online dot for owner if needed */}
                 {user.isOwner && <View style={styles.onlineDot} />}
@@ -312,7 +368,14 @@ const CircleTab = ({navigation}) => {
               <ProgressBar percentage={list.progress} />
               <View style={styles.listFooter}>
                 <View style={styles.listMeta}>
-                  <AvatarStack images={list.avatars} size={20} limit={2} />
+                  <AvatarStack
+                    items={list.avatars.map(avatar => ({
+                      image: avatar,
+                      name: "User",
+                    }))}
+                    size={20}
+                    limit={2}
+                  />
                   <Text style={styles.listUpdated}>{list.updated}</Text>
                 </View>
                 <TouchableOpacity>
@@ -333,10 +396,13 @@ const CircleTab = ({navigation}) => {
                 styles.activityRow,
                 index !== 0 && styles.activityBorder,
               ]}>
-              <Image
-                source={{uri: item.userAvatar}}
-                style={styles.activityAvatar}
-              />
+              <View style={{marginRight: 12}}>
+                <Avatar
+                  image={item.userAvatar}
+                  name={item.user}
+                  size={32}
+                />
+              </View>
               <View style={styles.activityContent}>
                 <Text style={styles.activityText}>
                   <Text style={styles.activityUser}>{item.user} </Text>
@@ -561,11 +627,6 @@ const styles = StyleSheet.create({
     position: "relative",
     marginBottom: 8,
   },
-  connectionAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-  },
   onlineDot: {
     position: "absolute",
     bottom: 2,
@@ -705,12 +766,6 @@ const styles = StyleSheet.create({
   activityBorder: {
     borderTopWidth: 1,
     borderTopColor: "#f3f4f6",
-  },
-  activityAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginRight: 12,
   },
   activityContent: {
     flex: 1,

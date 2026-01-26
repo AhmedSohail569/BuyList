@@ -1,13 +1,13 @@
-import React, {useState} from "react";
+import {useState, useEffect, useCallback, useMemo} from "react";
 import {
   View,
   StyleSheet,
   TouchableOpacity,
-  Image,
   TextInput,
-  Modal,
   TouchableWithoutFeedback,
   Platform,
+  FlatList,
+  ActivityIndicator,
 } from "react-native";
 import {
   ArrowLeft,
@@ -17,176 +17,300 @@ import {
   Check,
   MoreHorizontal,
 } from "lucide-react-native";
+import {useDispatch, useSelector} from "react-redux";
+import {useFocusEffect} from "@react-navigation/native";
+import Toast from "react-native-toast-message";
 import {ScrollView, Text} from "~components/Common";
 import {RFValue} from "react-native-responsive-fontsize";
 import {FontFamily} from "~theme/fonts";
+import {
+  fetchListById,
+  addItemsToList,
+  markItemAsPurchased,
+  deleteItemFromList,
+} from "~redux/actions/listActions";
+import {clearListsError} from "~redux/reducers/listReducer";
 
-// --- Mock Data ---
-const INITIAL_ITEMS = [
-  {
-    id: 1,
-    name: "Almond Milk",
-    addedBy: "Samrana",
-    category: "Dairy",
-    avatar:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=50&q=80",
-    status: "pending", // pending | purchased
-  },
-  {
-    id: 2,
-    name: "Organic Bananas",
-    addedBy: "Alex",
-    category: "Produce",
-    avatar:
-      "https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=50&q=80",
-    status: "pending",
-  },
-  {
-    id: 3,
-    name: "Avocados",
-    addedBy: "Jordan",
-    category: "Produce",
-    avatar:
-      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=50&q=80",
-    status: "pending",
-  },
-  {
-    id: 4,
-    name: "Sourdough Bread",
-    addedBy: "Samrana",
-    category: "Bakery",
-    avatar:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=50&q=80",
-    status: "purchased",
-  },
-  {
-    id: 5,
-    name: "Eggs (Dozen)",
-    addedBy: "Alex",
-    category: "Dairy",
-    avatar:
-      "https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=50&q=80",
-    status: "purchased",
-  },
-];
+const ListDetailsScreen = ({navigation, route}) => {
+  const dispatch = useDispatch();
+  const {listById, loading, error} = useSelector(state => state.lists);
 
-const ListDetailsScreen = ({navigation}) => {
-  const [activeTab, setActiveTab] = useState("All Items"); // 'All Items' | 'To Buy'
-  const [items, setItems] = useState(INITIAL_ITEMS);
+  const listId = route?.params?.listId;
+  const list = listId ? listById[listId] : null;
+
+  const [activeTab, setActiveTab] = useState("All Items");
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
-  const [activeItemMenuId, setActiveItemMenuId] = useState(null); // ID of item with open menu
+  const [activeItemMenuId, setActiveItemMenuId] = useState(null);
   const [newItemText, setNewItemText] = useState("");
+  const [pendingActions, setPendingActions] = useState(new Set());
+
+  // Fetch list if not cached
+  useFocusEffect(
+    useCallback(() => {
+      if (listId && !list && !loading) {
+        dispatch(fetchListById({listId}));
+      }
+    }, [listId, list, loading, dispatch]),
+  );
+
+  console.log("list", JSON.stringify(list, null, 2));
+
+  // Handle errors
+  useEffect(() => {
+    if (error) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: typeof error === "string" ? error : "Something went wrong",
+      });
+      dispatch(clearListsError());
+    }
+  }, [error, dispatch]);
+
+  // Prevent duplicate actions
+  const isActionPending = useCallback(
+    actionKey => {
+      return pendingActions.has(actionKey);
+    },
+    [pendingActions],
+  );
+
+  const setActionPending = useCallback((actionKey, isPending) => {
+    setPendingActions(prev => {
+      const next = new Set(prev);
+      if (isPending) {
+        next.add(actionKey);
+      } else {
+        next.delete(actionKey);
+      }
+      return next;
+    });
+  }, []);
 
   // Statistics
-  const totalItems = items.length;
-  const purchasedItems = items.filter(i => i.status === "purchased").length;
-  const progressPercent =
-    totalItems === 0 ? 0 : (purchasedItems / totalItems) * 100;
-
-  // Toggle Item Status
-  const toggleItemStatus = id => {
-    setItems(prev =>
-      prev.map(item =>
-        item.id === id
-          ? {
-              ...item,
-              status: item.status === "pending" ? "purchased" : "pending",
-            }
-          : item,
-      ),
-    );
-  };
-
-  // Add Item
-  const handleAddItem = () => {
-    if (newItemText.trim() === "") return;
-    const newItem = {
-      id: Date.now(),
-      name: newItemText,
-      addedBy: "Me",
-      category: "General",
-      avatar: "https://i.pravatar.cc/150?img=12",
-      status: "pending",
+  const {totalItems, purchasedItems, progressPercent} = useMemo(() => {
+    const items = list?.items || [];
+    const total = items.length;
+    const purchased = items.filter(i => i.isPurchased).length;
+    return {
+      totalItems: total,
+      purchasedItems: purchased,
+      progressPercent: total === 0 ? 0 : (purchased / total) * 100,
     };
-    setItems([newItem, ...items]);
+  }, [list?.items]);
+
+  // Filter items by tab
+  const {pendingItems, doneItems} = useMemo(() => {
+    const items = list?.items || [];
+    return {
+      pendingItems: items.filter(i => !i.isPurchased),
+      doneItems: items.filter(i => i.isPurchased),
+    };
+  }, [list?.items]);
+
+  // Display items based on active tab
+  // "All Items" shows only pending items, purchased items appear in separate section below
+  const displayItems = useMemo(() => {
+    // Both tabs show only pending items in main list
+    // Purchased items are shown separately in "Purchased" section
+    return pendingItems;
+  }, [pendingItems]);
+
+  // Add item handler
+  const handleAddItem = useCallback(async () => {
+    if (!listId || !newItemText.trim()) return;
+
+    const itemName = newItemText.trim();
+    const actionKey = `add-${listId}-${itemName}`;
+
+    if (isActionPending(actionKey)) return;
+
+    setActionPending(actionKey, true);
     setNewItemText("");
-  };
 
-  // Rendering Logic
-  const pendingItems = items.filter(i => i.status === "pending");
-  const doneItems = items.filter(i => i.status === "purchased");
+    try {
+      await dispatch(
+        addItemsToList({
+          listId,
+          items: [{name: itemName}],
+        }),
+      ).unwrap();
+      // Optimistic update handled by reducer
+    } catch (err) {
+      // Error handled by useEffect, rollback automatic
+      setNewItemText(itemName); // Restore text on error
+    } finally {
+      setActionPending(actionKey, false);
+    }
+  }, [listId, newItemText, dispatch, isActionPending, setActionPending]);
 
-  const renderItem = item => (
-    <View key={item.id} style={styles.itemRow}>
-      {/* Checkbox / Radio */}
-      <TouchableOpacity
-        style={styles.checkCircleContainer}
-        onPress={() => toggleItemStatus(item.id)}>
-        {item.status === "purchased" ? (
-          <View style={styles.checkedCircle}>
-            <Check size={12} color="#fff" strokeWidth={3} />
+  // Toggle item purchased status
+  const toggleItemStatus = useCallback(
+    async itemId => {
+      if (!listId || isActionPending(`toggle-${itemId}`)) return;
+
+      const item = list?.items?.find(
+        i => (i.id || i._id) === itemId,
+      );
+      if (!item) return;
+
+      const newStatus = !item.isPurchased;
+      setActionPending(`toggle-${itemId}`, true);
+
+      try {
+        if (newStatus) {
+          await dispatch(
+            markItemAsPurchased({
+              listId,
+              itemId,
+            }),
+          ).unwrap();
+        } else {
+          // If unpurchasing, we'd need an API endpoint for that
+          // For now, just mark as purchased
+          await dispatch(
+            markItemAsPurchased({
+              listId,
+              itemId,
+            }),
+          ).unwrap();
+        }
+        // Optimistic update handled by reducer
+      } catch (err) {
+        // Error handled by useEffect, rollback automatic
+      } finally {
+        setActionPending(`toggle-${itemId}`, false);
+      }
+    },
+    [listId, list, dispatch, isActionPending, setActionPending],
+  );
+
+  // Delete item handler
+  const handleDeleteItem = useCallback(
+    async itemId => {
+      if (!listId || isActionPending(`delete-${itemId}`)) return;
+
+      setActionPending(`delete-${itemId}`, true);
+      setActiveItemMenuId(null);
+
+      try {
+        await dispatch(
+          deleteItemFromList({
+            listId,
+            itemId,
+          }),
+        ).unwrap();
+        // Optimistic update handled by reducer
+      } catch (err) {
+        // Error handled by useEffect, rollback automatic
+      } finally {
+        setActionPending(`delete-${itemId}`, false);
+      }
+    },
+    [listId, dispatch, isActionPending, setActionPending],
+  );
+
+  // Render item row
+  const renderItem = useCallback(
+    ({item}) => {
+      const itemId = item.id || item._id;
+      const isPending = isActionPending(`toggle-${itemId}`) ||
+        isActionPending(`delete-${itemId}`);
+
+      return (
+        <View style={styles.itemRow}>
+          <TouchableOpacity
+            style={styles.checkCircleContainer}
+            onPress={() => toggleItemStatus(itemId)}
+            disabled={isPending}>
+            {item.isPurchased ? (
+              <View style={styles.checkedCircle}>
+                <Check size={12} color="#fff" strokeWidth={3} />
+              </View>
+            ) : (
+              <View style={styles.uncheckedCircle} />
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.itemContent}>
+            <Text
+              style={[
+                styles.itemName,
+                item.isPurchased && styles.itemNameStrike,
+              ]}>
+              {item.name}
+            </Text>
+            <View style={styles.itemMetaRow}>
+              <Text style={styles.itemMetaText}>
+                {item.isPurchased ? "Purchased" : "Pending"}
+              </Text>
+            </View>
           </View>
-        ) : (
-          <View style={styles.uncheckedCircle} />
-        )}
-      </TouchableOpacity>
 
-      {/* Text Content */}
-      <View style={styles.itemContent}>
-        <Text
-          style={[
-            styles.itemName,
-            item.status === "purchased" && styles.itemNameStrike,
-          ]}>
-          {item.name}
-        </Text>
-        <View style={styles.itemMetaRow}>
-          <Image source={{uri: item.avatar}} style={styles.itemAvatar} />
-          <Text style={styles.itemMetaText}>
-            {item.status === "purchased" ? "Purchased by" : "Added by"}{" "}
-            {item.addedBy} • {item.category}
-          </Text>
+          <TouchableOpacity
+            onPress={() =>
+              setActiveItemMenuId(activeItemMenuId === itemId ? null : itemId)
+            }
+            hitSlop={10}
+            disabled={isPending}>
+            <MoreHorizontal size={20} color="#d1d5db" />
+          </TouchableOpacity>
+
+          {activeItemMenuId === itemId && (
+            <View style={styles.itemMenu}>
+              <TouchableOpacity
+                style={styles.itemMenuOptionActive}
+                onPress={() => toggleItemStatus(itemId)}>
+                <Text style={styles.itemMenuTextBlue}>
+                  {item.isPurchased ? "Mark Pending" : "Mark Purchased"}
+                </Text>
+              </TouchableOpacity>
+              <View style={styles.divider} />
+              <TouchableOpacity
+                style={styles.itemMenuOption}
+                onPress={() => handleDeleteItem(itemId)}>
+                <Text style={styles.itemMenuTextRed}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      );
+    },
+    [
+      activeItemMenuId,
+      toggleItemStatus,
+      handleDeleteItem,
+      isActionPending,
+    ],
+  );
+
+  // Loading state
+  if (loading && !list) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#0ea5e9" />
+      </View>
+    );
+  }
+
+  // List not found
+  if (!list && !loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.iconButton}>
+            <ArrowLeft size={24} color="#1f2937" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>List Not Found</Text>
+        </View>
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyText}>List not found or has been deleted.</Text>
         </View>
       </View>
-
-      {/* Kebab Menu Button */}
-      <TouchableOpacity
-        onPress={() =>
-          setActiveItemMenuId(activeItemMenuId === item.id ? null : item.id)
-        }
-        hitSlop={10}>
-        <MoreHorizontal size={20} color="#d1d5db" />
-      </TouchableOpacity>
-
-      {/* Item Dropdown Menu */}
-      {activeItemMenuId === item.id && (
-        <View style={styles.itemMenu}>
-          <TouchableOpacity
-            style={styles.itemMenuOptionActive}
-            onPress={() => {
-              toggleItemStatus(item.id);
-              setActiveItemMenuId(null);
-            }}>
-            <Text style={styles.itemMenuTextBlue}>
-              {item.status === "purchased" ? "Mark Pending" : "Purchased"}
-            </Text>
-          </TouchableOpacity>
-          <View style={styles.divider} />
-          <TouchableOpacity
-            style={styles.itemMenuOption}
-            onPress={() => setActiveItemMenuId(null)}>
-            <Text style={styles.itemMenuText}>Pending</Text>
-          </TouchableOpacity>
-          <View style={styles.divider} />
-          <TouchableOpacity
-            style={styles.itemMenuOption}
-            onPress={() => setActiveItemMenuId(null)}>
-            <Text style={styles.itemMenuTextRed}>Unavailable</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
-  );
+    );
+  }
 
   return (
     <TouchableWithoutFeedback
@@ -195,14 +319,13 @@ const ListDetailsScreen = ({navigation}) => {
         setActiveItemMenuId(null);
       }}>
       <View style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.iconButton}>
             <ArrowLeft size={24} color="#1f2937" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Weekly Groceries</Text>
+          <Text style={styles.headerTitle}>{list?.name || "List"}</Text>
           <View style={styles.headerActions}>
             <TouchableOpacity style={styles.iconButton}>
               <Share2 size={22} color="#1f2937" />
@@ -214,7 +337,6 @@ const ListDetailsScreen = ({navigation}) => {
             </TouchableOpacity>
           </View>
 
-          {/* Header Dropdown Menu */}
           {showHeaderMenu && (
             <View style={styles.headerMenu}>
               <TouchableOpacity style={styles.headerMenuOptionActive}>
@@ -223,10 +345,6 @@ const ListDetailsScreen = ({navigation}) => {
               <View style={styles.divider} />
               <TouchableOpacity style={styles.headerMenuOption}>
                 <Text style={styles.itemMenuText}>View</Text>
-              </TouchableOpacity>
-              <View style={styles.divider} />
-              <TouchableOpacity style={styles.headerMenuOption}>
-                <Text style={styles.itemMenuTextRed}>Delete</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -258,9 +376,18 @@ const ListDetailsScreen = ({navigation}) => {
               placeholderTextColor="#9ca3af"
               value={newItemText}
               onChangeText={setNewItemText}
+              onSubmitEditing={handleAddItem}
+              returnKeyType="done"
+              editable={!isActionPending(`add-${listId}`)}
             />
-            <TouchableOpacity style={styles.addButton} onPress={handleAddItem}>
-              <Plus size={20} color="#d1d5db" />
+            <TouchableOpacity
+              style={[
+                styles.addButton,
+                !newItemText.trim() && styles.addButtonDisabled,
+              ]}
+              onPress={handleAddItem}
+              disabled={!newItemText.trim() || isActionPending(`add-${listId}`)}>
+              <Plus size={20} color={newItemText.trim() ? "#0ea5e9" : "#d1d5db"} />
             </TouchableOpacity>
           </View>
 
@@ -296,23 +423,35 @@ const ListDetailsScreen = ({navigation}) => {
 
           {/* Item List */}
           <View style={styles.listContainer}>
-            {/* Pending Items (Shown in both tabs) */}
-            {pendingItems.map(renderItem)}
-
-            {/* Purchased Items (Only in All Items) */}
-            {activeTab === "All Items" && doneItems.length > 0 && (
-              <>
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>PURCHASED</Text>
-                </View>
-                {doneItems.map(renderItem)}
-              </>
-            )}
-
-            {/* Empty State for To Buy */}
-            {activeTab === "To Buy" && pendingItems.length === 0 && (
+            {displayItems.length > 0 ? (
+              <FlatList
+                data={displayItems}
+                renderItem={renderItem}
+                keyExtractor={item => String(item.id || item._id)}
+                scrollEnabled={false}
+                ListFooterComponent={
+                  activeTab === "All Items" && doneItems.length > 0 ? (
+                    <>
+                      <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>PURCHASED</Text>
+                      </View>
+                      <FlatList
+                        data={doneItems}
+                        renderItem={renderItem}
+                        keyExtractor={item => String(item.id || item._id)}
+                        scrollEnabled={false}
+                      />
+                    </>
+                  ) : null
+                }
+              />
+            ) : (
               <Text style={styles.emptyText}>
-                All caught up! Nothing to buy.
+                {activeTab === "To Buy"
+                  ? "All caught up! Nothing to buy."
+                  : doneItems.length > 0
+                  ? "No pending items."
+                  : "No items in this list."}
               </Text>
             )}
           </View>
@@ -330,15 +469,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     paddingTop: Platform.OS === "android" ? 40 : 60,
   },
-
-  // Header
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingBottom: 16,
-    zIndex: 20, // Ensure menu sits on top
+    zIndex: 20,
   },
   iconButton: {
     padding: 8,
@@ -375,14 +517,11 @@ const styles = StyleSheet.create({
   headerMenuOptionActive: {
     paddingVertical: 10,
     paddingHorizontal: 16,
-    backgroundColor: "#f0f9ff", // Light blue highlight
+    backgroundColor: "#f0f9ff",
   },
-
   scrollContent: {
     paddingHorizontal: 20,
   },
-
-  // Progress Bar
   progressContainer: {
     marginTop: 4,
     marginBottom: 20,
@@ -412,8 +551,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#0ea5e9",
     borderRadius: 3,
   },
-
-  // Input
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -433,13 +570,14 @@ const styles = StyleSheet.create({
   addButton: {
     width: 32,
     height: 32,
-    backgroundColor: "#e5e7eb", // Light gray like screenshot
+    backgroundColor: "#e5e7eb",
     borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
   },
-
-  // Tabs
+  addButtonDisabled: {
+    opacity: 0.5,
+  },
   tabsContainer: {
     flexDirection: "row",
     borderBottomWidth: 1,
@@ -453,7 +591,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "transparent",
   },
   activeTab: {
-    borderBottomColor: "#111827", // Black indicator
+    borderBottomColor: "#111827",
   },
   tabText: {
     fontSize: RFValue(12),
@@ -464,15 +602,13 @@ const styles = StyleSheet.create({
     color: "#111827",
     fontFamily: FontFamily.bold,
   },
-
-  // Lists
   listContainer: {
     gap: 20,
   },
   sectionHeader: {
     paddingVertical: 10,
     marginTop: 10,
-    backgroundColor: "#f9fafb", // Slight bg for purchased header
+    backgroundColor: "#f9fafb",
     paddingHorizontal: 10,
     borderRadius: 8,
   },
@@ -482,18 +618,24 @@ const styles = StyleSheet.create({
     color: "#9ca3af",
     letterSpacing: 0.5,
   },
+  emptyState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
+  },
   emptyText: {
     textAlign: "center",
     color: "#9ca3af",
     marginTop: 20,
     fontFamily: FontFamily.regular,
+    fontSize: RFValue(12),
   },
-
-  // Item Row
   itemRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    zIndex: 1, // Default zIndex
+    zIndex: 1,
+    marginBottom: 16,
   },
   checkCircleContainer: {
     marginRight: 12,
@@ -510,7 +652,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: "#22c55e", // Green
+    backgroundColor: "#22c55e",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -532,23 +674,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  itemAvatar: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    marginRight: 6,
-  },
   itemMetaText: {
     fontSize: RFValue(9),
     fontFamily: FontFamily.regular,
     color: "#9ca3af",
   },
-
-  // Item Dropdown Menu
   itemMenu: {
     position: "absolute",
     right: 0,
-    top: 25, // Just below kebab
+    top: 25,
     width: 130,
     backgroundColor: "#ffffff",
     borderRadius: 12,
@@ -557,7 +691,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 10,
     elevation: 8,
-    zIndex: 100, // Important to sit on top of next row
+    zIndex: 100,
     paddingVertical: 4,
     borderWidth: 1,
     borderColor: "#f3f4f6",
@@ -569,7 +703,7 @@ const styles = StyleSheet.create({
   itemMenuOptionActive: {
     paddingVertical: 10,
     paddingHorizontal: 12,
-    backgroundColor: "#eff6ff", // Very light blue
+    backgroundColor: "#eff6ff",
   },
   itemMenuText: {
     fontSize: RFValue(10),

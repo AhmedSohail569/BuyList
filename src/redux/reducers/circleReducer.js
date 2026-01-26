@@ -170,17 +170,29 @@ const circleSlice = createSlice({
       })
       .addCase(editCircleName.fulfilled, (state, action) => {
         // Name already updated optimistically
-        // Optionally update with server response if it includes additional data
+        // Only update name and updatedAt from response, preserve all other data
         const {circleId, response} = action.payload;
         if (response) {
-          if (state.ownedCircle && (state.ownedCircle.id === circleId || state.ownedCircle._id === circleId)) {
-            state.ownedCircle = {...state.ownedCircle, ...response};
+          // Extract only name and updatedAt from response
+          const updates = {};
+          if (response.name !== undefined) {
+            updates.name = response.name;
           }
-          state.allCircles = state.allCircles.map(circle =>
-            circle.id === circleId || circle._id === circleId
-              ? {...circle, ...response}
-              : circle,
-          );
+          if (response.updatedAt !== undefined) {
+            updates.updatedAt = response.updatedAt;
+          }
+
+          // Only update if we have something to update
+          if (Object.keys(updates).length > 0) {
+            if (state.ownedCircle && (state.ownedCircle.id === circleId || state.ownedCircle._id === circleId)) {
+              state.ownedCircle = {...state.ownedCircle, ...updates};
+            }
+            state.allCircles = state.allCircles.map(circle =>
+              circle.id === circleId || circle._id === circleId
+                ? {...circle, ...updates}
+                : circle,
+            );
+          }
         }
         state.error = null;
       })

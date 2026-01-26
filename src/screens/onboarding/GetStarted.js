@@ -68,7 +68,7 @@ const GetStartedScreen = ({navigation}) => {
           <Text
             variant="link"
             color="primary"
-            onPress={() => navigation.navigate("Login")}
+            onPress={() => navigation.replace("Login")}
             style={styles.textStyle}>
             Login
           </Text>

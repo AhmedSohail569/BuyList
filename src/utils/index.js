@@ -42,3 +42,16 @@ export const getErrorMessage = (error, firstOnly = true) => {
 
   return error.message || "Something went wrong";
 };
+
+/**
+ * Clear Redux persisted state from AsyncStorage
+ * Use this if you encounter state structure errors
+ */
+export const clearPersistedState = async () => {
+  try {
+    await AsyncStorage.removeItem("persist:root");
+    console.log("✅ Persisted state cleared");
+  } catch (error) {
+    console.log("❌ Error clearing persisted state:", error);
+  }
+};

@@ -1,10 +1,10 @@
-import React, {useState, useEffect} from "react";
+import React, {useState, useEffect, useCallback, useMemo} from "react";
 import {
   View,
   TouchableOpacity,
-  Image,
   StyleSheet,
-  Platform,
+  RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import {
   Plus,
@@ -15,84 +15,19 @@ import {
   Check,
   ListFilter,
 } from "lucide-react-native";
+import {useDispatch, useSelector} from "react-redux";
+import {useFocusEffect} from "@react-navigation/native";
+import Toast from "react-native-toast-message";
 import {Modal, ScrollView, Text} from "~components/Common";
 import Header from "~components/Header";
 import {RFValue} from "react-native-responsive-fontsize";
 import {FontFamily} from "~theme/fonts";
-
-// --- Mock Data ---
-const LISTS_DATA = [
-  {
-    id: 1,
-    title: "Weekly Groceries",
-    category: "Groceries",
-    updated: "Updated 2h ago",
-    totalItems: 24,
-    completedItems: 18,
-    color: "#0ea5e9", // Blue
-    isShared: true,
-    isCompleted: false,
-    members: [
-      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80",
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80",
-    ],
-  },
-  {
-    id: 2,
-    title: "Apartment Essentials",
-    category: "Home",
-    updated: "Updated 1d ago",
-    totalItems: 8,
-    completedItems: 2,
-    color: "#0ea5e9", // Blue
-    isShared: true,
-    isCompleted: false,
-    showMenu: false,
-    members: [
-      "https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=100&q=80",
-      "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=100&q=80",
-    ],
-  },
-  {
-    id: 3,
-    title: "Personal To-Do",
-    category: "Personal",
-    updated: "Updated 3h ago",
-    totalItems: 5,
-    completedItems: 0,
-    color: "#22c55e", // Green
-    isShared: false,
-    isCompleted: false,
-    members: [],
-  },
-  {
-    id: 4,
-    title: "Weekend BBQ",
-    category: "Food",
-    updated: "Updated 5d ago",
-    totalItems: 15,
-    completedItems: 15,
-    color: "#ef4444", // Red
-    isShared: true,
-    isCompleted: true,
-    members: [
-      "https://images.unsplash.com/photo-1633332755192-727a05c4013d?auto=format&fit=crop&w=100&q=80",
-      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=100&q=80",
-    ],
-  },
-  {
-    id: 5,
-    title: "Gift Ideas",
-    category: "Gifts",
-    updated: "Updated 1w ago",
-    totalItems: 3,
-    completedItems: 1,
-    color: "#a855f7", // Purple
-    isShared: false,
-    isCompleted: false,
-    members: [],
-  },
-];
+import {
+  fetchAllLists,
+  deleteList,
+  createList,
+} from "~redux/actions/listActions";
+import {clearListsError} from "~redux/reducers/listReducer";
 
 // --- Sub Components ---
 
@@ -130,29 +65,126 @@ const ProgressBar = ({completed, total, color}) => {
   );
 };
 
-const AvatarStack = ({images}) => {
-  if (!images || images.length === 0) return null;
-  return (
-    <View style={styles.avatarStack}>
-      {images.map((uri, index) => (
-        <Image
-          key={index}
-          source={{uri}}
-          style={[styles.avatar, {marginLeft: index === 0 ? 0 : -10}]}
+// Memoized List Card Component
+const ListCard = React.memo(
+  ({item, onPress, onDelete, isDeleting}) => {
+    const totalItems = item.items?.length || 0;
+    const completedItems =
+      item.items?.filter(i => i.isPurchased)?.length || 0;
+    const isCompleted = totalItems > 0 && completedItems === totalItems;
+    const progressColor = isCompleted ? "#22c55e" : "#0ea5e9";
+
+    return (
+      <TouchableOpacity
+        key={item.id || item._id}
+        style={styles.card}
+        onPress={onPress}
+        disabled={isDeleting}>
+        <View
+          style={[
+            styles.cardBorderStrip,
+            {backgroundColor: progressColor},
+          ]}
         />
-      ))}
-    </View>
-  );
+
+        <View style={styles.cardContent}>
+          <View style={styles.cardHeader}>
+            <View style={styles.titleRow}>
+              <Text style={styles.cardTitle}>{item.name}</Text>
+              {item.shareWithCircle && (
+                <View style={styles.sharedBadge}>
+                  <Users
+                    size={10}
+                    color="#0ea5e9"
+                    style={{marginRight: 2}}
+                  />
+                  <Text style={styles.sharedText}>Shared</Text>
+                </View>
+              )}
+            </View>
+            <TouchableOpacity
+              onPress={e => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              disabled={isDeleting}>
+              <MoreHorizontal size={20} color="#9ca3af" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.subtitle}>
+            {item.category} • {formatDate(item.createdAt)}
+          </Text>
+
+          <View style={styles.progressSection}>
+            <ProgressBar
+              completed={completedItems}
+              total={totalItems}
+              color={progressColor}
+            />
+          </View>
+
+          <View style={styles.cardFooter}>
+            {isCompleted && (
+              <View style={styles.completedBadge}>
+                <Check
+                  size={12}
+                  color="#16a34a"
+                  style={{marginRight: 4}}
+                />
+                <Text style={styles.completedText}>Completed</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  },
+  (prevProps, nextProps) => {
+    return (
+      prevProps.item.id === nextProps.item.id &&
+      prevProps.item.items?.length === nextProps.item.items?.length &&
+      prevProps.isDeleting === nextProps.isDeleting
+    );
+  },
+);
+
+// Helper to format date
+const formatDate = date => {
+  if (!date) return "Recently";
+  const now = new Date();
+  const listDate = new Date(date);
+  const diffMs = now - listDate;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return `${Math.floor(diffDays / 7)}w ago`;
 };
 
 const ListsTab = ({onQuickAction, navigation, route}) => {
+  const dispatch = useDispatch();
+  const {lists, loading, error} = useSelector(state => state.lists);
+
   const [activeTab, setActiveTab] = useState("All Lists");
-  // Optional: Toggle menu state for demo purposes (e.g. card id 2)
-  const [activeMenuId, setActiveMenuId] = useState(2);
-
   const [isCreateListVisible, setCreateListVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [deletingListId, setDeletingListId] = useState(null);
 
-  // Handle navigation params to switch tabs automatically
+  // Fetch lists on mount and when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      if (lists.length === 0 && !loading) {
+        dispatch(fetchAllLists());
+      }
+    }, [dispatch, lists.length, loading]),
+  );
+
+  // Handle navigation params to switch tabs
   useEffect(() => {
     if (route?.params?.filter) {
       const filterParam = route.params.filter.toLowerCase();
@@ -166,22 +198,108 @@ const ListsTab = ({onQuickAction, navigation, route}) => {
     }
   }, [route?.params]);
 
-  // Filter Logic
-  const filteredData = LISTS_DATA.filter(item => {
-    if (activeTab === "Personal Lists") {
-      return !item.isShared;
+  // Handle API errors
+  useEffect(() => {
+    if (error) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: typeof error === "string" ? error : "Something went wrong",
+      });
+      dispatch(clearListsError());
     }
-    if (activeTab === "Shared Lists") {
-      return item.isShared;
-    }
-    return true; // "All Lists"
-  });
+  }, [error, dispatch]);
 
-  const handleCreateList = data => {
-    console.log("New List Created:", data);
-    // Add logic here to update state or call API
-    setCreateListVisible(false);
-  };
+  // Filter lists based on active tab
+  const filteredData = useMemo(() => {
+    return lists.filter(item => {
+      if (activeTab === "Personal Lists") {
+        return !item.shareWithCircle;
+      }
+      if (activeTab === "Shared Lists") {
+        return item.shareWithCircle;
+      }
+      return true;
+    });
+  }, [lists, activeTab]);
+
+  // Pull to refresh
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await dispatch(fetchAllLists()).unwrap();
+    } catch (err) {
+      // Error handled by useEffect
+    } finally {
+      setRefreshing(false);
+    }
+  }, [dispatch]);
+
+  // Delete list handler
+  const handleDeleteList = useCallback(
+    async listId => {
+      setDeletingListId(listId);
+      try {
+        await dispatch(deleteList({listId})).unwrap();
+        Toast.show({
+          type: "success",
+          text1: "List Deleted",
+          text2: "List has been deleted successfully",
+        });
+      } catch (err) {
+        // Error handled by useEffect, rollback happens automatically
+      } finally {
+        setDeletingListId(null);
+      }
+    },
+    [dispatch],
+  );
+
+  // Create list handler
+  const handleCreateList = useCallback(
+    async data => {
+      // Validate
+      if (!data.name?.trim()) {
+        Toast.show({
+          type: "error",
+          text1: "Validation Error",
+          text2: "List name is required",
+        });
+        return;
+      }
+
+      if (!data.items || data.items.length === 0) {
+        Toast.show({
+          type: "error",
+          text1: "Validation Error",
+          text2: "Please add at least one item",
+        });
+        return;
+      }
+
+      try {
+        await dispatch(createList(data)).unwrap();
+        Toast.show({
+          type: "success",
+          text1: "List Created",
+          text2: "Your list has been created successfully",
+        });
+        setCreateListVisible(false);
+        // Optimistic update already handled, no refetch needed
+      } catch (err) {
+        // Error handled by useEffect
+      }
+    },
+    [dispatch],
+  );
+
+  // Navigate to list details
+  const handleListPress = useCallback(
+    listId => {
+      navigation.navigate("ListDetails", {listId});
+    },
+    [navigation],
+  );
 
   return (
     <View style={styles.container}>
@@ -213,144 +331,79 @@ const ListsTab = ({onQuickAction, navigation, route}) => {
           </View>
         }
       />
-      {/* Custom Header Area */}
-      {/* <View style={styles.topBar}>
-        <Text style={styles.screenTitle}>Your Lists</Text>
-      </View> */}
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        {/* Smart Suggestions (Only visible on All Lists or based on logic) */}
-        <View style={styles.smartSuggestionContainer}>
-          <View style={styles.smartHeader}>
-            <Sparkles size={16} color="#0ea5e9" fill="#0ea5e9" />
-            <Text style={styles.smartTitle}>SMART SUGGESTIONS</Text>
-          </View>
-          <View style={styles.suggestionCard}>
-            <View style={styles.suggestionContent}>
-              <View style={styles.suggestionTitleRow}>
-                <Text style={styles.suggestionText}>Reorder Soon</Text>
-                <View style={styles.aiBadge}>
-                  <Text style={styles.aiText}>AI</Text>
-                </View>
-              </View>
-              <Text style={styles.suggestionSubText}>
-                Based on your purchase history
-              </Text>
+      {loading && lists.length === 0 ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#0ea5e9" />
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor="#0ea5e9"
+            />
+          }>
+          {/* Smart Suggestions */}
+          <View style={styles.smartSuggestionContainer}>
+            <View style={styles.smartHeader}>
+              <Sparkles size={16} color="#0ea5e9" fill="#0ea5e9" />
+              <Text style={styles.smartTitle}>SMART SUGGESTIONS</Text>
             </View>
-            <TouchableOpacity style={styles.suggestionAddBtn}>
-              <Plus size={20} color="#10b981" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Section Header */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{activeTab.toUpperCase()}</Text>
-          <TouchableOpacity style={styles.sortButton}>
-            <ListFilter size={14} color="#6b7280" style={{marginRight: 4}} />
-            <Text style={styles.sortText}>Sort</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Lists Cards */}
-        <View style={styles.cardsContainer}>
-          {filteredData.map(item => (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.card}
-              onPress={() => navigation.navigate("ListDetails")}>
-              {/* Colored Left Border */}
-              <View
-                style={[styles.cardBorderStrip, {backgroundColor: item.color}]}
-              />
-
-              <View style={styles.cardContent}>
-                {/* Header: Title + Shared Badge + More Icon */}
-                <View style={styles.cardHeader}>
-                  <View style={styles.titleRow}>
-                    <Text style={styles.cardTitle}>{item.title}</Text>
-                    {item.isShared && (
-                      <View style={styles.sharedBadge}>
-                        <Users
-                          size={10}
-                          color="#0ea5e9"
-                          style={{marginRight: 2}}
-                        />
-                        <Text style={styles.sharedText}>Shared</Text>
-                      </View>
-                    )}
+            <View style={styles.suggestionCard}>
+              <View style={styles.suggestionContent}>
+                <View style={styles.suggestionTitleRow}>
+                  <Text style={styles.suggestionText}>Reorder Soon</Text>
+                  <View style={styles.aiBadge}>
+                    <Text style={styles.aiText}>AI</Text>
                   </View>
-                  <TouchableOpacity
-                    onPress={() =>
-                      setActiveMenuId(activeMenuId === item.id ? null : item.id)
-                    }>
-                    <MoreHorizontal size={20} color="#9ca3af" />
-                  </TouchableOpacity>
                 </View>
-
-                {/* Category & Time */}
-                <Text style={styles.subtitle}>
-                  {item.category} • {item.updated}
+                <Text style={styles.suggestionSubText}>
+                  Based on your purchase history
                 </Text>
-
-                {/* Progress Bar */}
-                <View style={styles.progressSection}>
-                  <ProgressBar
-                    completed={item.completedItems}
-                    total={item.totalItems}
-                    color={item.isCompleted ? "#22c55e" : "#0ea5e9"}
-                  />
-                </View>
-
-                {/* Footer: Avatars & Completed Badge */}
-                <View style={styles.cardFooter}>
-                  <AvatarStack images={item.members} />
-                  {item.isCompleted && (
-                    <View style={styles.completedBadge}>
-                      <Check
-                        size={12}
-                        color="#16a34a"
-                        style={{marginRight: 4}}
-                      />
-                      <Text style={styles.completedText}>Completed</Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Dropdown Menu (Toggle based on activeMenuId) */}
-                {/* {activeMenuId === item.id && (
-                  <View style={styles.mockMenu}>
-                    <TouchableOpacity style={styles.menuItemActive}>
-                      <Text style={styles.menuTextBlue}>Edit</Text>
-                    </TouchableOpacity>
-                    <View style={styles.divider} />
-                    <TouchableOpacity style={styles.menuItem}>
-                      <Text style={styles.menuText}>View</Text>
-                    </TouchableOpacity>
-                    <View style={styles.divider} />
-                    <TouchableOpacity style={styles.menuItem}>
-                      <Text style={styles.menuTextRed}>Delete</Text>
-                    </TouchableOpacity>
-                  </View>
-                )} */}
               </View>
-            </TouchableOpacity>
-          ))}
-
-          {filteredData.length === 0 && (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>
-                No lists found in this category.
-              </Text>
+              <TouchableOpacity style={styles.suggestionAddBtn}>
+                <Plus size={20} color="#10b981" />
+              </TouchableOpacity>
             </View>
-          )}
-        </View>
+          </View>
 
-        {/* Bottom Padding */}
-        <View style={{height: 80}} />
-      </ScrollView>
+          {/* Section Header */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{activeTab.toUpperCase()}</Text>
+            <TouchableOpacity style={styles.sortButton}>
+              <ListFilter size={14} color="#6b7280" style={{marginRight: 4}} />
+              <Text style={styles.sortText}>Sort</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Lists Cards */}
+          <View style={styles.cardsContainer}>
+            {filteredData.map(item => (
+              <ListCard
+                key={item.id || item._id}
+                item={item}
+                onPress={() => handleListPress(item.id || item._id)}
+                onDelete={() => handleDeleteList(item.id || item._id)}
+                isDeleting={deletingListId === (item.id || item._id)}
+              />
+            ))}
+
+            {filteredData.length === 0 && !loading && (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>
+                  No lists found in this category.
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <View style={{height: 80}} />
+        </ScrollView>
+      )}
 
       {/* Floating Action Button */}
       <TouchableOpacity
@@ -374,7 +427,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f9fafb",
   },
-
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   searchButton: {
     width: 44,
     height: 44,
@@ -392,8 +449,6 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 20,
   },
-
-  // Filters
   filtersRow: {
     flexDirection: "row",
     gap: 10,
@@ -419,8 +474,6 @@ const styles = StyleSheet.create({
   filterTextActive: {
     color: "#ffffff",
   },
-
-  // Smart Suggestions
   smartSuggestionContainer: {
     marginBottom: 24,
   },
@@ -439,7 +492,7 @@ const styles = StyleSheet.create({
   suggestionCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ecfdf5", // Very light green
+    backgroundColor: "#ecfdf5",
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
@@ -460,7 +513,7 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
   aiBadge: {
-    backgroundColor: "#a7f3d0", // Greenish
+    backgroundColor: "#a7f3d0",
     paddingHorizontal: 6,
     borderRadius: 4,
   },
@@ -484,8 +537,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     elevation: 1,
   },
-
-  // Section Header
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -513,8 +564,6 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.medium,
     color: "#6b7280",
   },
-
-  // Cards
   cardsContainer: {
     gap: 16,
   },
@@ -574,8 +623,6 @@ const styles = StyleSheet.create({
     color: "#9ca3af",
     marginBottom: 16,
   },
-
-  // Progress
   progressSection: {
     marginBottom: 16,
   },
@@ -603,23 +650,10 @@ const styles = StyleSheet.create({
     height: "100%",
     borderRadius: 3,
   },
-
-  // Footer
   cardFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-  },
-  avatarStack: {
-    flexDirection: "row",
-    paddingLeft: 4,
-  },
-  avatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#fff",
   },
   completedBadge: {
     flexDirection: "row",
@@ -634,53 +668,6 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.bold,
     color: "#15803d",
   },
-
-  // Mock Menu
-  // mockMenu: {
-  //   position: "absolute",
-  //   top: 30,
-  //   right: 0,
-  //   width: 120,
-  //   backgroundColor: "#fff",
-  //   borderRadius: 12,
-  //   shadowColor: "#000",
-  //   shadowOffset: {width: 0, height: 4},
-  //   shadowOpacity: 0.15,
-  //   shadowRadius: 12,
-  //   elevation: 5,
-  //   zIndex: 10,
-  //   paddingVertical: 4,
-  // },
-  // menuItem: {
-  //   paddingVertical: 8,
-  //   paddingHorizontal: 16,
-  // },
-  // menuItemActive: {
-  //   paddingVertical: 8,
-  //   paddingHorizontal: 16,
-  //   backgroundColor: "#f0f9ff",
-  // },
-  // menuText: {
-  //   fontSize: RFValue(10),
-  //   fontFamily: FontFamily.medium,
-  //   color: "#374151",
-  // },
-  // menuTextBlue: {
-  //   fontSize: RFValue(10),
-  //   fontFamily: FontFamily.medium,
-  //   color: "#0ea5e9",
-  // },
-  // menuTextRed: {
-  //   fontSize: RFValue(10),
-  //   fontFamily: FontFamily.medium,
-  //   color: "#ef4444",
-  // },
-  // divider: {
-  //   height: 1,
-  //   backgroundColor: "#f3f4f6",
-  // },
-
-  // Empty State
   emptyState: {
     paddingVertical: 20,
     alignItems: "center",
@@ -690,8 +677,6 @@ const styles = StyleSheet.create({
     fontSize: RFValue(12),
     fontFamily: FontFamily.regular,
   },
-
-  // FAB
   fab: {
     position: "absolute",
     bottom: 30,

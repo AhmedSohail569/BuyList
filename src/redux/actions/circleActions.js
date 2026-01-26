@@ -102,6 +102,9 @@ export const editCircleName = createAsyncThunk(
       const response = await axios.put(`/circles/edit-circle/${circleId}`, {
         name,
       });
+
+      console.log("response", response);
+      
       return {
         circleId,
         name,

@@ -155,7 +155,7 @@ const LoginScreen = ({navigation}) => {
             <Text
               variant="link"
               color="primary"
-              onPress={() => navigation.navigate("Signup")}
+              onPress={() => navigation.replace("GetStarted")}
               style={[
                 styles.textStyle,
                 {

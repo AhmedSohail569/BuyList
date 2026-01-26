@@ -13,7 +13,6 @@ import SharedListsScreen from "~screens/settings/SharedLists";
 import LegalScreen from "~screens/settings/Legal";
 import ListDetailsScreen from "~screens/lists/ListDetails";
 import ManageConnectionsScreen from "~screens/circle/ManageConnections";
-import EditSubscriptionScreen from "~screens/settings/EditSubscription";
 import PriceCheckScreen from "~screens/home/PriceCheckScreen";
 import AIRecommendationsScreen from "~screens/home/AIRecommendations";
 
@@ -45,11 +44,6 @@ export default () => {
           options={{headerShown: false}}
         />
 
-        <Stack.Screen
-          name="EditSubscription"
-          component={EditSubscriptionScreen}
-          options={{headerShown: false}}
-        />
         <Stack.Screen
           name="EditProfile"
           component={EditProfileScreen}

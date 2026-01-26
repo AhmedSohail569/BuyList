@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from "react";
+import {useState, useEffect} from "react";
 import {
   StyleSheet,
   Dimensions,
@@ -33,8 +33,10 @@ export const BottomModal = ({
   const [listName, setListName] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Groceries");
   const [newItem, setNewItem] = useState("");
-  const [priority, setPriority] = useState("High");
+  const [items, setItems] = useState([]);
+  const [priority, setPriority] = useState("medium");
   const [isShared, setIsShared] = useState(true);
+  const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
 
   // --- CONSTANTS ---
   const sortOptions = [
@@ -53,6 +55,12 @@ export const BottomModal = ({
     "Other",
   ];
 
+  const priorityOptions = [
+    {label: "Low", value: "low"},
+    {label: "Medium", value: "medium"},
+    {label: "High", value: "high"},
+  ];
+
   // --- HANDLERS ---
   const handleResetFilter = () => {
     setSelectedSort("Relevance");
@@ -60,14 +68,50 @@ export const BottomModal = ({
     setMaxPrice("100+");
   };
 
-  const handleCreateList = () => {
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!isVisible && type === "createList") {
+      setListName("");
+      setSelectedCategory("Groceries");
+      setNewItem("");
+      setItems([]);
+      setPriority("medium");
+      setIsShared(true);
+      setShowPriorityDropdown(false);
+    }
+  }, [isVisible, type]);
+
+  const handleAddItem = () => {
+    const trimmedItem = newItem.trim();
+    if (trimmedItem && !items.includes(trimmedItem)) {
+      setItems([...items, trimmedItem]);
+      setNewItem("");
+    }
+  };
+
+  const handleRemoveItem = itemToRemove => {
+    setItems(items.filter(item => item !== itemToRemove));
+  };
+
+  const handleCreateList = async () => {
+    // Validate required fields
+    if (!listName.trim()) {
+      return;
+    }
+
+    if (items.length === 0) {
+      return;
+    }
+
+    // Call onApply and let parent handle closing on success
     onApply({
-      name: listName,
+      name: listName.trim(),
       category: selectedCategory,
-      priority,
-      isShared,
+      items: items,
+      priority: priority,
+      shareWithCircle: isShared,
     });
-    onClose();
+    // Don't close here - let parent handle it after successful dispatch
   };
 
   // --- RENDER CONTENT ---
@@ -199,18 +243,87 @@ export const BottomModal = ({
             placeholderTextColor="#9ca3af"
             value={newItem}
             onChangeText={setNewItem}
+            onSubmitEditing={handleAddItem}
+            returnKeyType="done"
           />
-          <TouchableOpacity style={styles.plusIconBadge}>
-            <Plus size={16} color="#ffffff" />
+          <TouchableOpacity
+            style={[
+              styles.plusIconBadge,
+              newItem.trim() && styles.plusIconBadgeActive,
+            ]}
+            onPress={handleAddItem}
+            disabled={!newItem.trim()}>
+            <Plus size={16} color={newItem.trim() ? "#ffffff" : "#9ca3af"} />
           </TouchableOpacity>
         </View>
 
+        {/* Display Added Items */}
+        {items.length > 0 && (
+          <View style={styles.itemsContainer}>
+            {items.map((item, index) => (
+              <View key={index} style={styles.itemChip}>
+                <Text style={styles.itemChipText}>{item}</Text>
+                <TouchableOpacity
+                  onPress={() => handleRemoveItem(item)}
+                  hitSlop={8}>
+                  <X size={14} color="#6b7280" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
+
         {/* Set Priority */}
         <Text style={styles.inputLabel}>SET PRIORITY</Text>
-        <TouchableOpacity style={styles.dropdownInput}>
-          <Text style={styles.inputText}>{priority}</Text>
-          <ChevronDown size={20} color="#9ca3af" />
-        </TouchableOpacity>
+        <View style={styles.dropdownContainer}>
+          <TouchableOpacity
+            style={styles.dropdownInput}
+            onPress={() => setShowPriorityDropdown(!showPriorityDropdown)}>
+            <Text style={styles.inputText}>
+              {priorityOptions.find(opt => opt.value === priority)?.label ||
+                "Medium"}
+            </Text>
+            <ChevronDown
+              size={20}
+              color="#9ca3af"
+              style={{
+                transform: [{rotate: showPriorityDropdown ? "180deg" : "0deg"}],
+              }}
+            />
+          </TouchableOpacity>
+
+          {showPriorityDropdown && (
+            <>
+              <TouchableWithoutFeedback
+                onPress={() => setShowPriorityDropdown(false)}>
+                <View style={styles.dropdownBackdrop} />
+              </TouchableWithoutFeedback>
+              <View style={styles.dropdownMenu}>
+                {priorityOptions.map(option => (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.dropdownOption,
+                      priority === option.value && styles.dropdownOptionActive,
+                    ]}
+                    onPress={() => {
+                      setPriority(option.value);
+                      setShowPriorityDropdown(false);
+                    }}>
+                    <Text
+                      style={[
+                        styles.dropdownOptionText,
+                        priority === option.value &&
+                          styles.dropdownOptionTextActive,
+                      ]}>
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
+        </View>
 
         {/* Share Toggle */}
         <View style={styles.divider} />
@@ -413,6 +526,77 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
+  },
+  plusIconBadgeActive: {
+    backgroundColor: "#0ea5e9", // Blue when active
+  },
+  itemsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 20,
+  },
+  itemChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#eff6ff",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 6,
+  },
+  itemChipText: {
+    fontSize: RFValue(11),
+    fontFamily: FontFamily.medium,
+    color: "#0ea5e9",
+  },
+  dropdownContainer: {
+    marginBottom: 20,
+    position: "relative",
+    zIndex: 1,
+  },
+  dropdownBackdrop: {
+    position: "absolute",
+    top: -200,
+    left: -20,
+    right: -20,
+    bottom: 0,
+    zIndex: 999,
+  },
+  dropdownMenu: {
+    position: "absolute",
+    bottom: 52, // Position above the input field (input height 50 + 2px margin)
+    left: 0,
+    right: 0,
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    shadowColor: "#000",
+    shadowOffset: {width: 0, height: -4}, // Shadow above
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    zIndex: 1000,
+    marginBottom: 4,
+  },
+  dropdownOption: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f3f4f6",
+  },
+  dropdownOptionActive: {
+    backgroundColor: "#eff6ff",
+  },
+  dropdownOptionText: {
+    fontSize: RFValue(12),
+    fontFamily: FontFamily.regular,
+    color: "#6b7280",
+  },
+  dropdownOptionTextActive: {
+    color: "#0ea5e9",
+    fontFamily: FontFamily.medium,
   },
   categoryChip: {
     flexGrow: 1,
