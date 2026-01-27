@@ -2,9 +2,9 @@
  * Lists Management Async Thunks
  * Handles all list-related API operations with optimistic updates
  */
-import {createAsyncThunk} from "@reduxjs/toolkit";
+import { createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "~utils/axiosInstance";
-import {getErrorMessage} from "~utils";
+import { getErrorMessage } from "~utils";
 
 // ============================================
 // 1️⃣ CREATE LIST
@@ -12,7 +12,7 @@ import {getErrorMessage} from "~utils";
 // ============================================
 export const createList = createAsyncThunk(
   "lists/createList",
-  async (listData, {rejectWithValue}) => {
+  async (listData, { rejectWithValue }) => {
     try {
       const response = await axios.post("/lists/create-list", listData);
       return response.data?.data || response.data;
@@ -29,7 +29,7 @@ export const createList = createAsyncThunk(
 // ============================================
 export const fetchAllLists = createAsyncThunk(
   "lists/fetchAllLists",
-  async (_, {rejectWithValue}) => {
+  async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get("/lists/get-all-list");
       return response.data?.data || response.data;
@@ -46,7 +46,7 @@ export const fetchAllLists = createAsyncThunk(
 // ============================================
 export const fetchListById = createAsyncThunk(
   "lists/fetchListById",
-  async ({listId}, {rejectWithValue}) => {
+  async ({ listId }, { rejectWithValue }) => {
     try {
       const response = await axios.get(`/lists/get-by-id/${listId}`);
       return {
@@ -66,20 +66,25 @@ export const fetchListById = createAsyncThunk(
 // ============================================
 export const addItemsToList = createAsyncThunk(
   "lists/addItemsToList",
-  async ({listId, items}, {rejectWithValue, getState}) => {
+  async ({ listId, items }, { rejectWithValue, getState }) => {
     // Store previous list state for rollback
     const state = getState().lists;
     const previousList = state.listById[listId] || null;
     const previousLists = [...state.lists];
 
+
+    console.log('items', items)
     try {
-      const response = await axios.post(`/lists/add-item/${listId}`, {items});
+      const response = await axios.post(`/lists/add-item/${listId}`, { items });
+      console.log('response', response)
       return {
         listId,
         items: response.data?.data?.items || response.data?.items || items,
         response: response.data?.data || response.data,
       };
+
     } catch (err) {
+      console.log('err', err)
       const message = getErrorMessage(err);
       // Return previous state for rollback
       return rejectWithValue({
@@ -98,22 +103,26 @@ export const addItemsToList = createAsyncThunk(
 // ============================================
 export const markItemAsPurchased = createAsyncThunk(
   "lists/markItemAsPurchased",
-  async ({listId, itemId}, {rejectWithValue, getState}) => {
+  async ({ listId, itemId }, { rejectWithValue, getState }) => {
     // Store previous list state for rollback
     const state = getState().lists;
     const previousList = state.listById[listId] || null;
     const previousLists = [...state.lists];
 
+    console.log('itemId', itemId)
+
     try {
-      const response = await axios.patch(
+      const response = await axios.put(
         `/lists/purchase-item/${listId}/items/${itemId}`,
       );
+      console.log('response', response)
       return {
         listId,
         itemId,
         response: response.data?.data || response.data,
       };
     } catch (err) {
+      console.log('err', err)
       const message = getErrorMessage(err);
       // Return previous state for rollback
       return rejectWithValue({
@@ -133,19 +142,21 @@ export const markItemAsPurchased = createAsyncThunk(
 // ============================================
 export const deleteItemFromList = createAsyncThunk(
   "lists/deleteItemFromList",
-  async ({listId, itemId}, {rejectWithValue, getState}) => {
+  async ({ listId, itemId }, { rejectWithValue, getState }) => {
     // Store previous list state for rollback
     const state = getState().lists;
     const previousList = state.listById[listId] || null;
     const previousLists = [...state.lists];
-
+    console.log('itemId', itemId)
     try {
-      await axios.delete(`/lists/delete-item/${listId}/items/${itemId}`);
+      const response = await axios.delete(`/lists/delete-item/${listId}/items/${itemId}`);
+      console.log('response', response)
       return {
         listId,
         itemId,
       };
     } catch (err) {
+      console.log('err', err)
       const message = getErrorMessage(err);
       // Return previous state for rollback
       return rejectWithValue({
@@ -165,10 +176,10 @@ export const deleteItemFromList = createAsyncThunk(
 // ============================================
 export const deleteList = createAsyncThunk(
   "lists/deleteList",
-  async ({listId}, {rejectWithValue, getState}) => {
+  async ({ listId }, { rejectWithValue, getState }) => {
     // Store previous lists for rollback
     const previousLists = [...getState().lists.lists];
-    const previousListById = {...getState().lists.listById};
+    const previousListById = { ...getState().lists.listById };
 
     try {
       await axios.delete(`/lists/delete-list/${listId}`);
@@ -194,7 +205,7 @@ export const deleteList = createAsyncThunk(
 // ============================================
 export const fetchRecentActivities = createAsyncThunk(
   "lists/fetchRecentActivities",
-  async (_, {rejectWithValue}) => {
+  async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get("/activities/recent");
       return response.data?.data || response.data;

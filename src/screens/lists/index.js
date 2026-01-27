@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback, useMemo} from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   View,
   TouchableOpacity,
@@ -15,23 +15,25 @@ import {
   Check,
   ListFilter,
 } from "lucide-react-native";
-import {useDispatch, useSelector} from "react-redux";
-import {useFocusEffect} from "@react-navigation/native";
+import { useDispatch, useSelector } from "react-redux";
+import { useFocusEffect } from "@react-navigation/native";
 import Toast from "react-native-toast-message";
-import {Modal, ScrollView, Text} from "~components/Common";
+import { Menu } from "react-native-paper";
+import { Modal, ScrollView, Text } from "~components/Common";
 import Header from "~components/Header";
-import {RFValue} from "react-native-responsive-fontsize";
-import {FontFamily} from "~theme/fonts";
+import { RFValue } from "react-native-responsive-fontsize";
+import { FontFamily } from "~theme/fonts";
 import {
   fetchAllLists,
   deleteList,
   createList,
 } from "~redux/actions/listActions";
-import {clearListsError} from "~redux/reducers/listReducer";
+import { clearListsError } from "~redux/reducers/listReducer";
+import { useAlert } from "~context/AlertContext";
 
 // --- Sub Components ---
 
-const FilterTab = ({label, isActive, onPress}) => (
+const FilterTab = ({ label, isActive, onPress }) => (
   <TouchableOpacity
     onPress={onPress}
     style={[styles.filterTab, isActive && styles.filterTabActive]}>
@@ -41,23 +43,22 @@ const FilterTab = ({label, isActive, onPress}) => (
   </TouchableOpacity>
 );
 
-const ProgressBar = ({completed, total, color}) => {
-  const percentage = total === 0 ? 0 : (completed / total) * 100;
+const ProgressBar = ({ completed, total, color, label, percentage }) => {
   return (
     <View style={styles.progressContainer}>
       <View style={styles.progressTextRow}>
         <Text style={styles.progressStats}>
-          {completed}/{total} items
+          {label} items
         </Text>
-        <Text style={[styles.progressPercentage, {color: color}]}>
-          {Math.round(percentage)}%
+        <Text style={[styles.progressPercentage, { color: color }]}>
+          {percentage}%
         </Text>
       </View>
       <View style={styles.track}>
         <View
           style={[
             styles.fill,
-            {width: `${percentage}%`, backgroundColor: color},
+            { width: `${percentage}%`, backgroundColor: color },
           ]}
         />
       </View>
@@ -67,12 +68,20 @@ const ProgressBar = ({completed, total, color}) => {
 
 // Memoized List Card Component
 const ListCard = React.memo(
-  ({item, onPress, onDelete, isDeleting}) => {
-    const totalItems = item.items?.length || 0;
+  ({
+    item,
+    onPress,
+    isDeleting,
+    menuVisible,
+    onOpenMenu,
+    onCloseMenu,
+    onRequestDelete,
+  }) => {
+    const totalItems = item.progress?.total || 0;
     const completedItems =
-      item.items?.filter(i => i.isPurchased)?.length || 0;
+      item.progress?.purchased || 0;
     const isCompleted = totalItems > 0 && completedItems === totalItems;
-    const progressColor = isCompleted ? "#22c55e" : "#0ea5e9";
+    const progressColor = item.type === "personal" ? "#16A34A" : isCompleted ? "#22c55e" : "#0ea5e9";
 
     return (
       <TouchableOpacity
@@ -83,7 +92,7 @@ const ListCard = React.memo(
         <View
           style={[
             styles.cardBorderStrip,
-            {backgroundColor: progressColor},
+            { backgroundColor: progressColor },
           ]}
         />
 
@@ -96,20 +105,30 @@ const ListCard = React.memo(
                   <Users
                     size={10}
                     color="#0ea5e9"
-                    style={{marginRight: 2}}
+                    style={{ marginRight: 2 }}
                   />
                   <Text style={styles.sharedText}>Shared</Text>
                 </View>
               )}
             </View>
-            <TouchableOpacity
-              onPress={e => {
-                e.stopPropagation();
-                onDelete();
-              }}
-              disabled={isDeleting}>
-              <MoreHorizontal size={20} color="#9ca3af" />
-            </TouchableOpacity>
+            <Menu
+              visible={menuVisible}
+              onDismiss={onCloseMenu}
+              anchor={
+                <TouchableOpacity onPress={onOpenMenu} disabled={isDeleting}>
+                  <MoreHorizontal size={20} color="#9ca3af" />
+                </TouchableOpacity>
+              }
+              contentStyle={styles.menuContent}>
+              <Menu.Item
+                title="Delete"
+                titleStyle={styles.menuItemDelete}
+                onPress={() => {
+                  onCloseMenu();
+                  onRequestDelete();
+                }}
+              />
+            </Menu>
           </View>
 
           <Text style={styles.subtitle}>
@@ -121,6 +140,8 @@ const ListCard = React.memo(
               completed={completedItems}
               total={totalItems}
               color={progressColor}
+              percentage={item.progress?.percentage}
+              label={item.progress?.label}
             />
           </View>
 
@@ -130,7 +151,7 @@ const ListCard = React.memo(
                 <Check
                   size={12}
                   color="#16a34a"
-                  style={{marginRight: 4}}
+                  style={{ marginRight: 4 }}
                 />
                 <Text style={styles.completedText}>Completed</Text>
               </View>
@@ -141,10 +162,15 @@ const ListCard = React.memo(
     );
   },
   (prevProps, nextProps) => {
+    // Compare all relevant fields that affect rendering
     return (
       prevProps.item.id === nextProps.item.id &&
       prevProps.item.items?.length === nextProps.item.items?.length &&
-      prevProps.isDeleting === nextProps.isDeleting
+      prevProps.item.progress?.purchased === nextProps.item.progress?.purchased &&
+      prevProps.item.progress?.total === nextProps.item.progress?.total &&
+      prevProps.item.progress?.percentage === nextProps.item.progress?.percentage &&
+      prevProps.isDeleting === nextProps.isDeleting &&
+      prevProps.menuVisible === nextProps.menuVisible
     );
   },
 );
@@ -166,22 +192,33 @@ const formatDate = date => {
   return `${Math.floor(diffDays / 7)}w ago`;
 };
 
-const ListsTab = ({onQuickAction, navigation, route}) => {
+const ListsTab = ({ onQuickAction, navigation, route }) => {
   const dispatch = useDispatch();
-  const {lists, loading, error} = useSelector(state => state.lists);
+  const { lists, loading, error } = useSelector(state => state.lists);
+  const { showAlert, showError } = useAlert();
 
   const [activeTab, setActiveTab] = useState("All Lists");
   const [isCreateListVisible, setCreateListVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [deletingListId, setDeletingListId] = useState(null);
+  const [activeMenuListId, setActiveMenuListId] = useState(null);
+  const [isCreatingList, setIsCreatingList] = useState(false);
+  const [sortOption, setSortOption] = useState("createdOn");
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const isDismissingRef = useRef(false);
 
-  // Fetch lists on mount and when screen is focused
+  console.log("lists", lists);
+
+  // Fetch lists on mount and refresh when screen is focused to get latest data
   useFocusEffect(
     useCallback(() => {
-      if (lists.length === 0 && !loading) {
+      // Refresh when screen is focused to ensure we have latest data
+      // This ensures progress updates from ListDetails screen are reflected
+      // Only fetch if not already loading to avoid unnecessary calls
+      if (!loading) {
         dispatch(fetchAllLists());
       }
-    }, [dispatch, lists.length, loading]),
+    }, [dispatch, loading]),
   );
 
   // Handle navigation params to switch tabs
@@ -210,9 +247,59 @@ const ListsTab = ({onQuickAction, navigation, route}) => {
     }
   }, [error, dispatch]);
 
-  // Filter lists based on active tab
+  // Sort lists based on selected sort option
+  const sortLists = useCallback((listsToSort) => {
+    const sorted = [...listsToSort];
+
+    switch (sortOption) {
+      case "createdOn":
+        // Sort by created date (oldest first)
+        return sorted.sort((a, b) => {
+          const dateA = new Date(a.createdAt || 0);
+          const dateB = new Date(b.createdAt || 0);
+          return dateA - dateB;
+        });
+
+      case "recentlyUpdated":
+        // Sort by updated date (most recent first)
+        return sorted.sort((a, b) => {
+          const dateA = new Date(a.updatedAt || a.createdAt || 0);
+          const dateB = new Date(b.updatedAt || b.createdAt || 0);
+          return dateB - dateA;
+        });
+
+      case "alphabetical":
+        // Sort alphabetically A-Z
+        return sorted.sort((a, b) => {
+          const nameA = (a.name || "").toLowerCase();
+          const nameB = (b.name || "").toLowerCase();
+          return nameA.localeCompare(nameB);
+        });
+
+      case "mostItems":
+        // Sort by total items (most first)
+        return sorted.sort((a, b) => {
+          const totalA = a.progress?.total || a.items?.length || 0;
+          const totalB = b.progress?.total || b.items?.length || 0;
+          return totalB - totalA;
+        });
+
+      case "leastItems":
+        // Sort by total items (least first)
+        return sorted.sort((a, b) => {
+          const totalA = a.progress?.total || a.items?.length || 0;
+          const totalB = b.progress?.total || b.items?.length || 0;
+          return totalA - totalB;
+        });
+
+      default:
+        return sorted;
+    }
+  }, [sortOption]);
+
+  // Filter and sort lists based on active tab and sort option
   const filteredData = useMemo(() => {
-    return lists.filter(item => {
+    const filtered = lists.filter(item => {
       if (activeTab === "Personal Lists") {
         return !item.shareWithCircle;
       }
@@ -221,7 +308,9 @@ const ListsTab = ({onQuickAction, navigation, route}) => {
       }
       return true;
     });
-  }, [lists, activeTab]);
+
+    return sortLists(filtered);
+  }, [lists, activeTab, sortLists]);
 
   // Pull to refresh
   const handleRefresh = useCallback(async () => {
@@ -240,7 +329,7 @@ const ListsTab = ({onQuickAction, navigation, route}) => {
     async listId => {
       setDeletingListId(listId);
       try {
-        await dispatch(deleteList({listId})).unwrap();
+        await dispatch(deleteList({ listId })).unwrap();
         Toast.show({
           type: "success",
           text1: "List Deleted",
@@ -255,9 +344,35 @@ const ListsTab = ({onQuickAction, navigation, route}) => {
     [dispatch],
   );
 
+  const confirmDeleteList = useCallback(
+    (listId, listName) => {
+      showAlert({
+        title: "Delete List",
+        message: `Are you sure you want to delete "${listName || "this list"}"?`,
+        type: "confirm",
+        buttons: [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await handleDeleteList(listId);
+              } catch (e) {
+                showError("Error", "Failed to delete list. Please try again.");
+              }
+            },
+          },
+        ],
+      });
+    },
+    [showAlert, showError, handleDeleteList],
+  );
+
   // Create list handler
   const handleCreateList = useCallback(
     async data => {
+      if (isCreatingList) return;
       // Validate
       if (!data.name?.trim()) {
         Toast.show({
@@ -277,6 +392,7 @@ const ListsTab = ({onQuickAction, navigation, route}) => {
         return;
       }
 
+      setIsCreatingList(true);
       try {
         await dispatch(createList(data)).unwrap();
         Toast.show({
@@ -288,18 +404,36 @@ const ListsTab = ({onQuickAction, navigation, route}) => {
         // Optimistic update already handled, no refetch needed
       } catch (err) {
         // Error handled by useEffect
+      } finally {
+        setIsCreatingList(false);
       }
     },
-    [dispatch],
+    [dispatch, isCreatingList],
   );
 
   // Navigate to list details
   const handleListPress = useCallback(
     listId => {
-      navigation.navigate("ListDetails", {listId});
+      navigation.navigate("ListDetails", { listId });
     },
     [navigation],
   );
+
+  // Handle sort menu toggle with proper state management
+  const handleSortMenuToggle = useCallback(() => {
+    // Prevent action if currently dismissing
+    if (isDismissingRef.current) {
+      return;
+    }
+
+    // Close any other open menus first to avoid conflicts
+    if (activeMenuListId !== null) {
+      setActiveMenuListId(null);
+    }
+
+    // Toggle menu state
+    setShowSortMenu(prev => !prev);
+  }, [activeMenuListId]);
 
   return (
     <View style={styles.container}>
@@ -374,10 +508,101 @@ const ListsTab = ({onQuickAction, navigation, route}) => {
           {/* Section Header */}
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{activeTab.toUpperCase()}</Text>
-            <TouchableOpacity style={styles.sortButton}>
-              <ListFilter size={14} color="#6b7280" style={{marginRight: 4}} />
-              <Text style={styles.sortText}>Sort</Text>
-            </TouchableOpacity>
+            <Menu
+              visible={showSortMenu}
+              onDismiss={() => {
+                isDismissingRef.current = true;
+                setShowSortMenu(false);
+                // Reset flag after a short delay to allow state to settle
+                setTimeout(() => {
+                  isDismissingRef.current = false;
+                }, 100);
+              }}
+              anchor={
+                <TouchableOpacity
+                  style={styles.sortButton}
+                  onPress={handleSortMenuToggle}>
+                  <ListFilter size={14} color="#6b7280" style={{ marginRight: 4 }} />
+                  <Text style={styles.sortText}>Sort</Text>
+                </TouchableOpacity>
+              }
+              contentStyle={styles.sortMenuContent}>
+              <Menu.Item
+                onPress={() => {
+                  isDismissingRef.current = true;
+                  setSortOption("createdOn");
+                  setShowSortMenu(false);
+                  setTimeout(() => {
+                    isDismissingRef.current = false;
+                  }, 100);
+                }}
+                title="Created On"
+                titleStyle={[
+                  styles.sortMenuItem,
+                  sortOption === "createdOn" && styles.sortMenuItemActive,
+                ]}
+              />
+              <Menu.Item
+                onPress={() => {
+                  isDismissingRef.current = true;
+                  setSortOption("recentlyUpdated");
+                  setShowSortMenu(false);
+                  setTimeout(() => {
+                    isDismissingRef.current = false;
+                  }, 100);
+                }}
+                title="Recently Updated"
+                titleStyle={[
+                  styles.sortMenuItem,
+                  sortOption === "recentlyUpdated" && styles.sortMenuItemActive,
+                ]}
+              />
+              <Menu.Item
+                onPress={() => {
+                  isDismissingRef.current = true;
+                  setSortOption("alphabetical");
+                  setShowSortMenu(false);
+                  setTimeout(() => {
+                    isDismissingRef.current = false;
+                  }, 100);
+                }}
+                title="Alphabetical A-Z"
+                titleStyle={[
+                  styles.sortMenuItem,
+                  sortOption === "alphabetical" && styles.sortMenuItemActive,
+                ]}
+              />
+              <Menu.Item
+                onPress={() => {
+                  isDismissingRef.current = true;
+                  setSortOption("mostItems");
+                  setShowSortMenu(false);
+                  setTimeout(() => {
+                    isDismissingRef.current = false;
+                  }, 100);
+                }}
+                title="Most Items"
+                titleStyle={[
+                  styles.sortMenuItem,
+                  sortOption === "mostItems" && styles.sortMenuItemActive,
+                ]}
+              />
+              <Menu.Item
+                onPress={() => {
+                  isDismissingRef.current = true;
+                  setSortOption("leastItems");
+                  setShowSortMenu(false);
+                  setTimeout(() => {
+                    isDismissingRef.current = false;
+                  }, 100);
+                }}
+                title="Least Items"
+                titleStyle={[
+                  styles.sortMenuItem,
+                  sortOption === "leastItems" && styles.sortMenuItemActive,
+                ]}
+              />
+            </Menu>
           </View>
 
           {/* Lists Cards */}
@@ -387,8 +612,13 @@ const ListsTab = ({onQuickAction, navigation, route}) => {
                 key={item.id || item._id}
                 item={item}
                 onPress={() => handleListPress(item.id || item._id)}
-                onDelete={() => handleDeleteList(item.id || item._id)}
                 isDeleting={deletingListId === (item.id || item._id)}
+                menuVisible={activeMenuListId === (item.id || item._id)}
+                onOpenMenu={() => setActiveMenuListId(item.id || item._id)}
+                onCloseMenu={() => setActiveMenuListId(null)}
+                onRequestDelete={() =>
+                  confirmDeleteList(item.id || item._id, item.name)
+                }
               />
             ))}
 
@@ -401,7 +631,7 @@ const ListsTab = ({onQuickAction, navigation, route}) => {
             )}
           </View>
 
-          <View style={{height: 80}} />
+          <View style={{ height: 80 }} />
         </ScrollView>
       )}
 
@@ -417,6 +647,7 @@ const ListsTab = ({onQuickAction, navigation, route}) => {
         onClose={() => setCreateListVisible(false)}
         onApply={handleCreateList}
         type="createList"
+        loading={isCreatingList}
       />
     </View>
   );
@@ -440,7 +671,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
@@ -564,6 +795,21 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.medium,
     color: "#6b7280",
   },
+  sortMenuContent: {
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    paddingVertical: 4,
+    minWidth: 180,
+  },
+  sortMenuItem: {
+    fontSize: RFValue(12),
+    fontFamily: FontFamily.medium,
+    color: "#111827",
+  },
+  sortMenuItemActive: {
+    color: "#0ea5e9",
+    fontFamily: FontFamily.bold,
+  },
   cardsContainer: {
     gap: 16,
   },
@@ -573,7 +819,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
@@ -677,6 +923,17 @@ const styles = StyleSheet.create({
     fontSize: RFValue(12),
     fontFamily: FontFamily.regular,
   },
+  menuContent: {
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    paddingVertical: 4,
+    minWidth: 160,
+  },
+  menuItemDelete: {
+    fontSize: RFValue(12),
+    fontFamily: FontFamily.medium,
+    color: "#ef4444",
+  },
   fab: {
     position: "absolute",
     bottom: 30,
@@ -688,7 +945,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#0ea5e9",
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 10,
     elevation: 6,

@@ -1,39 +1,39 @@
-import {useState, useEffect, useCallback, useMemo} from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  TouchableWithoutFeedback,
   Platform,
   FlatList,
   ActivityIndicator,
 } from "react-native";
 import {
-  ArrowLeft,
   Share2,
   MoreVertical,
   Plus,
   Check,
   MoreHorizontal,
 } from "lucide-react-native";
-import {useDispatch, useSelector} from "react-redux";
-import {useFocusEffect} from "@react-navigation/native";
+import { Menu } from "react-native-paper";
+import { useDispatch, useSelector } from "react-redux";
+import { useFocusEffect } from "@react-navigation/native";
 import Toast from "react-native-toast-message";
-import {ScrollView, Text} from "~components/Common";
-import {RFValue} from "react-native-responsive-fontsize";
-import {FontFamily} from "~theme/fonts";
+import { ScrollView, Text } from "~components/Common";
+import Header from "~components/Header";
+import { RFValue } from "react-native-responsive-fontsize";
+import { FontFamily } from "~theme/fonts";
 import {
   fetchListById,
   addItemsToList,
   markItemAsPurchased,
   deleteItemFromList,
 } from "~redux/actions/listActions";
-import {clearListsError} from "~redux/reducers/listReducer";
+import { clearListsError } from "~redux/reducers/listReducer";
 
-const ListDetailsScreen = ({navigation, route}) => {
+const ListDetailsScreen = ({ navigation, route }) => {
   const dispatch = useDispatch();
-  const {listById, loading, error} = useSelector(state => state.lists);
+  const { listById, loading, error } = useSelector(state => state.lists);
 
   const listId = route?.params?.listId;
   const list = listId ? listById[listId] : null;
@@ -48,12 +48,12 @@ const ListDetailsScreen = ({navigation, route}) => {
   useFocusEffect(
     useCallback(() => {
       if (listId && !list && !loading) {
-        dispatch(fetchListById({listId}));
+        dispatch(fetchListById({ listId }));
       }
     }, [listId, list, loading, dispatch]),
   );
 
-  console.log("list", JSON.stringify(list, null, 2));
+  // console.log("list", JSON.stringify(list, null, 2));
 
   // Handle errors
   useEffect(() => {
@@ -88,10 +88,10 @@ const ListDetailsScreen = ({navigation, route}) => {
   }, []);
 
   // Statistics
-  const {totalItems, purchasedItems, progressPercent} = useMemo(() => {
+  const { totalItems, purchasedItems, progressPercent } = useMemo(() => {
     const items = list?.items || [];
     const total = items.length;
-    const purchased = items.filter(i => i.isPurchased).length;
+    const purchased = items.filter(i => i.status === "purchased").length;
     return {
       totalItems: total,
       purchasedItems: purchased,
@@ -100,11 +100,11 @@ const ListDetailsScreen = ({navigation, route}) => {
   }, [list?.items]);
 
   // Filter items by tab
-  const {pendingItems, doneItems} = useMemo(() => {
+  const { pendingItems, doneItems } = useMemo(() => {
     const items = list?.items || [];
     return {
-      pendingItems: items.filter(i => !i.isPurchased),
-      doneItems: items.filter(i => i.isPurchased),
+      pendingItems: items.filter(i => i.status === "pending"),
+      doneItems: items.filter(i => i.status === "purchased"),
     };
   }, [list?.items]);
 
@@ -132,7 +132,7 @@ const ListDetailsScreen = ({navigation, route}) => {
       await dispatch(
         addItemsToList({
           listId,
-          items: [{name: itemName}],
+          items: [{ name: itemName }],
         }),
       ).unwrap();
       // Optimistic update handled by reducer
@@ -154,7 +154,7 @@ const ListDetailsScreen = ({navigation, route}) => {
       );
       if (!item) return;
 
-      const newStatus = !item.isPurchased;
+      const newStatus = item.status === "pending";
       setActionPending(`toggle-${itemId}`, true);
 
       try {
@@ -212,18 +212,20 @@ const ListDetailsScreen = ({navigation, route}) => {
 
   // Render item row
   const renderItem = useCallback(
-    ({item}) => {
+    ({ item }) => {
       const itemId = item.id || item._id;
       const isPending = isActionPending(`toggle-${itemId}`) ||
         isActionPending(`delete-${itemId}`);
+      const isMenuOpen = activeItemMenuId === itemId;
 
       return (
         <View style={styles.itemRow}>
           <TouchableOpacity
             style={styles.checkCircleContainer}
-            onPress={() => toggleItemStatus(itemId)}
+            onPress={() => item.status === "pending" ? toggleItemStatus(itemId) : null}
+            activeOpacity={item.status === "pending" ? 0.8 : 1}
             disabled={isPending}>
-            {item.isPurchased ? (
+            {item.status === "purchased" ? (
               <View style={styles.checkedCircle}>
                 <Check size={12} color="#fff" strokeWidth={3} />
               </View>
@@ -236,43 +238,47 @@ const ListDetailsScreen = ({navigation, route}) => {
             <Text
               style={[
                 styles.itemName,
-                item.isPurchased && styles.itemNameStrike,
+                item.status === "purchased" && styles.itemNameStrike,
               ]}>
               {item.name}
             </Text>
             <View style={styles.itemMetaRow}>
               <Text style={styles.itemMetaText}>
-                {item.isPurchased ? "Purchased" : "Pending"}
+                {item.status === "purchased" ? "Purchased" : "Pending"}
               </Text>
             </View>
           </View>
 
-          <TouchableOpacity
-            onPress={() =>
-              setActiveItemMenuId(activeItemMenuId === itemId ? null : itemId)
+          <Menu
+            visible={isMenuOpen}
+            onDismiss={() => item.status === "pending" ? setActiveItemMenuId(null) : null}
+            disabled={item.status !== "pending"}
+            anchor={
+              <TouchableOpacity
+                onPress={() => item.status === "pending" ? setActiveItemMenuId(itemId) : null}
+                hitSlop={10}
+                disabled={isPending}>
+                <MoreHorizontal size={20} color="#d1d5db" />
+              </TouchableOpacity>
             }
-            hitSlop={10}
-            disabled={isPending}>
-            <MoreHorizontal size={20} color="#d1d5db" />
-          </TouchableOpacity>
-
-          {activeItemMenuId === itemId && (
-            <View style={styles.itemMenu}>
-              <TouchableOpacity
-                style={styles.itemMenuOptionActive}
-                onPress={() => toggleItemStatus(itemId)}>
-                <Text style={styles.itemMenuTextBlue}>
-                  {item.isPurchased ? "Mark Pending" : "Mark Purchased"}
-                </Text>
-              </TouchableOpacity>
-              <View style={styles.divider} />
-              <TouchableOpacity
-                style={styles.itemMenuOption}
-                onPress={() => handleDeleteItem(itemId)}>
-                <Text style={styles.itemMenuTextRed}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+            contentStyle={styles.menuContent}>
+            <Menu.Item
+              onPress={() => {
+                item.status === "pending" && setActiveItemMenuId(null);
+                item.status === "pending" && toggleItemStatus(itemId);
+              }}
+              title={item.status === "purchased" ? "Mark Pending" : "Mark Purchased"}
+              titleStyle={styles.menuItemTitle}
+            />
+            <Menu.Item
+              onPress={() => {
+                setActiveItemMenuId(null);
+                handleDeleteItem(itemId);
+              }}
+              title="Delete"
+              titleStyle={styles.menuItemTitleDelete}
+            />
+          </Menu>
         </View>
       );
     },
@@ -297,14 +303,11 @@ const ListDetailsScreen = ({navigation, route}) => {
   if (!list && !loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.iconButton}>
-            <ArrowLeft size={24} color="#1f2937" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>List Not Found</Text>
-        </View>
+        <Header
+          variant="screen"
+          title="List Not Found"
+          onBack={() => navigation.goBack()}
+        />
         <View style={styles.emptyState}>
           <Text style={styles.emptyText}>List not found or has been deleted.</Text>
         </View>
@@ -313,153 +316,157 @@ const ListDetailsScreen = ({navigation, route}) => {
   }
 
   return (
-    <TouchableWithoutFeedback
-      onPress={() => {
-        setShowHeaderMenu(false);
-        setActiveItemMenuId(null);
-      }}>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.iconButton}>
-            <ArrowLeft size={24} color="#1f2937" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{list?.name || "List"}</Text>
+    <View style={styles.container}>
+      <Header
+        variant="screen"
+        title={list?.name || "List"}
+        onBack={() => navigation.goBack()}
+        rightAction={
           <View style={styles.headerActions}>
             <TouchableOpacity style={styles.iconButton}>
               <Share2 size={22} color="#1f2937" />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.iconButton}
-              onPress={() => setShowHeaderMenu(!showHeaderMenu)}>
-              <MoreVertical size={22} color="#1f2937" />
-            </TouchableOpacity>
+            <Menu
+              visible={showHeaderMenu}
+              onDismiss={() => setShowHeaderMenu(false)}
+              anchor={
+                <TouchableOpacity
+                  style={styles.iconButton}
+                  onPress={() => setShowHeaderMenu(true)}>
+                  <MoreVertical size={22} color="#1f2937" />
+                </TouchableOpacity>
+              }
+              contentStyle={styles.menuContent}>
+              <Menu.Item
+                onPress={() => {
+                  setShowHeaderMenu(false);
+                  // Handle edit action
+                }}
+                title="Edit"
+                titleStyle={styles.menuItemTitle}
+              />
+              <Menu.Item
+                onPress={() => {
+                  setShowHeaderMenu(false);
+                  // Handle view action
+                }}
+                title="View"
+                titleStyle={styles.menuItemTitle}
+              />
+            </Menu>
           </View>
+        }
+      />
 
-          {showHeaderMenu && (
-            <View style={styles.headerMenu}>
-              <TouchableOpacity style={styles.headerMenuOptionActive}>
-                <Text style={styles.itemMenuTextBlue}>Edit</Text>
-              </TouchableOpacity>
-              <View style={styles.divider} />
-              <TouchableOpacity style={styles.headerMenuOption}>
-                <Text style={styles.itemMenuText}>View</Text>
-              </TouchableOpacity>
-            </View>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
+        {/* Progress Bar */}
+        <View style={styles.progressContainer}>
+          <View style={styles.progressLabels}>
+            <Text style={styles.progressText}>
+              {purchasedItems}/{totalItems} purchased
+            </Text>
+            <Text style={styles.progressPercentText}>
+              {Math.round(progressPercent)}%
+            </Text>
+          </View>
+          <View style={styles.track}>
+            <View style={[styles.fill, { width: `${progressPercent}%` }]} />
+          </View>
+        </View>
+
+        {/* Add Item Input */}
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Add an item..."
+            placeholderTextColor="#9ca3af"
+            value={newItemText}
+            onChangeText={setNewItemText}
+            onSubmitEditing={handleAddItem}
+            returnKeyType="done"
+            editable={!isActionPending(`add-${listId}`)}
+          />
+          <TouchableOpacity
+            style={[
+              styles.addButton,
+              !newItemText.trim() && styles.addButtonDisabled,
+            ]}
+            onPress={handleAddItem}
+            disabled={!newItemText.trim() || isActionPending(`add-${listId}`)}>
+            <Plus size={20} color={newItemText.trim() ? "#0ea5e9" : "#d1d5db"} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Tabs */}
+        <View style={styles.tabsContainer}>
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              activeTab === "All Items" && styles.activeTab,
+            ]}
+            onPress={() => setActiveTab("All Items")}>
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === "All Items" && styles.activeTabText,
+              ]}>
+              All Items
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tab, activeTab === "To Buy" && styles.activeTab]}
+            onPress={() => setActiveTab("To Buy")}>
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === "To Buy" && styles.activeTabText,
+              ]}>
+              To Buy ({pendingItems.length})
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Item List */}
+        <View style={styles.listContainer}>
+          {displayItems.length > 0 ? (
+            <FlatList
+              data={displayItems}
+              renderItem={renderItem}
+              keyExtractor={item => String(item.id || item._id)}
+              scrollEnabled={false}
+              ListFooterComponent={
+                activeTab === "All Items" && doneItems.length > 0 ? (
+                  <>
+                    <View style={styles.sectionHeader}>
+                      <Text style={styles.sectionTitle}>PURCHASED</Text>
+                    </View>
+                    <FlatList
+                      data={doneItems}
+                      renderItem={renderItem}
+                      keyExtractor={item => String(item.id || item._id)}
+                      scrollEnabled={false}
+                    />
+                  </>
+                ) : null
+              }
+            />
+          ) : (
+            <Text style={styles.emptyText}>
+              {activeTab === "To Buy"
+                ? "All caught up! Nothing to buy."
+                : doneItems.length > 0
+                  ? "No pending items."
+                  : "No items in this list."}
+            </Text>
           )}
         </View>
 
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}>
-          {/* Progress Bar */}
-          <View style={styles.progressContainer}>
-            <View style={styles.progressLabels}>
-              <Text style={styles.progressText}>
-                {purchasedItems}/{totalItems} purchased
-              </Text>
-              <Text style={styles.progressPercentText}>
-                {Math.round(progressPercent)}%
-              </Text>
-            </View>
-            <View style={styles.track}>
-              <View style={[styles.fill, {width: `${progressPercent}%`}]} />
-            </View>
-          </View>
-
-          {/* Add Item Input */}
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Add an item..."
-              placeholderTextColor="#9ca3af"
-              value={newItemText}
-              onChangeText={setNewItemText}
-              onSubmitEditing={handleAddItem}
-              returnKeyType="done"
-              editable={!isActionPending(`add-${listId}`)}
-            />
-            <TouchableOpacity
-              style={[
-                styles.addButton,
-                !newItemText.trim() && styles.addButtonDisabled,
-              ]}
-              onPress={handleAddItem}
-              disabled={!newItemText.trim() || isActionPending(`add-${listId}`)}>
-              <Plus size={20} color={newItemText.trim() ? "#0ea5e9" : "#d1d5db"} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Tabs */}
-          <View style={styles.tabsContainer}>
-            <TouchableOpacity
-              style={[
-                styles.tab,
-                activeTab === "All Items" && styles.activeTab,
-              ]}
-              onPress={() => setActiveTab("All Items")}>
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === "All Items" && styles.activeTabText,
-                ]}>
-                All Items
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.tab, activeTab === "To Buy" && styles.activeTab]}
-              onPress={() => setActiveTab("To Buy")}>
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === "To Buy" && styles.activeTabText,
-                ]}>
-                To Buy ({pendingItems.length})
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Item List */}
-          <View style={styles.listContainer}>
-            {displayItems.length > 0 ? (
-              <FlatList
-                data={displayItems}
-                renderItem={renderItem}
-                keyExtractor={item => String(item.id || item._id)}
-                scrollEnabled={false}
-                ListFooterComponent={
-                  activeTab === "All Items" && doneItems.length > 0 ? (
-                    <>
-                      <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>PURCHASED</Text>
-                      </View>
-                      <FlatList
-                        data={doneItems}
-                        renderItem={renderItem}
-                        keyExtractor={item => String(item.id || item._id)}
-                        scrollEnabled={false}
-                      />
-                    </>
-                  ) : null
-                }
-              />
-            ) : (
-              <Text style={styles.emptyText}>
-                {activeTab === "To Buy"
-                  ? "All caught up! Nothing to buy."
-                  : doneItems.length > 0
-                  ? "No pending items."
-                  : "No items in this list."}
-              </Text>
-            )}
-          </View>
-
-          <View style={{height: 100}} />
-        </ScrollView>
-      </View>
-    </TouchableWithoutFeedback>
+        <View style={{ height: 100 }} />
+      </ScrollView>
+    </View>
   );
 };
 
@@ -467,57 +474,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#ffffff",
-    paddingTop: Platform.OS === "android" ? 40 : 60,
+    // paddingTop: Platform.OS === "android" ? 40 : 60,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    zIndex: 20,
-  },
   iconButton: {
     padding: 8,
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: RFValue(16),
-    fontFamily: FontFamily.bold,
-    color: "#111827",
-    marginLeft: 8,
   },
   headerActions: {
     flexDirection: "row",
     gap: 0,
-  },
-  headerMenu: {
-    position: "absolute",
-    top: 50,
-    right: 20,
-    width: 140,
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-    paddingVertical: 4,
-  },
-  headerMenuOption: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  headerMenuOptionActive: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    backgroundColor: "#f0f9ff",
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -679,50 +648,21 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.regular,
     color: "#9ca3af",
   },
-  itemMenu: {
-    position: "absolute",
-    right: 0,
-    top: 25,
-    width: 130,
+  menuContent: {
     backgroundColor: "#ffffff",
     borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 8,
-    zIndex: 100,
     paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: "#f3f4f6",
+    minWidth: 150,
   },
-  itemMenuOption: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-  },
-  itemMenuOptionActive: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: "#eff6ff",
-  },
-  itemMenuText: {
-    fontSize: RFValue(10),
+  menuItemTitle: {
+    fontSize: RFValue(12),
     fontFamily: FontFamily.medium,
     color: "#374151",
   },
-  itemMenuTextBlue: {
-    fontSize: RFValue(10),
-    fontFamily: FontFamily.medium,
-    color: "#0ea5e9",
-  },
-  itemMenuTextRed: {
-    fontSize: RFValue(10),
+  menuItemTitleDelete: {
+    fontSize: RFValue(12),
     fontFamily: FontFamily.medium,
     color: "#ef4444",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#f3f4f6",
   },
 });
 

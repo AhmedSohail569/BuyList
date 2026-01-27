@@ -2,7 +2,7 @@
  * Lists Management Slice
  * Handles list state with optimistic updates and rollback logic
  */
-import {createSlice} from "@reduxjs/toolkit";
+import { createSlice } from "@reduxjs/toolkit";
 import {
   createList,
   fetchAllLists,
@@ -39,24 +39,64 @@ const initialState = {
 // HELPER FUNCTIONS
 // ============================================
 
+// Helper to calculate progress from items
+const calculateProgress = (items) => {
+  if (!Array.isArray(items) || items.length === 0) {
+    return {
+      total: 0,
+      purchased: 0,
+      percentage: 0,
+      label: "0/0",
+    };
+  }
+
+  const total = items.length;
+  const purchased = items.filter(
+    item => item.isPurchased || item.status === "purchased"
+  ).length;
+  const percentage = total > 0 ? Math.round((purchased / total) * 100) : 0;
+
+  return {
+    total,
+    purchased,
+    percentage,
+    label: `${purchased}/${total}`,
+  };
+};
+
 // Normalize list into listById structure
 const normalizeList = (list) => {
   if (!list) return null;
+
+  // Normalize items to ensure both isPurchased and status fields exist
+  const normalizedItems = Array.isArray(list.items)
+    ? list.items.map(item => ({
+      ...item,
+      id: item.id || item._id,
+      isPurchased: item.isPurchased ?? item.status === "purchased",
+      status: item.status || (item.isPurchased ? "purchased" : "pending"),
+    }))
+    : [];
+
+  // Calculate progress
+  const progress = calculateProgress(normalizedItems);
+
   return {
+    ...list, // Preserve any additional fields first
     id: list.id || list._id,
     name: list.name,
     category: list.category,
     priority: list.priority,
-    items: Array.isArray(list.items) ? list.items : [],
+    items: normalizedItems, // Override items with normalized version
+    progress, // Add calculated progress
     createdAt: list.createdAt,
     shareWithCircle: list.shareWithCircle,
-    ...list, // Preserve any additional fields
   };
 };
 
 // Normalize multiple lists
 const normalizeLists = (lists) => {
-  if (!Array.isArray(lists)) return {lists: [], listById: {}};
+  if (!Array.isArray(lists)) return { lists: [], listById: {} };
 
   const normalizedLists = lists.map(normalizeList).filter(Boolean);
   const listById = {};
@@ -68,7 +108,7 @@ const normalizeLists = (lists) => {
     }
   });
 
-  return {lists: normalizedLists, listById};
+  return { lists: normalizedLists, listById };
 };
 
 // ============================================
@@ -123,7 +163,7 @@ const listsSlice = createSlice({
       })
       .addCase(fetchAllLists.fulfilled, (state, action) => {
         state.loading = false;
-        const {lists, listById} = normalizeLists(
+        const { lists, listById } = normalizeLists(
           Array.isArray(action.payload) ? action.payload : [],
         );
         state.lists = lists;
@@ -143,16 +183,21 @@ const listsSlice = createSlice({
       })
       .addCase(fetchListById.fulfilled, (state, action) => {
         state.loading = false;
-        const {listId, list} = action.payload;
+        const { listId, list } = action.payload;
         const normalized = normalizeList(list);
         if (normalized && listId) {
           state.listById[listId] = normalized;
-          // Update in lists array if it exists
+          // Update in lists array if it exists - create new array reference
           const listIndex = state.lists.findIndex(
             l => (l.id || l._id) === listId,
           );
           if (listIndex !== -1) {
-            state.lists[listIndex] = normalized;
+            // Create new array with updated list to ensure React re-renders
+            state.lists = [
+              ...state.lists.slice(0, listIndex),
+              normalized,
+              ...state.lists.slice(listIndex + 1),
+            ];
           } else {
             state.lists.push(normalized);
           }
@@ -168,7 +213,7 @@ const listsSlice = createSlice({
       // ============================================
       // OPTIMISTIC: Add items immediately on pending
       .addCase(addItemsToList.pending, (state, action) => {
-        const {listId, items} = action.meta.arg;
+        const { listId, items } = action.meta.arg;
         const list = state.listById[listId];
 
         if (list) {
@@ -177,46 +222,71 @@ const listsSlice = createSlice({
             id: item.id || `temp-${Date.now()}-${index}`,
             name: item.name || item,
             isPurchased: false,
+            status: "pending",
             _isOptimistic: true,
           }));
 
-          // Optimistically add items
-          list.items = [...(list.items || []), ...newItems];
+          // Optimistically add items - create new array reference
+          const updatedItems = [...(list.items || []), ...newItems];
+          const progress = calculateProgress(updatedItems);
+          const updatedList = {
+            ...list,
+            items: updatedItems,
+            progress, // Recalculate progress
+          };
+          state.listById[listId] = updatedList;
 
-          // Update in lists array
+          // Update in lists array - create new array reference to trigger re-renders
           const listIndex = state.lists.findIndex(
             l => (l.id || l._id) === listId,
           );
           if (listIndex !== -1) {
-            state.lists[listIndex] = {...list};
+            // Create new array with updated list to ensure React re-renders
+            state.lists = [
+              ...state.lists.slice(0, listIndex),
+              { ...updatedList },
+              ...state.lists.slice(listIndex + 1),
+            ];
           }
         }
       })
       .addCase(addItemsToList.fulfilled, (state, action) => {
-        const {listId, items: responseItems} = action.payload;
+        const { listId, items: responseItems } = action.payload;
         const list = state.listById[listId];
 
         if (list && responseItems) {
-          // Replace optimistic items with server response
-          list.items = responseItems.map(item => ({
+          // Replace optimistic items with server response, ensuring both isPurchased and status
+          const normalizedItems = responseItems.map(item => ({
             id: item.id || item._id,
             name: item.name,
-            isPurchased: item.isPurchased || false,
+            isPurchased: item.isPurchased ?? item.status === "purchased",
+            status: item.status || (item.isPurchased ? "purchased" : "pending"),
+            ...item, // Preserve other fields
           }));
 
-          // Update in lists array
+          // Calculate progress
+          const progress = calculateProgress(normalizedItems);
+          const updatedList = { ...list, items: normalizedItems, progress };
+          state.listById[listId] = updatedList;
+
+          // Update in lists array - create new array reference to trigger re-renders
           const listIndex = state.lists.findIndex(
             l => (l.id || l._id) === listId,
           );
           if (listIndex !== -1) {
-            state.lists[listIndex] = {...list};
+            // Create new array with updated list to ensure React re-renders
+            state.lists = [
+              ...state.lists.slice(0, listIndex),
+              { ...updatedList },
+              ...state.lists.slice(listIndex + 1),
+            ];
           }
         }
         state.error = null;
       })
       // ROLLBACK: Restore previous list state on failure
       .addCase(addItemsToList.rejected, (state, action) => {
-        const {previousList, previousLists, listId, message} =
+        const { previousList, previousLists, listId, message } =
           action.payload || {};
 
         if (listId && previousList) {
@@ -233,49 +303,73 @@ const listsSlice = createSlice({
       // ============================================
       // OPTIMISTIC: Mark item as purchased immediately on pending
       .addCase(markItemAsPurchased.pending, (state, action) => {
-        const {listId, itemId} = action.meta.arg;
+        const { listId, itemId } = action.meta.arg;
         const list = state.listById[listId];
 
         if (list && list.items) {
-          // Optimistically mark item as purchased
-          list.items = list.items.map(item =>
+          // Optimistically mark item as purchased (update both isPurchased and status)
+          const updatedItems = list.items.map(item =>
             (item.id || item._id) === itemId
-              ? {...item, isPurchased: true}
+              ? { ...item, isPurchased: true, status: "purchased" }
               : item,
           );
 
-          // Update in lists array
+          // Calculate updated progress
+          const progress = calculateProgress(updatedItems);
+
+          // Create a new list object with updated items and progress
+          const updatedList = { ...list, items: updatedItems, progress };
+          state.listById[listId] = updatedList;
+
+          // Update in lists array - create new array reference to trigger re-renders
           const listIndex = state.lists.findIndex(
             l => (l.id || l._id) === listId,
           );
           if (listIndex !== -1) {
-            state.lists[listIndex] = {...list};
+            // Create new array with updated list to ensure React re-renders
+            state.lists = [
+              ...state.lists.slice(0, listIndex),
+              { ...updatedList },
+              ...state.lists.slice(listIndex + 1),
+            ];
           }
         }
       })
       .addCase(markItemAsPurchased.fulfilled, (state, action) => {
         // Item already marked optimistically
         // Optionally merge with server response if it includes additional data
-        const {listId, response} = action.payload;
-        if (response) {
-          const list = state.listById[listId];
-          if (list) {
-            // Merge any additional data from response
-            Object.assign(list, response);
-            // Update in lists array
-            const listIndex = state.lists.findIndex(
-              l => (l.id || l._id) === listId,
-            );
-            if (listIndex !== -1) {
-              state.lists[listIndex] = {...list};
-            }
+        const { listId, response } = action.payload;
+        const list = state.listById[listId];
+        if (list) {
+          // Merge any additional data from response, ensuring items are properly updated
+          const mergedItems = response?.items || list.items;
+          const progress = calculateProgress(mergedItems);
+          const mergedList = {
+            ...list,
+            ...response,
+            items: mergedItems,
+            progress, // Recalculate progress
+          };
+          state.listById[listId] = mergedList;
+
+          // Update in lists array - create new array reference to trigger re-renders
+          const listIndex = state.lists.findIndex(
+            l => (l.id || l._id) === listId,
+          );
+          if (listIndex !== -1) {
+            // Create new array with updated list to ensure React re-renders
+            state.lists = [
+              ...state.lists.slice(0, listIndex),
+              { ...mergedList },
+              ...state.lists.slice(listIndex + 1),
+            ];
           }
         }
         state.error = null;
       })
       // ROLLBACK: Restore previous list state on failure
       .addCase(markItemAsPurchased.rejected, (state, action) => {
-        const {previousList, previousLists, listId, message} =
+        const { previousList, previousLists, listId, message } =
           action.payload || {};
 
         if (listId && previousList) {
@@ -292,21 +386,30 @@ const listsSlice = createSlice({
       // ============================================
       // OPTIMISTIC: Remove item immediately on pending
       .addCase(deleteItemFromList.pending, (state, action) => {
-        const {listId, itemId} = action.meta.arg;
+        const { listId, itemId } = action.meta.arg;
         const list = state.listById[listId];
 
         if (list && list.items) {
-          // Optimistically remove the item
-          list.items = list.items.filter(
+          // Optimistically remove the item - create new array reference
+          const updatedItems = list.items.filter(
             item => (item.id || item._id) !== itemId,
           );
+          // Recalculate progress
+          const progress = calculateProgress(updatedItems);
+          const updatedList = { ...list, items: updatedItems, progress };
+          state.listById[listId] = updatedList;
 
-          // Update in lists array
+          // Update in lists array - create new array reference to trigger re-renders
           const listIndex = state.lists.findIndex(
             l => (l.id || l._id) === listId,
           );
           if (listIndex !== -1) {
-            state.lists[listIndex] = {...list};
+            // Create new array with updated list to ensure React re-renders
+            state.lists = [
+              ...state.lists.slice(0, listIndex),
+              { ...updatedList },
+              ...state.lists.slice(listIndex + 1),
+            ];
           }
         }
       })
@@ -316,7 +419,7 @@ const listsSlice = createSlice({
       })
       // ROLLBACK: Restore previous list state on failure
       .addCase(deleteItemFromList.rejected, (state, action) => {
-        const {previousList, previousLists, listId, message} =
+        const { previousList, previousLists, listId, message } =
           action.payload || {};
 
         if (listId && previousList) {
@@ -333,7 +436,7 @@ const listsSlice = createSlice({
       // ============================================
       // OPTIMISTIC: Remove list immediately on pending
       .addCase(deleteList.pending, (state, action) => {
-        const {listId} = action.meta.arg;
+        const { listId } = action.meta.arg;
 
         // Optimistically remove from lists array
         state.lists = state.lists.filter(
@@ -351,7 +454,7 @@ const listsSlice = createSlice({
       })
       // ROLLBACK: Restore previous lists on failure
       .addCase(deleteList.rejected, (state, action) => {
-        const {previousLists, previousListById, message} = action.payload || {};
+        const { previousLists, previousListById, message } = action.payload || {};
 
         if (previousLists) {
           state.lists = previousLists;
@@ -385,6 +488,6 @@ const listsSlice = createSlice({
 // ============================================
 // EXPORTED ACTIONS & REDUCER
 // ============================================
-export const {clearListsState, clearListsError} = listsSlice.actions;
+export const { clearListsState, clearListsError } = listsSlice.actions;
 
 export default listsSlice.reducer;

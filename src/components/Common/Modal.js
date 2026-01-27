@@ -23,6 +23,7 @@ export const BottomModal = ({
   onClose,
   onApply,
   type = "filter", // 'filter' | 'createList'
+  loading = false,
 }) => {
   // --- STATE: Filter Mode ---
   const [selectedSort, setSelectedSort] = useState("Relevance");
@@ -37,6 +38,7 @@ export const BottomModal = ({
   const [priority, setPriority] = useState("medium");
   const [isShared, setIsShared] = useState(true);
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // --- CONSTANTS ---
   const sortOptions = [
@@ -103,15 +105,24 @@ export const BottomModal = ({
       return;
     }
 
-    // Call onApply and let parent handle closing on success
-    onApply({
-      name: listName.trim(),
-      category: selectedCategory,
-      items: items,
-      priority: priority,
-      shareWithCircle: isShared,
-    });
-    // Don't close here - let parent handle it after successful dispatch
+    if (isSubmitting || loading) return;
+    setIsSubmitting(true);
+
+    try {
+      // Await parent handler so we can prevent double submit.
+      await Promise.resolve(
+        onApply({
+          name: listName.trim(),
+          category: selectedCategory,
+          items: items,
+          priority: priority,
+          shareWithCircle: isShared,
+        }),
+      );
+      // Parent closes modal on success; this keeps behavior consistent.
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // --- RENDER CONTENT ---
@@ -351,9 +362,15 @@ export const BottomModal = ({
       {/* Footer Button */}
       <View style={styles.modalFooterSingle}>
         <TouchableOpacity
-          style={styles.createButton}
-          onPress={handleCreateList}>
-          <Text style={styles.createButtonText}>Create List</Text>
+          style={[
+            styles.createButton,
+            (loading || isSubmitting) && styles.createButtonDisabled,
+          ]}
+          onPress={handleCreateList}
+          disabled={loading || isSubmitting}>
+          <Text style={styles.createButtonText}>
+            {loading || isSubmitting ? "Creating..." : "Create List"}
+          </Text>
         </TouchableOpacity>
       </View>
     </>
@@ -714,6 +731,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
+  },
+  createButtonDisabled: {
+    opacity: 0.6,
   },
   createButtonText: {
     fontSize: RFValue(12),
