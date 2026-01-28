@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import {
   View,
   StyleSheet,
@@ -16,25 +16,26 @@ import {
   QrCode,
   ChevronRight,
 } from "lucide-react-native";
-import {ScrollView, Text} from "~components/Common";
-import {RFValue} from "react-native-responsive-fontsize";
-import {FontFamily} from "~theme/fonts";
+import { ScrollView, Text } from "~components/Common";
+import { RFValue } from "react-native-responsive-fontsize";
+import { FontFamily } from "~theme/fonts";
 import Header from "~components/Header";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchOwnedCircle } from "~redux/actions/circleActions";
+import { fetchRecentActivities } from "~redux/actions/listActions";
 
 // Helper function to get initials from a name
 const getInitials = (name) => {
   if (!name || typeof name !== "string") return "U";
-  
+
   const parts = name.trim().split(/\s+/);
   if (parts.length === 0) return "U";
-  
+
   if (parts.length === 1) {
     // Single name - take first 2 letters
     return parts[0].substring(0, 2).toUpperCase();
   }
-  
+
   // Multiple names - take first letter of first and last name
   const firstInitial = parts[0].charAt(0).toUpperCase();
   const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
@@ -105,44 +106,89 @@ const SHARED_LISTS = [
   },
 ];
 
-const ACTIVITY = [
-  {
-    id: 1,
-    user: "Alex",
-    userAvatar: null, // Will show initials
-    action: "added 3 items to",
-    target: "Weekly Groceries",
-    time: "2 min ago",
-  },
-  {
-    id: 2,
-    user: "Casey",
-    userAvatar: null, // Will show initials
-    action: "marked 5 items purchased in",
-    target: "Weekly Groceries",
-    time: "15 min ago",
-  },
-  {
-    id: 3,
-    user: "Jordan",
-    userAvatar: null, // Will show initials
-    action: "joined the circle",
-    target: "",
-    time: "11:20 AM",
-  },
-];
+// ---- Recent Activity Helpers (from /activities/recent) ----
+const formatTimeAgo = isoDate => {
+  if (!isoDate) return "";
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const diffMs = Date.now() - date.getTime();
+  const mins = Math.floor(diffMs / 60000);
+  const hours = Math.floor(diffMs / 3600000);
+  const days = Math.floor(diffMs / 86400000);
+
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7) return `${days}d ago`;
+  return `${Math.floor(days / 7)}w ago`;
+};
+
+// Format activity action type to readable text
+const formatActivityAction = (action, metadata) => {
+  const itemCount = metadata?.itemCount || 1;
+  const listName = metadata?.listName || "";
+
+  switch (action) {
+    case "PURCHASE_ITEMS":
+      return `marked ${itemCount} ${itemCount === 1 ? "item" : "items"} as purchased`;
+    case "ADD_ITEMS":
+      return `added ${itemCount} ${itemCount === 1 ? "item" : "items"}`;
+    case "CREATE_LIST":
+      return "created a list";
+    case "DELETE_LIST":
+      return "deleted a list";
+    case "JOIN_CIRCLE":
+      return "joined the circle";
+    case "LEAVE_CIRCLE":
+      return "left the circle";
+    default:
+      return "updated the circle";
+  }
+};
+
+const normalizeActivity = (activity, index) => {
+  const id = activity?._id || activity?.id || `${index}`;
+
+  // Extract actor info (new API format uses `actor` object)
+  const actor = activity?.actor || {};
+  const userName = actor?.username || activity?.username || "Someone";
+  const userAvatar = actor?.profilePicture || actor?.avatar || "";
+
+  // Extract action and format it
+  const actionType = activity?.action || "";
+  const metadata = activity?.metadata || {};
+  const actionText = formatActivityAction(actionType, metadata);
+
+  // Extract target/list name
+  const listObj = activity?.list || {};
+  const targetText = listObj?.name || metadata?.listName || "";
+
+  // Format timestamp
+  const createdAt = activity?.createdAt || activity?.updatedAt;
+  const timeText = createdAt ? formatTimeAgo(createdAt) : "";
+
+  return {
+    id,
+    userName,
+    userAvatar,
+    actionText,
+    targetText,
+    timeText,
+  };
+};
 
 // --- Sub Components ---
 
 // Avatar Component with initials fallback
-const Avatar = ({image, name, size = 56, style}) => {
+const Avatar = ({ image, name, size = 56, style }) => {
   const hasImage = hasProfilePicture(image);
   const initials = getInitials(name || "User");
-  
+
   if (hasImage) {
     return (
       <Image
-        source={{uri: image}}
+        source={{ uri: image }}
         style={[
           {
             width: size,
@@ -154,7 +200,7 @@ const Avatar = ({image, name, size = 56, style}) => {
       />
     );
   }
-  
+
   return (
     <View
       style={[
@@ -170,10 +216,10 @@ const Avatar = ({image, name, size = 56, style}) => {
       ]}>
       <Text
         style={{
-          fontSize: RFValue(size * 0.30),    
+          fontSize: RFValue(size * 0.30),
           color: "#0ea5e9",
-          lineHeight: size * 0.30,
-        
+          // lineHeight: size * 0.30,
+
         }}>
         {initials}
       </Text>
@@ -182,16 +228,16 @@ const Avatar = ({image, name, size = 56, style}) => {
 };
 
 // Avatar Stack Component
-const AvatarStack = ({items, size = 24, limit = 3}) => {
+const AvatarStack = ({ items, size = 24, limit = 3 }) => {
   // items can be array of {image, name} objects or array of image strings (for backward compatibility)
   const avatarItems = items.map((item, index) => {
     if (typeof item === "string") {
       // Backward compatibility: if it's a string, treat as image
-      return {image: item, name: "User"};
+      return { image: item, name: "User" };
     }
     return item;
   });
-  
+
   return (
     <View style={styles.avatarStack}>
       {avatarItems.slice(0, limit).map((item, index) => (
@@ -219,31 +265,34 @@ const AvatarStack = ({items, size = 24, limit = 3}) => {
   );
 };
 
-const ProgressBar = ({percentage}) => (
+const ProgressBar = ({ percentage }) => (
   <View style={styles.progressContainer}>
     <View style={styles.track}>
-      <View style={[styles.fill, {width: `${percentage}%`}]} />
+      <View style={[styles.fill, { width: `${percentage}%` }]} />
     </View>
     <Text style={styles.progressText}>{percentage}%</Text>
   </View>
 );
 
-const CircleTab = ({navigation}) => {
+const CircleTab = ({ navigation }) => {
   const dispatch = useDispatch();
-  const {ownedCircle} = useSelector(state => state.circles);
+  const { ownedCircle } = useSelector(state => state.circles);
+  const { recentActivities } = useSelector(state => state.lists);
 
   useEffect(() => {
     dispatch(fetchOwnedCircle());
+    dispatch(fetchRecentActivities());
   }, [dispatch]);
 
   // Build connections from ownedCircle data
   const connections = buildConnections(ownedCircle);
-  
+
   // Get circle name or default
   const circleName = ownedCircle?.name || "Family Home";
-
-  console.log("ownedCircle", ownedCircle);
-  console.log("connections", connections);
+  const activityItems = useMemo(() => {
+    const source = Array.isArray(recentActivities) ? recentActivities : [];
+    return source.slice(0, 5).map(normalizeActivity);
+  }, [recentActivities]);
 
   return (
     <View style={styles.container}>
@@ -257,7 +306,7 @@ const CircleTab = ({navigation}) => {
           </TouchableOpacity>
         }
       />
-   
+
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -285,11 +334,11 @@ const CircleTab = ({navigation}) => {
           </View>
 
           <View style={styles.addressRow}>
-            <MapPin size={16} color="#0ea5e9" style={{marginRight: 6}} />
+            <MapPin size={16} color="#0ea5e9" style={{ marginRight: 6 }} />
             <Text style={styles.addressText}>
               123 Maple Street, Springfield
             </Text>
-            <TouchableOpacity style={{marginLeft: "auto"}}>
+            <TouchableOpacity style={{ marginLeft: "auto" }}>
               <Pencil size={14} color="#9ca3af" />
             </TouchableOpacity>
           </View>
@@ -345,7 +394,7 @@ const CircleTab = ({navigation}) => {
           <TouchableOpacity
             style={styles.inviteItem}
             onPress={() =>
-              navigation.navigate("ManageConnections", {tab: "Invite"})
+              navigation.navigate("ManageConnections", { tab: "Invite" })
             }>
             <View style={styles.inviteCircle}>
               <UserPlus size={20} color="#9ca3af" />
@@ -373,7 +422,7 @@ const CircleTab = ({navigation}) => {
                       image: avatar,
                       name: "User",
                     }))}
-                    size={20}
+                    size={35}
                     limit={2}
                   />
                   <Text style={styles.listUpdated}>{list.updated}</Text>
@@ -389,32 +438,34 @@ const CircleTab = ({navigation}) => {
         {/* Recent Activity Section */}
         <Text style={styles.sectionHeader}>Recent Activity</Text>
         <View style={styles.activityCard}>
-          {ACTIVITY.map((item, index) => (
-            <View
-              key={item.id}
-              style={[
-                styles.activityRow,
-                index !== 0 && styles.activityBorder,
-              ]}>
-              <View style={{marginRight: 12}}>
-                <Avatar
-                  image={item.userAvatar}
-                  name={item.user}
-                  size={32}
-                />
-              </View>
-              <View style={styles.activityContent}>
-                <Text style={styles.activityText}>
-                  <Text style={styles.activityUser}>{item.user} </Text>
-                  {item.action}{" "}
-                  {item.target ? (
-                    <Text style={styles.activityTarget}>{item.target}</Text>
+          {activityItems.length === 0 ? (
+            <Text style={styles.emptyActivityText}>No recent updates yet.</Text>
+          ) : (
+            activityItems.map((item, index) => (
+              <View
+                key={item.id}
+                style={[
+                  styles.activityRow,
+                  index !== 0 && styles.activityBorder,
+                ]}>
+                <View style={{ marginRight: 12 }}>
+                  <Avatar image={item.userAvatar} name={item.userName} size={32} />
+                </View>
+                <View style={styles.activityContent}>
+                  <Text style={styles.activityText}>
+                    <Text style={styles.activityUser}>{item.userName} </Text>
+                    {item.actionText}{" "}
+                    {!!item.targetText ? (
+                      <Text style={styles.activityTarget}>{item.targetText}</Text>
+                    ) : null}
+                  </Text>
+                  {!!item.timeText ? (
+                    <Text style={styles.activityTime}>{item.timeText}</Text>
                   ) : null}
-                </Text>
-                <Text style={styles.activityTime}>{item.time}</Text>
+                </View>
               </View>
-            </View>
-          ))}
+            ))
+          )}
         </View>
 
         {/* Grow Your Circle Banner */}
@@ -432,18 +483,18 @@ const CircleTab = ({navigation}) => {
           </View>
           <View style={styles.growActions}>
             <TouchableOpacity style={styles.inviteLinkBtn}>
-              <Share2 size={16} color="#0ea5e9" style={{marginRight: 8}} />
+              <Share2 size={16} color="#0ea5e9" style={{ marginRight: 8 }} />
               <Text style={styles.inviteLinkText}>Invite via Link</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.qrCodeBtn}>
-              <QrCode size={16} color="#ffffff" style={{marginRight: 8}} />
+              <QrCode size={16} color="#ffffff" style={{ marginRight: 8 }} />
               <Text style={styles.qrCodeText}>QR Code</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Bottom Padding */}
-        <View style={{height: 100}} />
+        <View style={{ height: 100 }} />
       </ScrollView>
     </View>
   );
@@ -463,7 +514,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
@@ -481,7 +532,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 24,
     shadowColor: "#000",
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 8,
     elevation: 2,
@@ -680,7 +731,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 16,
     shadowColor: "#000",
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
     shadowRadius: 4,
     elevation: 2,

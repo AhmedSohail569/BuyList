@@ -1,10 +1,9 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   View,
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  Platform,
   FlatList,
   ActivityIndicator,
 } from "react-native";
@@ -28,18 +27,22 @@ import {
   addItemsToList,
   markItemAsPurchased,
   deleteItemFromList,
+  deleteList,
 } from "~redux/actions/listActions";
 import { clearListsError } from "~redux/reducers/listReducer";
+import { useAlert } from "~context/AlertContext";
 
 const ListDetailsScreen = ({ navigation, route }) => {
   const dispatch = useDispatch();
   const { listById, loading, error } = useSelector(state => state.lists);
+  const { showAlert, showError } = useAlert();
 
   const listId = route?.params?.listId;
   const list = listId ? listById[listId] : null;
 
   const [activeTab, setActiveTab] = useState("All Items");
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+  const isHeaderMenuDismissingRef = useRef(false);
   const [activeItemMenuId, setActiveItemMenuId] = useState(null);
   const [newItemText, setNewItemText] = useState("");
   const [pendingActions, setPendingActions] = useState(new Set());
@@ -86,6 +89,52 @@ const ListDetailsScreen = ({ navigation, route }) => {
       return next;
     });
   }, []);
+
+  // Header menu toggle (guarded to prevent Menu open/close race conditions)
+  const handleHeaderMenuToggle = useCallback(() => {
+    if (isHeaderMenuDismissingRef.current) return;
+    setShowHeaderMenu(prev => !prev);
+  }, []);
+
+  const handleDeleteThisList = useCallback(async () => {
+    if (!listId) return;
+
+    const actionKey = `delete-list-${listId}`;
+    if (isActionPending(actionKey)) return;
+
+    setActionPending(actionKey, true);
+    try {
+      await dispatch(deleteList({ listId })).unwrap();
+      Toast.show({
+        type: "success",
+        text1: "List Deleted",
+        text2: "List has been deleted successfully",
+      });
+      navigation.goBack();
+    } catch (e) {
+      showError("Error", "Failed to delete list. Please try again.");
+    } finally {
+      setActionPending(actionKey, false);
+    }
+  }, [dispatch, isActionPending, listId, navigation, setActionPending, showError]);
+
+  const confirmDeleteThisList = useCallback(() => {
+    setShowHeaderMenu(false);
+
+    showAlert({
+      title: "Delete List",
+      message: `Are you sure you want to delete "${list?.name || "this list"}"?`,
+      type: "confirm",
+      buttons: [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: handleDeleteThisList,
+        },
+      ],
+    });
+  }, [handleDeleteThisList, list?.name, showAlert]);
 
   // Statistics
   const { totalItems, purchasedItems, progressPercent } = useMemo(() => {
@@ -245,6 +294,7 @@ const ListDetailsScreen = ({ navigation, route }) => {
             <View style={styles.itemMetaRow}>
               <Text style={styles.itemMetaText}>
                 {item.status === "purchased" ? "Purchased" : "Pending"}
+                {console.log("item", item)}
               </Text>
             </View>
           </View>
@@ -328,11 +378,17 @@ const ListDetailsScreen = ({ navigation, route }) => {
             </TouchableOpacity>
             <Menu
               visible={showHeaderMenu}
-              onDismiss={() => setShowHeaderMenu(false)}
+              onDismiss={() => {
+                isHeaderMenuDismissingRef.current = true;
+                setShowHeaderMenu(false);
+                setTimeout(() => {
+                  isHeaderMenuDismissingRef.current = false;
+                }, 100);
+              }}
               anchor={
                 <TouchableOpacity
                   style={styles.iconButton}
-                  onPress={() => setShowHeaderMenu(true)}>
+                  onPress={handleHeaderMenuToggle}>
                   <MoreVertical size={22} color="#1f2937" />
                 </TouchableOpacity>
               }
@@ -347,11 +403,14 @@ const ListDetailsScreen = ({ navigation, route }) => {
               />
               <Menu.Item
                 onPress={() => {
-                  setShowHeaderMenu(false);
-                  // Handle view action
+                  isHeaderMenuDismissingRef.current = true;
+                  confirmDeleteThisList();
+                  setTimeout(() => {
+                    isHeaderMenuDismissingRef.current = false;
+                  }, 100);
                 }}
-                title="View"
-                titleStyle={styles.menuItemTitle}
+                title="Delete"
+                titleStyle={styles.menuItemTitleDelete}
               />
             </Menu>
           </View>
@@ -431,36 +490,49 @@ const ListDetailsScreen = ({ navigation, route }) => {
 
         {/* Item List */}
         <View style={styles.listContainer}>
-          {displayItems.length > 0 ? (
-            <FlatList
-              data={displayItems}
-              renderItem={renderItem}
-              keyExtractor={item => String(item.id || item._id)}
-              scrollEnabled={false}
-              ListFooterComponent={
-                activeTab === "All Items" && doneItems.length > 0 ? (
-                  <>
-                    <View style={styles.sectionHeader}>
-                      <Text style={styles.sectionTitle}>PURCHASED</Text>
-                    </View>
-                    <FlatList
-                      data={doneItems}
-                      renderItem={renderItem}
-                      keyExtractor={item => String(item.id || item._id)}
-                      scrollEnabled={false}
-                    />
-                  </>
-                ) : null
-              }
-            />
+          {activeTab === "To Buy" ? (
+            displayItems.length > 0 ? (
+              <FlatList
+                data={displayItems}
+                renderItem={renderItem}
+                keyExtractor={item => String(item.id || item._id)}
+                scrollEnabled={false}
+              />
+            ) : (
+              <Text style={styles.emptyText}>All caught up! Nothing to buy.</Text>
+            )
           ) : (
-            <Text style={styles.emptyText}>
-              {activeTab === "To Buy"
-                ? "All caught up! Nothing to buy."
-                : doneItems.length > 0
-                  ? "No pending items."
-                  : "No items in this list."}
-            </Text>
+            <>
+              {/* Pending items (may be empty) */}
+              {displayItems.length > 0 ? (
+                <FlatList
+                  data={displayItems}
+                  renderItem={renderItem}
+                  keyExtractor={item => String(item.id || item._id)}
+                  scrollEnabled={false}
+                />
+              ) : null}
+
+              {/* Purchased items should always render when present (even if all items are purchased) */}
+              {doneItems.length > 0 ? (
+                <>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>PURCHASED</Text>
+                  </View>
+                  <FlatList
+                    data={doneItems}
+                    renderItem={renderItem}
+                    keyExtractor={item => String(item.id || item._id)}
+                    scrollEnabled={false}
+                  />
+                </>
+              ) : null}
+
+              {/* Empty state when there are no items at all */}
+              {displayItems.length === 0 && doneItems.length === 0 ? (
+                <Text style={styles.emptyText}>No items in this list.</Text>
+              ) : null}
+            </>
           )}
         </View>
 
@@ -474,7 +546,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#ffffff",
-    // paddingTop: Platform.OS === "android" ? 40 : 60,
+    // paddingTop: 40,
   },
   loadingContainer: {
     flex: 1,

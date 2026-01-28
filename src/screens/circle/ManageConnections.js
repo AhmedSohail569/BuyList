@@ -1,79 +1,271 @@
-import React, {useState} from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   View,
   TouchableOpacity,
   Image,
   StyleSheet,
   TextInput,
-  Dimensions,
-  Platform,
 } from "react-native";
 import {
-  ArrowLeft,
   Search,
   MoreHorizontal,
   UserPlus,
   Link as LinkIcon,
   QrCode,
   Smartphone,
-  Shield, // Using Shield for Owner icon logic if needed
+  Shield,
 } from "lucide-react-native";
+import { Menu } from "react-native-paper";
+import Toast from "react-native-toast-message";
 import Header from "~components/Header";
-import {ScrollView, Text} from "~components/Common";
-import {RFValue} from "react-native-responsive-fontsize";
-import {FontFamily} from "~theme/fonts";
+import { ScrollView, Text } from "~components/Common";
+import { RFValue } from "react-native-responsive-fontsize";
+import { FontFamily } from "~theme/fonts";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchOwnedCircle,
+  updateMemberRole,
+  removeMemberFromCircle,
+} from "~redux/actions/circleActions";
+import { useAlert } from "~context/AlertContext";
 
-const {width} = Dimensions.get("window");
+// Helper function to get initials from a name
+const getInitials = (name) => {
+  if (!name || typeof name !== "string") return "U";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 0) return "U";
+  if (parts.length === 1) {
+    return parts[0].substring(0, 2).toUpperCase();
+  }
+  const firstInitial = parts[0].charAt(0).toUpperCase();
+  const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
+  return `${firstInitial}${lastInitial}`;
+};
 
-// --- Mock Data ---
-const CONNECTIONS_DATA = [
-  {
-    id: 1,
-    name: "Samrana",
-    role: "Owner",
-    badgeColor: "#eff6ff",
-    textColor: "#0ea5e9",
-    avatar:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80",
-    isOwner: true,
-  },
-  {
-    id: 2,
-    name: "Alex",
-    role: "Editor",
-    badgeColor: "#ecfdf5",
-    textColor: "#10b981", // Green
-    avatar:
-      "https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=100&q=80",
-    isOwner: false,
-    showMenu: true, // For screenshot replication
-  },
-  {
-    id: 3,
-    name: "Jordan",
-    role: "Viewer",
-    badgeColor: "#f3f4f6",
-    textColor: "#6b7280", // Gray
-    avatar:
-      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80",
-    isOwner: false,
-  },
-  {
-    id: 4,
-    name: "Casey",
-    role: "Editor",
-    badgeColor: "#ecfdf5",
-    textColor: "#10b981",
-    avatar:
-      "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=100&q=80",
-    isOwner: false,
-  },
-];
+// Helper function to check if profile picture is available
+const hasProfilePicture = (profilePicture) => {
+  return profilePicture && profilePicture.trim() !== "";
+};
 
-const ManageConnectionsScreen = ({navigation, route}) => {
-  const {tab} = route.params || {};
-  const [activeTab, setActiveTab] = useState(tab || "Connections"); // 'Connections' | 'Invite'
-  const [activeMenuId, setActiveMenuId] = useState(2); // Default open on Alex to match screenshot
+// Helper function to format role for display
+const formatRole = (role) => {
+  if (!role) return "Member";
+  return role.charAt(0).toUpperCase() + role.slice(1);
+};
+
+// Build connections list from ownedCircle data
+const buildConnections = (ownedCircle) => {
+  if (!ownedCircle) return [];
+
+  const connections = [];
+
+  // Always add owner first
+  if (ownedCircle.owner) {
+    connections.push({
+      id: ownedCircle.owner._id || ownedCircle.owner.id,
+      name: ownedCircle.owner.username || ownedCircle.owner.email || "Owner",
+      role: "Owner",
+      avatar: ownedCircle.owner.profilePicture,
+      isOwner: true,
+      badgeColor: "#eff6ff",
+      textColor: "#0ea5e9",
+    });
+  }
+
+  // Add members if they exist
+  if (ownedCircle.members && Array.isArray(ownedCircle.members)) {
+    ownedCircle.members.forEach((member) => {
+      if (member.userId) {
+        const role = formatRole(member.role);
+        // Determine badge colors based on role
+        let badgeColor = "#f3f4f6";
+        let textColor = "#6b7280";
+        if (role === "Editor") {
+          badgeColor = "#ecfdf5";
+          textColor = "#10b981";
+        }
+
+        connections.push({
+          id: member.userId._id || member.userId.id,
+          name: member.userId.username || member.userId.email || "Member",
+          role,
+          avatar: member.userId.profilePicture,
+          isOwner: false,
+          badgeColor,
+          textColor,
+        });
+      }
+    });
+  }
+
+  return connections;
+};
+
+// Avatar Component with initials fallback
+const Avatar = ({ image, name, size = 40 }) => {
+  const hasImage = hasProfilePicture(image);
+  const initials = getInitials(name || "User");
+
+  if (hasImage) {
+    return (
+      <View style={{ width: size, height: size, borderRadius: size / 2, marginRight: 12 }}>
+        <Image
+          source={{ uri: image }}
+          style={{
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+          }}
+        />
+      </View>
+    );
+  }
+
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: "#e0f2fe",
+        justifyContent: "center",
+        alignItems: "center",
+        marginRight: 12,
+      }}>
+      <Text
+        style={{
+          fontSize: RFValue(size * 0.35),
+          color: "#0ea5e9",
+          fontFamily: FontFamily.bold,
+        }}>
+        {initials}
+      </Text>
+    </View>
+  );
+};
+
+const ManageConnectionsScreen = ({ navigation, route }) => {
+  const dispatch = useDispatch();
+  const { ownedCircle, loading } = useSelector(state => state.circles);
+  const { showAlert, showError } = useAlert();
+  const { tab } = route.params || {};
+  const [activeTab, setActiveTab] = useState(tab || "Connections");
+  const [activeMenuId, setActiveMenuId] = useState(null);
+  const isMenuDismissingRef = useRef(false);
+
+  // Get circle ID
+  const circleId = ownedCircle?._id || ownedCircle?.id;
+
+  // Fetch owned circle on mount
+  useEffect(() => {
+    if (!ownedCircle) {
+      dispatch(fetchOwnedCircle());
+    }
+  }, [dispatch, ownedCircle]);
+
+  // Build connections from ownedCircle data
+  const connections = useMemo(() => buildConnections(ownedCircle), [ownedCircle]);
+
+  // Handle menu toggle with proper state management
+  const handleMenuToggle = useCallback(
+    (memberId) => {
+      if (isMenuDismissingRef.current) {
+        return;
+      }
+      setActiveMenuId(prev => (prev === memberId ? null : memberId));
+    },
+    [],
+  );
+
+  // Handle menu dismiss
+  const handleMenuDismiss = useCallback(() => {
+    isMenuDismissingRef.current = true;
+    setActiveMenuId(null);
+    setTimeout(() => {
+      isMenuDismissingRef.current = false;
+    }, 100);
+  }, []);
+
+  // Update member role
+  const handleUpdateRole = useCallback(
+    async (memberId, newRole) => {
+      if (!circleId) {
+        showError("Error", "Circle ID not found");
+        return;
+      }
+
+      handleMenuDismiss();
+
+      try {
+        await dispatch(
+          updateMemberRole({
+            circleId,
+            memberId,
+            role: newRole.toLowerCase(),
+          }),
+        ).unwrap();
+
+        Toast.show({
+          type: "success",
+          text1: "Role Updated",
+          text2: `Member role updated to ${newRole}`,
+        });
+
+        // Refetch owned circle to update UI
+        dispatch(fetchOwnedCircle());
+      } catch (err) {
+        showError("Error", err || "Failed to update member role");
+      }
+    },
+    [circleId, dispatch, handleMenuDismiss, showError],
+  );
+
+  // Remove member from circle
+  const handleRemoveMember = useCallback(
+    (memberId, memberName) => {
+      if (!circleId) {
+        showError("Error", "Circle ID not found");
+        return;
+      }
+
+      handleMenuDismiss();
+
+      showAlert({
+        title: "Remove Member",
+        message: `Are you sure you want to remove "${memberName}" from the circle?`,
+        type: "confirm",
+        buttons: [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Remove",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await dispatch(
+                  removeMemberFromCircle({
+                    circleId,
+                    memberId,
+                  }),
+                ).unwrap();
+
+                Toast.show({
+                  type: "success",
+                  text1: "Member Removed",
+                  text2: `${memberName} has been removed from the circle`,
+                });
+
+                // Refetch owned circle to update UI
+                dispatch(fetchOwnedCircle());
+              } catch (err) {
+                showError("Error", err || "Failed to remove member");
+              }
+            },
+          },
+        ],
+      });
+    },
+    [circleId, dispatch, handleMenuDismiss, showAlert, showError],
+  );
 
   // --- Render Functions ---
 
@@ -83,53 +275,64 @@ const ManageConnectionsScreen = ({navigation, route}) => {
       style={[
         styles.connectionRow,
         !isLast && styles.separator,
-        {zIndex: activeMenuId === item.id ? 10 : 1},
+        { zIndex: activeMenuId === item.id ? 10 : 1 },
       ]}>
-      <Image source={{uri: item.avatar}} style={styles.avatar} />
+      <Avatar image={item.avatar} name={item.name} size={40} />
 
       <View style={styles.infoContainer}>
         <Text style={styles.nameText}>{item.name}</Text>
-        <View style={[styles.roleBadge, {backgroundColor: item.badgeColor}]}>
+        <View style={[styles.roleBadge, { backgroundColor: item.badgeColor }]}>
           {item.isOwner && (
             <Shield
               size={8}
               color={item.textColor}
-              style={{marginRight: 4}}
+              style={{ marginRight: 4 }}
               fill={item.textColor}
             />
           )}
-          <Text style={[styles.roleText, {color: item.textColor}]}>
+          <Text style={[styles.roleText, { color: item.textColor }]}>
             {item.role}
           </Text>
         </View>
       </View>
 
       {!item.isOwner && (
-        <TouchableOpacity
-          hitSlop={10}
-          onPress={() =>
-            setActiveMenuId(activeMenuId === item.id ? null : item.id)
-          }>
-          <MoreHorizontal size={20} color="#9ca3af" />
-        </TouchableOpacity>
+        <Menu
+          visible={activeMenuId === item.id}
+          onDismiss={handleMenuDismiss}
+          anchor={
+            <TouchableOpacity
+              hitSlop={10}
+              onPress={() => handleMenuToggle(item.id)}
+              disabled={loading}>
+              <MoreHorizontal size={20} color="#9ca3af" />
+            </TouchableOpacity>
+          }
+          contentStyle={styles.menuContent}>
+          {/* Show Editor option only if current role is not Editor */}
+          {item.role.toLowerCase() !== "editor" && (
+            <Menu.Item
+              onPress={() => handleUpdateRole(item.id, "Editor")}
+              title="Editor"
+              titleStyle={styles.menuItemTitle}
+            />
+          )}
+          {/* Show Viewer option only if current role is not Viewer */}
+          {item.role.toLowerCase() !== "viewer" && (
+            <Menu.Item
+              onPress={() => handleUpdateRole(item.id, "Viewer")}
+              title="Viewer"
+              titleStyle={styles.menuItemTitle}
+            />
+          )}
+          {/* Always show Remove option */}
+          <Menu.Item
+            onPress={() => handleRemoveMember(item.id, item.name)}
+            title="Remove"
+            titleStyle={styles.menuItemTitleDelete}
+          />
+        </Menu>
       )}
-
-      {/* Role Menu Dropdown */}
-      {/* {activeMenuId === item.id && (
-        <View style={styles.dropdownMenu}>
-          <TouchableOpacity style={styles.menuItemActive}>
-            <Text style={styles.menuTextBlue}>Editor</Text>
-          </TouchableOpacity>
-          <View style={styles.divider} />
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuText}>Viewer</Text>
-          </TouchableOpacity>
-          <View style={styles.divider} />
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuTextRed}>Remove</Text>
-          </TouchableOpacity>
-        </View>
-      )} */}
     </View>
   );
 
@@ -151,7 +354,7 @@ const ManageConnectionsScreen = ({navigation, route}) => {
               styles.tabText,
               activeTab === "Connections" && styles.activeTabText,
             ]}>
-            Connections (4)
+            Connections ({connections.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -174,7 +377,7 @@ const ManageConnectionsScreen = ({navigation, route}) => {
         {activeTab === "Connections" && (
           <>
             <View style={styles.searchContainer}>
-              <Search size={18} color="#9ca3af" style={{marginRight: 8}} />
+              <Search size={18} color="#9ca3af" style={{ marginRight: 8 }} />
               <TextInput
                 placeholder="Search connections..."
                 placeholderTextColor="#9ca3af"
@@ -183,11 +386,17 @@ const ManageConnectionsScreen = ({navigation, route}) => {
             </View>
 
             <View style={styles.listCard}>
-              {CONNECTIONS_DATA.map((item, index) =>
-                renderConnectionItem(
-                  item,
-                  index === CONNECTIONS_DATA.length - 1,
-                ),
+              {connections.length === 0 ? (
+                <Text style={styles.emptyConnectionsText}>
+                  No connections yet. Invite members to get started.
+                </Text>
+              ) : (
+                connections.map((item, index) =>
+                  renderConnectionItem(
+                    item,
+                    index === connections.length - 1,
+                  ),
+                )
               )}
             </View>
 
@@ -220,7 +429,7 @@ const ManageConnectionsScreen = ({navigation, route}) => {
 
               {/* Copy Link Box */}
               <View style={styles.copyBox}>
-                <LinkIcon size={16} color="#9ca3af" style={{marginRight: 8}} />
+                <LinkIcon size={16} color="#9ca3af" style={{ marginRight: 8 }} />
                 <Text style={styles.linkText} numberOfLines={1}>
                   buylist.app/join/fam-123
                 </Text>
@@ -233,14 +442,14 @@ const ManageConnectionsScreen = ({navigation, route}) => {
             {/* Bottom Action Grid */}
             <View style={styles.actionGrid}>
               <TouchableOpacity style={styles.actionCard}>
-                <QrCode size={24} color="#111827" style={{marginBottom: 8}} />
+                <QrCode size={24} color="#111827" style={{ marginBottom: 8 }} />
                 <Text style={styles.actionText}>Show QR Code</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.actionCard}>
                 <Smartphone
                   size={24}
                   color="#111827"
-                  style={{marginBottom: 8}}
+                  style={{ marginBottom: 8 }}
                 />
                 <Text style={styles.actionText}>From Contacts</Text>
               </TouchableOpacity>
@@ -248,7 +457,7 @@ const ManageConnectionsScreen = ({navigation, route}) => {
           </>
         )}
 
-        <View style={{height: 40}} />
+        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
@@ -315,7 +524,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     shadowColor: "#000",
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
     shadowRadius: 2,
     elevation: 2,
@@ -365,7 +574,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 10,
     shadowColor: "#000",
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 10,
     elevation: 5,
@@ -416,7 +625,7 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
     shadowRadius: 4,
     elevation: 2,
@@ -498,7 +707,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
     shadowRadius: 2,
     elevation: 2,
@@ -507,6 +716,22 @@ const styles = StyleSheet.create({
     fontSize: RFValue(10),
     fontFamily: FontFamily.bold,
     color: "#111827",
+  },
+  menuContent: {
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    paddingVertical: 4,
+    minWidth: 150,
+  },
+  menuItemTitle: {
+    fontSize: RFValue(12),
+    fontFamily: FontFamily.medium,
+    color: "#374151",
+  },
+  menuItemTitleDelete: {
+    fontSize: RFValue(12),
+    fontFamily: FontFamily.medium,
+    color: "#ef4444",
   },
 });
 

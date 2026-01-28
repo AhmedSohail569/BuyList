@@ -73,10 +73,8 @@ export const addItemsToList = createAsyncThunk(
     const previousLists = [...state.lists];
 
 
-    console.log('items', items)
     try {
       const response = await axios.post(`/lists/add-item/${listId}`, { items });
-      console.log('response', response)
       return {
         listId,
         items: response.data?.data?.items || response.data?.items || items,
@@ -84,7 +82,6 @@ export const addItemsToList = createAsyncThunk(
       };
 
     } catch (err) {
-      console.log('err', err)
       const message = getErrorMessage(err);
       // Return previous state for rollback
       return rejectWithValue({
@@ -109,20 +106,16 @@ export const markItemAsPurchased = createAsyncThunk(
     const previousList = state.listById[listId] || null;
     const previousLists = [...state.lists];
 
-    console.log('itemId', itemId)
-
     try {
       const response = await axios.put(
         `/lists/purchase-item/${listId}/items/${itemId}`,
       );
-      console.log('response', response)
       return {
         listId,
         itemId,
         response: response.data?.data || response.data,
       };
     } catch (err) {
-      console.log('err', err)
       const message = getErrorMessage(err);
       // Return previous state for rollback
       return rejectWithValue({
@@ -147,16 +140,13 @@ export const deleteItemFromList = createAsyncThunk(
     const state = getState().lists;
     const previousList = state.listById[listId] || null;
     const previousLists = [...state.lists];
-    console.log('itemId', itemId)
     try {
-      const response = await axios.delete(`/lists/delete-item/${listId}/items/${itemId}`);
-      console.log('response', response)
+      await axios.delete(`/lists/delete-item/${listId}/items/${itemId}`);
       return {
         listId,
         itemId,
       };
     } catch (err) {
-      console.log('err', err)
       const message = getErrorMessage(err);
       // Return previous state for rollback
       return rejectWithValue({
@@ -208,7 +198,9 @@ export const fetchRecentActivities = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get("/activities/recent");
-      return response.data?.data || response.data;
+      // Handle nested data structure: response.data.data.data (array)
+      const activities = response.data?.data?.data || response.data?.data || response.data;
+      return Array.isArray(activities) ? activities : [];
     } catch (err) {
       const message = getErrorMessage(err);
       return rejectWithValue(message);

@@ -206,25 +206,48 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
   const [sortOption, setSortOption] = useState("createdOn");
   const [showSortMenu, setShowSortMenu] = useState(false);
   const isDismissingRef = useRef(false);
+  const isFetchingOnFocusRef = useRef(false);
+
+  // Open create list modal when navigated from other tabs (e.g. Home "Create" quick action)
+  useFocusEffect(
+    useCallback(() => {
+      const shouldOpen = route?.params?.openCreateListModal;
+      if (shouldOpen && !isCreateListVisible) {
+        setCreateListVisible(true);
+      }
+      if (shouldOpen) {
+        // Clear the param so it doesn't re-open on every focus
+        navigation.setParams?.({ openCreateListModal: undefined });
+      }
+    }, [route?.params?.openCreateListModal, isCreateListVisible, navigation]),
+  );
 
   console.log("lists", lists);
 
   // Fetch lists on mount and refresh when screen is focused to get latest data
   useFocusEffect(
     useCallback(() => {
-      // Refresh when screen is focused to ensure we have latest data
-      // This ensures progress updates from ListDetails screen are reflected
-      // Only fetch if not already loading to avoid unnecessary calls
-      if (!loading) {
-        dispatch(fetchAllLists());
-      }
-    }, [dispatch, loading]),
+      // Refresh when screen is focused to ensure we have latest data.
+      // IMPORTANT: don't depend on `loading` here; it changes during fetch and can re-trigger this effect.
+      if (isFetchingOnFocusRef.current) return;
+
+      isFetchingOnFocusRef.current = true;
+      dispatch(fetchAllLists())
+        .unwrap()
+        .catch(() => {
+          // Errors handled by existing `error` effect/toast
+        })
+        .finally(() => {
+          isFetchingOnFocusRef.current = false;
+        });
+    }, [dispatch]),
   );
 
   // Handle navigation params to switch tabs
   useEffect(() => {
-    if (route?.params?.filter) {
-      const filterParam = route.params.filter.toLowerCase();
+    const filter = route?.params?.filter;
+    if (filter) {
+      const filterParam = String(filter).toLowerCase();
       if (filterParam === "shared") {
         setActiveTab("Shared Lists");
       } else if (filterParam === "personal") {
@@ -233,7 +256,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
         setActiveTab("All Lists");
       }
     }
-  }, [route?.params]);
+  }, [route?.params?.filter]);
 
   // Handle API errors
   useEffect(() => {
@@ -301,10 +324,10 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
   const filteredData = useMemo(() => {
     const filtered = lists.filter(item => {
       if (activeTab === "Personal Lists") {
-        return !item.shareWithCircle;
+        return item.type === "personal";
       }
       if (activeTab === "Shared Lists") {
-        return item.shareWithCircle;
+        return item.type === "shared";
       }
       return true;
     });
