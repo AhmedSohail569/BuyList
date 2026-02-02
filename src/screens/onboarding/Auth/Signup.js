@@ -36,6 +36,7 @@ const SignupScreen = ({navigation, route}) => {
         type: "success",
         text1: "Account Created",
         text2: "Please verify your email to continue",
+        props: { forceLight: true },
       });
       navigation.navigate("OTPVerification", {
         email,
@@ -51,6 +52,7 @@ const SignupScreen = ({navigation, route}) => {
         type: "error",
         text1: "Signup Failed",
         text2: typeof error === "string" ? error : "Something went wrong",
+        props: { forceLight: true },
       });
       dispatch(clearError());
     }
@@ -98,6 +100,7 @@ const SignupScreen = ({navigation, route}) => {
         type: "error",
         text1: "Validation Error",
         text2: "Please fill in all fields correctly",
+        props: { forceLight: true },
       });
       return;
     }
@@ -130,12 +133,12 @@ const SignupScreen = ({navigation, route}) => {
       <View
         style={[styles.content, {paddingBottom: insets.bottom + RFValue(24)}]}>
         {/* Title */}
-        <Text variant="sectionTitle" style={styles.title}>
+        <Text variant="sectionTitle" style={[styles.title, {color: "#1B1A1F"}]}>
           Sign Up
         </Text>
 
         {/* Subtitle */}
-        <Text variant="bodySmall" color="muted" style={styles.subtitle}>
+        <Text variant="bodySmall" style={[styles.subtitle, {color: "#9CA3AF"}]}>
           Enter your credentials to continue
         </Text>
 
@@ -147,6 +150,7 @@ const SignupScreen = ({navigation, route}) => {
           type={2}
           autoCapitalize="words"
           error={errors.username}
+          forceLight
         />
 
         <TextInput
@@ -158,6 +162,7 @@ const SignupScreen = ({navigation, route}) => {
           keyboardType="email-address"
           autoCapitalize="none"
           error={errors.email}
+          forceLight
         />
 
         <TextInput
@@ -168,21 +173,20 @@ const SignupScreen = ({navigation, route}) => {
           onChangeText={handlePasswordChange}
           type={2}
           error={errors.password}
+          forceLight
         />
 
         <Text
           variant="bodySmall"
-          style={{marginBottom: RFValue(15), fontSize: RFValue(10)}}>
+          style={{marginBottom: RFValue(15), fontSize: RFValue(10), color: "#9CA3AF"}}>
           By continuing you agree to our{" "}
           <Text
-            color="primary"
-            style={{marginBottom: RFValue(10), fontSize: RFValue(10)}}>
+            style={{marginBottom: RFValue(10), fontSize: RFValue(10), color: "#1E9DF1"}}>
             Terms of Service
           </Text>{" "}
           and{" "}
           <Text
-            color="primary"
-            style={{marginBottom: RFValue(10), fontSize: RFValue(10)}}>
+            style={{marginBottom: RFValue(10), fontSize: RFValue(10), color: "#1E9DF1"}}>
             Privacy Policy.
           </Text>
         </Text>
@@ -192,20 +196,21 @@ const SignupScreen = ({navigation, route}) => {
           title="Sign Up"
           onPress={() => handleSignUp()}
           loading={loading}
+          forceLight
         />
 
         <View style={{flexDirection: "row", alignSelf: "center"}}>
-          <Text variant="bodySmall" style={styles.textStyle}>
+          <Text variant="bodySmall" style={[styles.textStyle, {color: "#9CA3AF"}]}>
             Already have an account?{" "}
           </Text>
           <Text
             variant="link"
-            color="primary"
             onPress={() => navigation.navigate("Login")}
             style={[
               styles.textStyle,
               {
                 textDecorationLine: "underline",
+                color: "#1E9DF1",
               },
             ]}>
             Login

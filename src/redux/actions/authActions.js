@@ -1,13 +1,13 @@
-import {createAsyncThunk} from "@reduxjs/toolkit";
+import { createAsyncThunk } from "@reduxjs/toolkit";
 
-import {getErrorMessage, storeAccessToken} from "~utils";
+import { getErrorMessage, storeAccessToken } from "~utils";
 import axios from "~utils/axiosInstance";
 
 export const loginUser = createAsyncThunk(
   "auth/loginUser",
-  async ({email, password}, {rejectWithValue}) => {
+  async ({ email, password }, { rejectWithValue }) => {
     try {
-      const response = await axios.post("/auth/login", {email, password});
+      const response = await axios.post("/auth/login", { email, password });
 
       const data = response.data;
 
@@ -26,7 +26,7 @@ export const loginUser = createAsyncThunk(
 
 export const signupUser = createAsyncThunk(
   "auth/registerUser",
-  async ({username, email, password, phone, zone, area}, {rejectWithValue}) => {
+  async ({ username, email, password, phone, zone, area }, { rejectWithValue }) => {
     try {
       console.log(
         "name, email, password, phone",
@@ -64,7 +64,7 @@ export const signupUser = createAsyncThunk(
 // Verify Email OTP
 export const verifyEmail = createAsyncThunk(
   "auth/verifyEmail",
-  async ({email, otp}, {rejectWithValue}) => {
+  async ({ email, otp }, { rejectWithValue }) => {
     try {
       console.log("email, otp", email, otp);
       const response = await axios.post("/auth/verify-email", {
@@ -84,10 +84,10 @@ export const verifyEmail = createAsyncThunk(
 // Forgot password
 export const forgotPassword = createAsyncThunk(
   "auth/forgotPassword",
-  async ({email}, {rejectWithValue}) => {
+  async ({ email }, { rejectWithValue }) => {
     try {
       console.log("email", email);
-      const response = await axios.post("/auth/forgot-password", {email});
+      const response = await axios.post("/auth/forgot-password", { email });
       console.log("responseForgot", response);
       return response.data; // e.g., { message: "Reset email sent" }
     } catch (err) {
@@ -100,7 +100,7 @@ export const forgotPassword = createAsyncThunk(
 // Verify reset token
 export const verifyResetToken = createAsyncThunk(
   "auth/verifyResetToken",
-  async ({email, otp}, {rejectWithValue}) => {
+  async ({ email, otp }, { rejectWithValue }) => {
     try {
       const response = await axios.post("/auth/verify-reset-otp", {
         email,
@@ -118,7 +118,7 @@ export const verifyResetToken = createAsyncThunk(
 // Reset password
 export const resetPassword = createAsyncThunk(
   "auth/resetPassword",
-  async ({email, otp, newPassword, confirmPassword}, {rejectWithValue}) => {
+  async ({ email, otp, newPassword, confirmPassword }, { rejectWithValue }) => {
     try {
       const response = await axios.post("/auth/reset-password", {
         email,
@@ -134,6 +134,40 @@ export const resetPassword = createAsyncThunk(
         response,
       );
       return response.data; // e.g., { message: "Password reset successful" }
+    } catch (err) {
+      const message = getErrorMessage(err);
+      return rejectWithValue(message);
+    }
+  },
+);
+
+// Resend OTP for email verification
+export const resendOTP = createAsyncThunk(
+  "auth/resendOTP",
+  async ({ email }, { rejectWithValue }) => {
+    try {
+      if (!email) {
+        return rejectWithValue("Email is required");
+      }
+      const response = await axios.post("/auth/resend-otp", { email });
+      return response.data; // e.g., { message: "OTP resent successfully" }
+    } catch (err) {
+      const message = getErrorMessage(err);
+      return rejectWithValue(message);
+    }
+  },
+);
+
+// Resend OTP for reset password
+export const resendResetOTP = createAsyncThunk(
+  "auth/resendResetOTP",
+  async ({ email }, { rejectWithValue }) => {
+    try {
+      if (!email) {
+        return rejectWithValue("Email is required");
+      }
+      const response = await axios.post("/auth/resend-reset-otp", { email });
+      return response.data; // e.g., { message: "Reset OTP resent successfully" }
     } catch (err) {
       const message = getErrorMessage(err);
       return rejectWithValue(message);

@@ -2,15 +2,7 @@ import React from "react";
 import {Text, TouchableOpacity} from "react-native";
 import PropTypes from "prop-types";
 import {Typography} from "../../theme/typography";
-
-const COLORS = {
-  default: "#1B1A1F",
-  primary: "#1E9DF1",
-  secondary: "#666666",
-  muted: "#9E9E9E",
-  error: "#FF4D4D",
-  white: "#FFFFFF",
-};
+import {useTheme} from "~context/ThemeContext";
 
 const AppText = ({
   children,
@@ -22,9 +14,39 @@ const AppText = ({
   numberOfLines,
   ...props
 }) => {
+  const {colors, isDark} = useTheme();
+
+  // Map color names to theme colors
+  const getColor = colorName => {
+    switch (colorName) {
+      case "default":
+        return colors.textPrimary;
+      case "primary":
+        return colors.primary;
+      case "secondary":
+        return colors.textSecondary;
+      case "muted":
+        return colors.textMuted;
+      case "error":
+        return colors.error;
+      case "white":
+        return isDark ? colors.textPrimary : "#FFFFFF";
+      case "success":
+        return colors.success;
+      case "warning":
+        return colors.warning;
+      default:
+        // If it's a hex color, use it directly
+        if (colorName && colorName.startsWith("#")) {
+          return colorName;
+        }
+        return colors.textPrimary;
+    }
+  };
+
   const textStyle = [
     Typography[variant],
-    {color: COLORS[color], textAlign: align},
+    {color: getColor(color), textAlign: align},
     style,
   ];
 
@@ -54,7 +76,11 @@ AppText.propTypes = {
     "caption",
     "button",
     "link",
+    "small",
+    "medium",
   ]),
+  color: PropTypes.string,
+  align: PropTypes.oneOf(["left", "center", "right"]),
 };
 
 export default AppText;

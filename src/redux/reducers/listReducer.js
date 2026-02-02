@@ -13,6 +13,7 @@ import {
   deleteList,
   fetchRecentActivities,
 } from "../actions/listActions";
+import { logout } from "./authReducer";
 
 // ============================================
 // INITIAL STATE
@@ -481,6 +482,11 @@ const listsSlice = createSlice({
       .addCase(fetchRecentActivities.rejected, (state, action) => {
         state.activitiesLoading = false;
         state.error = action.payload;
+      })
+
+      // Clear list state on logout
+      .addCase(logout, () => {
+        return initialState;
       });
   },
 });

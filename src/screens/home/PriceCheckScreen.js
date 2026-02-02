@@ -20,6 +20,7 @@ import Header from "~components/Header"; // Assuming generic header available
 import {Text} from "~components/Common";
 import {RFValue} from "react-native-responsive-fontsize";
 import {FontFamily} from "~theme/fonts";
+import {useTheme} from "~context/ThemeContext";
 
 const {width} = Dimensions.get("window");
 
@@ -72,6 +73,8 @@ const SPECS = [
 ];
 
 const PriceCheckScreen = ({navigation}) => {
+  const {colors} = useTheme();
+  
   // --- Render Store Card ---
   const renderStoreCard = item => {
     const isBest = item.isBestPrice;
@@ -79,10 +82,14 @@ const PriceCheckScreen = ({navigation}) => {
     return (
       <View
         key={item.id}
-        style={[styles.offerCard, isBest && styles.offerCardBest]}>
+        style={[
+          styles.offerCard, 
+          {backgroundColor: colors.card, borderColor: colors.border},
+          isBest && [styles.offerCardBest, {borderColor: colors.success}]
+        ]}>
         {/* Best Price Badge */}
         {isBest && (
-          <View style={styles.bestPriceBadge}>
+          <View style={[styles.bestPriceBadge, {backgroundColor: colors.success}]}>
             <CheckCircle size={10} color="#fff" style={{marginRight: 4}} />
             <Text style={styles.bestPriceText}>Best Price</Text>
           </View>
@@ -94,41 +101,41 @@ const PriceCheckScreen = ({navigation}) => {
             <Text style={styles.storeLogoText}>{item.storeLogoText}</Text>
           </View>
           <View>
-            <Text style={styles.storeName}>{item.store}</Text>
-            <Text style={styles.storeType}>{item.type}</Text>
+            <Text style={[styles.storeName, {color: colors.textPrimary}]}>{item.store}</Text>
+            <Text style={[styles.storeType, {color: colors.textSecondary}]}>{item.type}</Text>
           </View>
         </View>
 
         {/* Price Section */}
         <View style={styles.priceRow}>
-          <Text style={[styles.currentPrice, isBest && {color: "#22C55E"}]}>
+          <Text style={[styles.currentPrice, {color: colors.textPrimary}, isBest && {color: colors.success}]}>
             ${item.price.toFixed(2)}
           </Text>
           {item.oldPrice && (
-            <Text style={styles.oldPrice}>${item.oldPrice.toFixed(2)}</Text>
+            <Text style={[styles.oldPrice, {color: colors.textMuted}]}>${item.oldPrice.toFixed(2)}</Text>
           )}
         </View>
-        <Text style={styles.taxNote}>Taxes calculated at checkout</Text>
+        <Text style={[styles.taxNote, {color: colors.textMuted}]}>Taxes calculated at checkout</Text>
 
         {/* Details Grid */}
         <View style={styles.detailsGrid}>
           {/* Row 1: Stock */}
           <View style={styles.detailRow}>
-            <CheckCircle size={14} color="#6B7280" />
-            <Text style={styles.detailLabel}>Stock</Text>
+            <CheckCircle size={14} color={colors.iconSecondary} />
+            <Text style={[styles.detailLabel, {color: colors.textSecondary}]}>Stock</Text>
             <View
               style={[
                 styles.stockBadge,
                 item.stockStatus === "In Stock"
-                  ? styles.stockGreen
-                  : styles.stockOrange,
+                  ? {backgroundColor: colors.successLight}
+                  : {backgroundColor: colors.warningLight},
               ]}>
               <Text
                 style={[
                   styles.stockText,
                   item.stockStatus === "In Stock"
-                    ? {color: "#166534"}
-                    : {color: "#9A3412"},
+                    ? {color: colors.successDark}
+                    : {color: colors.warningDark},
                 ]}>
                 {item.stockStatus}
               </Text>
@@ -137,28 +144,28 @@ const PriceCheckScreen = ({navigation}) => {
 
           {/* Row 2: Shipping */}
           <View style={styles.detailRow}>
-            <Truck size={14} color="#6B7280" />
-            <Text style={styles.detailLabel}>Get it by</Text>
-            <Text style={styles.detailValue}>{item.shipping}</Text>
+            <Truck size={14} color={colors.iconSecondary} />
+            <Text style={[styles.detailLabel, {color: colors.textSecondary}]}>Get it by</Text>
+            <Text style={[styles.detailValue, {color: colors.textPrimary}]}>{item.shipping}</Text>
           </View>
 
           {/* Row 3: Returns */}
           <View style={styles.detailRow}>
-            <RotateCcw size={14} color="#6B7280" />
-            <Text style={styles.detailLabel}>Returns</Text>
-            <Text style={styles.detailValueSingle}>{item.returns}</Text>
+            <RotateCcw size={14} color={colors.iconSecondary} />
+            <Text style={[styles.detailLabel, {color: colors.textSecondary}]}>Returns</Text>
+            <Text style={[styles.detailValueSingle, {color: colors.textPrimary}]}>{item.returns}</Text>
           </View>
         </View>
 
         {/* Action Button */}
         {isBest ? (
-          <TouchableOpacity style={styles.primaryButton}>
+          <TouchableOpacity style={[styles.primaryButton, {backgroundColor: colors.primary}]}>
             <ShoppingCart size={16} color="#fff" style={{marginRight: 8}} />
             <Text style={styles.primaryButtonText}>Go to Store</Text>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity style={styles.secondaryButton}>
-            <ShoppingCart size={18} color="#1F2937" />
+          <TouchableOpacity style={[styles.secondaryButton, {backgroundColor: colors.backgroundSecondary}]}>
+            <ShoppingCart size={18} color={colors.textPrimary} />
           </TouchableOpacity>
         )}
       </View>
@@ -166,7 +173,7 @@ const PriceCheckScreen = ({navigation}) => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, {backgroundColor: colors.background}]}>
       <Header
         variant="screen"
         title={"Price Check"}
@@ -174,20 +181,20 @@ const PriceCheckScreen = ({navigation}) => {
       />
 
       {/* Read-Only Search Bar */}
-      <View style={styles.searchContainer}>
-        <Search size={18} color="#9CA3AF" />
-        <Text style={styles.searchText}>Sony WH-1000XM5</Text>
+      <View style={[styles.searchContainer, {backgroundColor: colors.inputBackground, borderColor: colors.border}]}>
+        <Search size={18} color={colors.inputPlaceholder} />
+        <Text style={[styles.searchText, {color: colors.textPrimary}]}>Sony WH-1000XM5</Text>
       </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
         {/* Product Info Card */}
-        <View style={styles.productCard}>
-          <Image source={{uri: PRODUCT.image}} style={styles.productImage} />
+        <View style={[styles.productCard, {backgroundColor: colors.card, borderColor: colors.border}]}>
+          <Image source={{uri: PRODUCT.image}} style={[styles.productImage, {backgroundColor: colors.backgroundSecondary}]} />
           <View style={styles.productInfo}>
             <View style={styles.tagRow}>
-              <Text style={styles.tagText}>{PRODUCT.category}</Text>
+              <Text style={[styles.tagText, {backgroundColor: colors.badgeBackground, color: colors.primary}]}>{PRODUCT.category}</Text>
               <View style={styles.ratingBox}>
                 <Star
                   size={10}
@@ -195,36 +202,36 @@ const PriceCheckScreen = ({navigation}) => {
                   fill="#FBBF24"
                   style={{marginRight: 2}}
                 />
-                <Text style={styles.ratingText}>{PRODUCT.rating}</Text>
+                <Text style={[styles.ratingText, {color: colors.warning}]}>{PRODUCT.rating}</Text>
               </View>
             </View>
-            <Text style={styles.productTitle}>{PRODUCT.title}</Text>
+            <Text style={[styles.productTitle, {color: colors.textPrimary}]}>{PRODUCT.title}</Text>
             <View style={styles.msrpRow}>
-              <Text style={styles.msrpLabel}>MSRP</Text>
-              <Text style={styles.msrpValue}>{PRODUCT.msrp}</Text>
+              <Text style={[styles.msrpLabel, {color: colors.textSecondary}]}>MSRP</Text>
+              <Text style={[styles.msrpValue, {color: colors.textMuted}]}>{PRODUCT.msrp}</Text>
             </View>
           </View>
         </View>
 
         {/* AI Analysis Banner */}
-        <View style={styles.aiCard}>
+        <View style={[styles.aiCard, {backgroundColor: colors.textPrimary}]}>
           <View style={styles.aiHeader}>
-            <View style={styles.aiIconBox}>
-              <BarChart2 size={16} color="#9CA3AF" />
+            <View style={[styles.aiIconBox, {backgroundColor: colors.backgroundSecondary}]}>
+              <BarChart2 size={16} color={colors.textMuted} />
             </View>
-            <Text style={styles.aiTitle}>AI ANALYSIS</Text>
+            <Text style={[styles.aiTitle, {color: colors.textMuted}]}>AI ANALYSIS</Text>
           </View>
-          <Text style={styles.aiText}>
-            <Text style={styles.boldWhite}>Amazon</Text> is your cheapest option
-            today. However, <Text style={styles.boldWhite}>Best Buy</Text> has
+          <Text style={[styles.aiText, {color: colors.textMuted}]}>
+            <Text style={[styles.boldWhite, {color: colors.textInverse}]}>Amazon</Text> is your cheapest option
+            today. However, <Text style={[styles.boldWhite, {color: colors.textInverse}]}>Best Buy</Text> has
             limited stock near you for immediate pickup.
           </Text>
         </View>
 
         {/* Store Offers */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Store Offers</Text>
-          <Text style={styles.sectionSubtitle}>4 stores found</Text>
+          <Text style={[styles.sectionTitle, {color: colors.textPrimary}]}>Store Offers</Text>
+          <Text style={[styles.sectionSubtitle, {color: colors.textSecondary}]}>4 stores found</Text>
         </View>
 
         <ScrollView
@@ -236,23 +243,24 @@ const PriceCheckScreen = ({navigation}) => {
         </ScrollView>
 
         {/* Technical Details */}
-        <Text style={styles.sectionTitle}>Technical Details</Text>
-        <View style={styles.specsCard}>
+        <Text style={[styles.sectionTitle, {color: colors.textPrimary}]}>Technical Details</Text>
+        <View style={[styles.specsCard, {backgroundColor: colors.card, borderColor: colors.border}]}>
           {SPECS.map((spec, index) => (
             <View
               key={index}
               style={[
                 styles.specRow,
+                {borderBottomColor: colors.border},
                 index === SPECS.length - 1 && {borderBottomWidth: 0},
               ]}>
-              <Text style={styles.specLabel}>{spec.label}</Text>
-              <Text style={styles.specValue}>{spec.value}</Text>
+              <Text style={[styles.specLabel, {color: colors.textSecondary}]}>{spec.label}</Text>
+              <Text style={[styles.specValue, {color: colors.textPrimary}]}>{spec.value}</Text>
             </View>
           ))}
 
-          <TouchableOpacity style={styles.showSpecsBtn}>
-            <Text style={styles.showSpecsText}>Show Full Specs</Text>
-            <ChevronDown size={14} color="#0EA5E9" />
+          <TouchableOpacity style={[styles.showSpecsBtn, {backgroundColor: colors.backgroundSecondary}]}>
+            <Text style={[styles.showSpecsText, {color: colors.primary}]}>Show Full Specs</Text>
+            <ChevronDown size={14} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
@@ -265,7 +273,6 @@ const PriceCheckScreen = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
   },
 
   // Header
@@ -273,7 +280,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingTop: 16, // Adjust for SafeArea
+    paddingTop: 16,
     marginBottom: 12,
   },
   backButton: {
@@ -282,25 +289,23 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: RFValue(18),
     fontFamily: FontFamily.bold,
-    color: "#111827",
   },
 
   // Search Bar
   searchContainer: {
     marginHorizontal: 16,
-    backgroundColor: "#F3F4F6",
     borderRadius: 12,
     height: 44,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
     marginBottom: 16,
+    borderWidth: 1,
   },
   searchText: {
     marginLeft: 10,
     fontSize: RFValue(12),
     fontFamily: FontFamily.regular,
-    color: "#1F2937",
   },
 
   scrollContent: {
@@ -309,19 +314,16 @@ const styles = StyleSheet.create({
 
   // Product Card
   productCard: {
-    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 12,
     flexDirection: "row",
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#F3F4F6",
   },
   productImage: {
     width: 80,
     height: 80,
     borderRadius: 8,
-    backgroundColor: "#F3F4F6",
     marginRight: 12,
   },
   productInfo: {
@@ -335,8 +337,6 @@ const styles = StyleSheet.create({
   tagText: {
     fontSize: RFValue(8),
     fontFamily: FontFamily.bold,
-    color: "#0EA5E9",
-    backgroundColor: "#E0F2FE",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -349,12 +349,10 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: RFValue(9),
     fontFamily: FontFamily.bold,
-    color: "#B45309",
   },
   productTitle: {
     fontSize: RFValue(12),
     fontFamily: FontFamily.bold,
-    color: "#111827",
     marginBottom: 4,
     lineHeight: 18,
   },
@@ -364,18 +362,15 @@ const styles = StyleSheet.create({
   },
   msrpLabel: {
     fontSize: RFValue(9),
-    color: "#6B7280",
     marginRight: 4,
   },
   msrpValue: {
     fontSize: RFValue(9),
-    color: "#9CA3AF",
     textDecorationLine: "line-through",
   },
 
   // AI Card
   aiCard: {
-    backgroundColor: "#111827", // Dark
     borderRadius: 16,
     padding: 16,
     marginBottom: 24,
@@ -386,25 +381,21 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   aiIconBox: {
-    backgroundColor: "#374151",
     padding: 4,
     borderRadius: 6,
     marginRight: 8,
   },
   aiTitle: {
-    color: "#D1D5DB",
     fontSize: RFValue(9),
     fontFamily: FontFamily.bold,
     letterSpacing: 1,
   },
   aiText: {
-    color: "#D1D5DB",
     fontSize: RFValue(11),
     fontFamily: FontFamily.regular,
     lineHeight: 20,
   },
   boldWhite: {
-    color: "#FFFFFF",
     fontFamily: FontFamily.bold,
     textDecorationLine: "underline",
   },
@@ -419,31 +410,25 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: RFValue(14),
     fontFamily: FontFamily.bold,
-    color: "#111827",
   },
   sectionSubtitle: {
     fontSize: RFValue(10),
-    color: "#6B7280",
   },
   offersScroll: {
-    marginHorizontal: -16, // Bleed to edge
+    marginHorizontal: -16,
     paddingHorizontal: 16,
     marginBottom: 24,
   },
   offerCard: {
-    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 16,
-    width: width * 0.7, // Card Width
+    width: width * 0.7,
     marginRight: 12,
     borderWidth: 1,
-    borderColor: "#F3F4F6", // Default border
     position: "relative",
   },
   offerCardBest: {
     borderWidth: 2,
-    borderColor: "#22C55E", // Green Border
-    backgroundColor: "#FFFFFF",
   },
   bestPriceBadge: {
     position: "absolute",
@@ -451,7 +436,6 @@ const styles = StyleSheet.create({
     right: 12,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#22C55E",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -484,11 +468,9 @@ const styles = StyleSheet.create({
   storeName: {
     fontSize: RFValue(13),
     fontFamily: FontFamily.bold,
-    color: "#111827",
   },
   storeType: {
     fontSize: RFValue(9),
-    color: "#6B7280",
   },
   priceRow: {
     flexDirection: "row",
@@ -498,18 +480,15 @@ const styles = StyleSheet.create({
   currentPrice: {
     fontSize: RFValue(22),
     fontFamily: FontFamily.bold,
-    color: "#111827",
     marginRight: 8,
   },
   oldPrice: {
     fontSize: RFValue(12),
-    color: "#9CA3AF",
     textDecorationLine: "line-through",
     marginBottom: 4,
   },
   taxNote: {
     fontSize: RFValue(8),
-    color: "#9CA3AF",
     marginBottom: 16,
   },
 
@@ -524,9 +503,8 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: RFValue(10),
-    color: "#6B7280",
     marginLeft: 6,
-    width: 60, // Fixed label width for alignment
+    width: 60,
   },
   stockBadge: {
     paddingHorizontal: 6,
@@ -534,8 +512,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     marginLeft: "auto",
   },
-  stockGreen: {backgroundColor: "#DCFCE7"},
-  stockOrange: {backgroundColor: "#FFEDD5"},
   stockText: {
     fontSize: RFValue(9),
     fontFamily: FontFamily.bold,
@@ -543,20 +519,17 @@ const styles = StyleSheet.create({
   detailValue: {
     fontSize: RFValue(10),
     fontFamily: FontFamily.bold,
-    color: "#111827",
     marginLeft: "auto",
     textAlign: "right",
   },
   detailValueSingle: {
     fontSize: RFValue(10),
     fontFamily: FontFamily.bold,
-    color: "#111827",
     marginLeft: "auto",
   },
 
   // Buttons
   primaryButton: {
-    backgroundColor: "#0EA5E9",
     borderRadius: 12,
     paddingVertical: 12,
     flexDirection: "row",
@@ -569,7 +542,6 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.bold,
   },
   secondaryButton: {
-    backgroundColor: "#F3F4F6",
     borderRadius: 12,
     paddingVertical: 12,
     justifyContent: "center",
@@ -578,27 +550,22 @@ const styles = StyleSheet.create({
 
   // Specs
   specsCard: {
-    backgroundColor: "#fff",
     borderRadius: 16,
     marginTop: 12,
     borderWidth: 1,
-    borderColor: "#F3F4F6",
   },
   specRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
   },
   specLabel: {
     fontSize: RFValue(11),
-    color: "#6B7280",
     fontFamily: FontFamily.regular,
   },
   specValue: {
     fontSize: RFValue(11),
-    color: "#111827",
     fontFamily: FontFamily.bold,
   },
   showSpecsBtn: {
@@ -606,13 +573,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F9FAFB",
     borderBottomLeftRadius: 16,
     borderBottomRightRadius: 16,
   },
   showSpecsText: {
     fontSize: RFValue(10),
-    color: "#0EA5E9",
     fontFamily: FontFamily.bold,
     marginRight: 4,
   },

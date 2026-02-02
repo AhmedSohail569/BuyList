@@ -7,7 +7,7 @@ const OnboardingLayout = ({
   children,
   source = Images.onboardingBgLayout, // background image
   overlayOpacity = 0.35,
-  statusBarStyle = "light-content",
+  statusBarStyle = "dark-content",
 }) => {
   return (
     <View style={styles.container}>
@@ -22,9 +22,7 @@ const OnboardingLayout = ({
         style={styles.image}
         imageStyle={styles.imageRadius}
         resizeMode="stretch">
-        {/* <SafeAreaView edges={["top", "left", "right"]} style={styles.safeArea}> */}
         {children}
-        {/* </SafeAreaView> */}
       </ImageBackground>
     </View>
   );
@@ -40,7 +38,6 @@ const styles = StyleSheet.create({
 
   image: {
     flex: 1,
-    // justifyContent: "flex-end",
   },
 
   safeArea: {

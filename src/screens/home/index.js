@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo } from "react";
 import {
   View,
@@ -26,12 +25,13 @@ import { RFValue } from "react-native-responsive-fontsize";
 import { FontFamily } from "~theme/fonts";
 import { useSelector, useDispatch } from "react-redux";
 import { fetchRecentActivities } from "~redux/actions/listActions";
-// import {fetchAIRecommendations} from "../services/geminiService.js";
+import { getProfile } from "~redux/actions/profileActions";
+import { useTheme } from "~context/ThemeContext";
 
 const { width } = Dimensions.get("window");
 
 // Helper to format relative time
-const formatTimeAgo = (dateString) => {
+const formatTimeAgo = dateString => {
   if (!dateString) return "Recently";
   const now = new Date();
   const date = new Date(dateString);
@@ -94,7 +94,7 @@ const normalizeActivity = (activity, index) => {
 };
 
 // Helper to get initials from name
-const getInitials = (name) => {
+const getInitials = name => {
   if (!name || typeof name !== "string") return "U";
   const parts = name.trim().split(/\s+/);
   if (parts.length === 0) return "U";
@@ -107,18 +107,19 @@ const getInitials = (name) => {
 };
 
 // Helper to check if profile picture is available
-const hasProfilePicture = (profilePicture) => {
+const hasProfilePicture = profilePicture => {
   return profilePicture && profilePicture.trim() !== "";
 };
 
 // Avatar Component with initials fallback
-const Avatar = ({ image, name, size = 40, style }) => {
+const Avatar = ({ image, name, size = 40, style, colors }) => {
   const hasImage = hasProfilePicture(image);
   const initials = getInitials(name || "User");
 
   if (hasImage) {
     return (
-      <View style={[{ width: size, height: size, borderRadius: size / 2 }, style]}>
+      <View
+        style={[{ width: size, height: size, borderRadius: size / 2 }, style]}>
         <Image
           source={{ uri: image }}
           style={{
@@ -138,7 +139,7 @@ const Avatar = ({ image, name, size = 40, style }) => {
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: "#e0f2fe",
+          backgroundColor: colors?.badgeBackground || "#e0f2fe",
           justifyContent: "center",
           alignItems: "center",
         },
@@ -147,7 +148,7 @@ const Avatar = ({ image, name, size = 40, style }) => {
       <Text
         style={{
           fontSize: RFValue(size * 0.35),
-          color: "#0ea5e9",
+          color: colors?.primary || "#0ea5e9",
         }}>
         {initials}
       </Text>
@@ -181,7 +182,7 @@ const FOR_YOU = [
     tag: "Kitchen Appliance",
     desc: "Prepare healthier meals with less oil, controllable remotely via your smartphone.",
     image:
-      "https://images.unsplash.com/photo-1585670149967-b4f4cb280d49?auto=format&fit=crop&w=100&q=80", // Placeholder
+      "https://images.unsplash.com/photo-1585670149967-b4f4cb280d49?auto=format&fit=crop&w=100&q=80",
   },
   {
     id: 2,
@@ -195,11 +196,14 @@ const FOR_YOU = [
 
 const HomeTab = ({ onQuickAction, navigation }) => {
   const dispatch = useDispatch();
+  const { colors, isDark } = useTheme();
   const { user } = useSelector(state => state.auth);
+  const { profile } = useSelector(state => state.profile);
   const { recentActivities } = useSelector(state => state.lists);
 
   // Fetch recent activities on mount
   useEffect(() => {
+    dispatch(getProfile());
     dispatch(fetchRecentActivities());
   }, [dispatch]);
 
@@ -210,14 +214,11 @@ const HomeTab = ({ onQuickAction, navigation }) => {
   }, [recentActivities]);
 
   const navigateToTab = tabName => {
-    // HomeTab is inside HomeStackNavigator which is inside BottomTabs.
-    // Use parent navigator to switch tabs reliably.
     const tabNav = navigation.getParent?.();
     if (tabNav?.navigate) {
       tabNav.navigate(tabName);
       return true;
     }
-    // Fallback: sometimes direct navigate works depending on navigator nesting.
     navigation.navigate(tabName);
     return true;
   };
@@ -237,28 +238,33 @@ const HomeTab = ({ onQuickAction, navigation }) => {
     });
   };
 
+  // Quick action colors for dark/light mode
+  const quickActionColors = {
+    create: { bg: isDark ? "rgba(37, 99, 235, 0.2)" : "#DBEAFE", icon: "#2563EB" },
+    lists: { bg: isDark ? "rgba(147, 51, 234, 0.2)" : "#F3E8FF", icon: "#9333EA" },
+    circle: {
+      bg: isDark ? "rgba(234, 88, 12, 0.2)" : "#FFEDD5",
+      icon: "#EA580C",
+    },
+    compare: {
+      bg: isDark ? "rgba(22, 163, 74, 0.2)" : "#DCFCE7",
+      icon: "#16A34A",
+    },
+  };
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header
         variant="home"
         greeting="Good Morning,"
-        userName={user?.username || "Samrana"}
-        avatar={{ uri: "https://i.pravatar.cc/150" }}
+        userName={profile?.username || user?.username || "User"}
+        avatar={profile?.profilePicture ? { uri: profile.profilePicture } : null}
         rightIcon="notifications-outline"
         notificationBadge
         onRightPress={() => navigation.navigate("Notifications")}
       />
 
       <SearchBar placeholder="Search products, categories..." />
-
-      {/* <Header
-        variant="title"
-        title="Your Circle"
-        subtitle="Shared shopping with your household"
-        rightIcon="person-add-outline"
-        onRightPress={() => navigation.navigate("AddMember")}
-      /> */}
-      {/* Top Bar */}
 
       <ScrollView>
         {/* Quick Actions */}
@@ -267,32 +273,36 @@ const HomeTab = ({ onQuickAction, navigation }) => {
             id="create"
             icon={Plus}
             label="Create"
-            color="#DBEAFE"
-            iconColor="#2563EB"
+            color={quickActionColors.create.bg}
+            iconColor={quickActionColors.create.icon}
+            labelColor={colors.textSecondary}
             onPress={() => navigateToListsAndOpenCreate()}
           />
           <ActionIcon
             id="lists"
             icon={List}
             label="Lists"
-            color="#F3E8FF"
-            iconColor="#9333EA"
+            color={quickActionColors.lists.bg}
+            iconColor={quickActionColors.lists.icon}
+            labelColor={colors.textSecondary}
             onPress={() => navigateToTab("Lists")}
           />
           <ActionIcon
             id="circle"
             icon={Users}
             label="Circle"
-            color="#FFEDD5"
-            iconColor="#EA580C"
+            color={quickActionColors.circle.bg}
+            iconColor={quickActionColors.circle.icon}
+            labelColor={colors.textSecondary}
             onPress={() => navigateToTab("Circle")}
           />
           <ActionIcon
             id="compare"
             icon={TrendingDown}
             label="Compare"
-            color="#DCFCE7"
-            iconColor="#16A34A"
+            color={quickActionColors.compare.bg}
+            iconColor={quickActionColors.compare.icon}
+            labelColor={colors.textSecondary}
             onPress={() => navigation.navigate("PriceCheck")}
           />
         </View>
@@ -302,25 +312,56 @@ const HomeTab = ({ onQuickAction, navigation }) => {
         <YourLists navigation={navigation} />
 
         {/* --- SECTION: Circle Updates --- */}
-        <Text style={styles.sectionTitle}>Circle Updates</Text>
-        <View style={styles.updatesCard}>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+          Circle Updates
+        </Text>
+        <View
+          style={[
+            styles.updatesCard,
+            {
+              backgroundColor: colors.card,
+              shadowColor: colors.shadowColor,
+            },
+          ]}>
           {circleUpdates.length === 0 ? (
-            <Text style={styles.emptyUpdateText}>No recent updates yet.</Text>
+            <Text style={[styles.emptyUpdateText, { color: colors.textMuted }]}>
+              No recent updates yet.
+            </Text>
           ) : (
             circleUpdates.map((item, index) => (
               <View
                 key={item.id}
-                style={[styles.updateRow, index !== 0 && styles.updateSeparator]}>
+                style={[
+                  styles.updateRow,
+                  index !== 0 && [
+                    styles.updateSeparator,
+                    { borderTopColor: colors.divider },
+                  ],
+                ]}>
                 <View>
-                  <Avatar image={item.userAvatar} name={item.userName} size={40} />
-                  <View style={[styles.onlineDot, { backgroundColor: "#22C55E" }]} />
+                  <Avatar
+                    image={item.userAvatar}
+                    name={item.userName}
+                    size={40}
+                    colors={colors}
+                  />
+                  <View
+                    style={[styles.onlineDot, { borderColor: colors.card }]}
+                  />
                 </View>
                 <View style={styles.updateContent}>
-                  <Text style={styles.updateText}>
-                    <Text style={styles.boldText}>{item.userName}</Text> {item.actionText}
+                  <Text
+                    style={[styles.updateText, { color: colors.textSecondary }]}>
+                    <Text
+                      style={[styles.boldText, { color: colors.textPrimary }]}>
+                      {item.userName}
+                    </Text>{" "}
+                    {item.actionText}
                     {item.targetText ? ` in ${item.targetText}` : ""}
                   </Text>
-                  <Text style={styles.timeText}>{item.timeText}</Text>
+                  <Text style={[styles.timeText, { color: colors.textMuted }]}>
+                    {item.timeText}
+                  </Text>
                 </View>
               </View>
             ))
@@ -328,19 +369,39 @@ const HomeTab = ({ onQuickAction, navigation }) => {
         </View>
 
         {/* --- SECTION: Best Online Prices --- */}
-        <Text style={styles.sectionTitle}>Best Online Prices</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+          Best Online Prices
+        </Text>
         <View style={styles.horizontalScrollContainer}>
           <ReactScrollView horizontal showsHorizontalScrollIndicator={false}>
             {BEST_PRICES.map(item => (
               <TouchableOpacity
                 key={item.id}
-                style={styles.priceCard}
+                style={[
+                  styles.priceCard,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                  },
+                ]}
                 onPress={() => navigation.navigate("PriceCheck")}>
-                <Image source={{ uri: item.image }} style={styles.priceImage} />
+                <Image
+                  source={{ uri: item.image }}
+                  style={[
+                    styles.priceImage,
+                    { backgroundColor: colors.surfaceSecondary },
+                  ]}
+                />
                 <View style={styles.priceInfo}>
-                  <Text style={styles.priceName}>{item.name}</Text>
-                  <Text style={styles.storeName}>{item.store}</Text>
-                  <Text style={styles.priceValue}>{item.price}</Text>
+                  <Text style={[styles.priceName, { color: colors.textPrimary }]}>
+                    {item.name}
+                  </Text>
+                  <Text style={[styles.storeName, { color: colors.textMuted }]}>
+                    {item.store}
+                  </Text>
+                  <Text style={[styles.priceValue, { color: colors.primary }]}>
+                    {item.price}
+                  </Text>
                 </View>
               </TouchableOpacity>
             ))}
@@ -350,44 +411,83 @@ const HomeTab = ({ onQuickAction, navigation }) => {
         {/* --- SECTION: For You --- */}
         <View style={styles.sectionHeaderRow}>
           <View style={styles.sectionTitleRow}>
-            <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>
+            <Text
+              style={[
+                styles.sectionTitle,
+                { marginBottom: 0, color: colors.textPrimary },
+              ]}>
               For You
             </Text>
             <Sparkles
               size={16}
-              color="#0EA5E9"
-              fill="#0EA5E9"
+              color={colors.primary}
+              fill={colors.primary}
               style={{ marginLeft: 6 }}
             />
           </View>
           <TouchableOpacity
             style={styles.seeAllBtn}
             onPress={() => navigation.navigate("AIRecommendations")}>
-            <Text style={styles.seeAllText}>See All</Text>
-            <ArrowRight size={14} color="#0EA5E9" />
+            <Text style={[styles.seeAllText, { color: colors.primary }]}>
+              See All
+            </Text>
+            <ArrowRight size={14} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
         <View style={styles.forYouContainer}>
           {FOR_YOU.map((item, index) => (
-            <View key={index} style={styles.forYouCard}>
-              <Image source={{ uri: item.image }} style={styles.forYouImage} />
+            <View
+              key={index}
+              style={[
+                styles.forYouCard,
+                {
+                  backgroundColor: colors.card,
+                  shadowColor: colors.shadowColor,
+                },
+              ]}>
+              <Image
+                source={{ uri: item.image }}
+                style={[
+                  styles.forYouImage,
+                  { backgroundColor: colors.surfaceSecondary },
+                ]}
+              />
               <View style={styles.forYouContent}>
                 <View
                   style={{
                     flexDirection: "row",
                     justifyContent: "space-between",
                   }}>
-                  <Text style={styles.forYouTitle}>{item.name}</Text>
-                  <View style={styles.tagBadge}>
-                    <Text style={styles.tagText}>{item.tag}</Text>
+                  <Text
+                    style={[styles.forYouTitle, { color: colors.textPrimary }]}>
+                    {item.name}
+                  </Text>
+                  <View
+                    style={[
+                      styles.tagBadge,
+                      { backgroundColor: colors.surfaceSecondary },
+                    ]}>
+                    <Text style={[styles.tagText, { color: colors.textMuted }]}>
+                      {item.tag}
+                    </Text>
                   </View>
                 </View>
-                <Text style={styles.forYouDesc} numberOfLines={2}>
+                <Text style={[styles.forYouDesc, { color: colors.primary }]}>
                   {item.desc}
                 </Text>
-                <TouchableOpacity style={styles.addListBtn}>
-                  <Text style={styles.addListText}>+ Add to List</Text>
+                <TouchableOpacity
+                  style={[
+                    styles.addListBtn,
+                    { backgroundColor: isDark ? colors.surface : "#111827" },
+                  ]}>
+                  <Text
+                    style={[
+                      styles.addListText,
+                      { color: isDark ? colors.primary : "#FFF" },
+                    ]}>
+                    + Add to List
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -400,17 +500,17 @@ const HomeTab = ({ onQuickAction, navigation }) => {
   );
 };
 
-const ActionIcon = ({ id, icon: Icon, label, color, iconColor, onPress }) => (
+const ActionIcon = ({ id, icon: Icon, label, color, iconColor, labelColor, onPress }) => (
   <TouchableOpacity style={styles.actionItem} onPress={() => onPress(id)}>
     <View style={[styles.actionIconCircle, { backgroundColor: color }]}>
       <Icon size={24} color={iconColor} />
     </View>
-    <Text style={styles.actionLabel}>{label}</Text>
+    <Text style={[styles.actionLabel, { color: labelColor }]}>{label}</Text>
   </TouchableOpacity>
 );
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9FAFB" },
+  container: { flex: 1 },
 
   quickActions: {
     flexDirection: "row",
@@ -426,13 +526,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
-  actionLabel: { fontSize: 12, fontWeight: "600", color: "#4B5563" },
+  actionLabel: { fontSize: 12, fontWeight: "600" },
 
   // Section Headers
   sectionTitle: {
     fontSize: RFValue(14),
     fontFamily: FontFamily.bold,
-    color: "#111827",
     marginBottom: 12,
   },
   sectionHeaderRow: {
@@ -453,18 +552,15 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     fontSize: RFValue(11),
-    color: "#0EA5E9",
     fontFamily: FontFamily.bold,
     marginRight: 4,
   },
 
   // Circle Updates
   updatesCard: {
-    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 16,
     marginBottom: 24,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
     shadowRadius: 2,
@@ -476,11 +572,8 @@ const styles = StyleSheet.create({
   },
   updateSeparator: {
     marginTop: 16,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
   },
   onlineDot: {
     width: 12,
@@ -490,7 +583,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     right: 0,
     borderWidth: 2,
-    borderColor: "#FFF",
+    backgroundColor: "#22C55E",
   },
   updateContent: {
     marginLeft: 12,
@@ -499,22 +592,18 @@ const styles = StyleSheet.create({
   },
   updateText: {
     fontSize: RFValue(10),
-    color: "#374151",
     lineHeight: 18,
     fontFamily: FontFamily.regular,
   },
   boldText: {
     fontFamily: FontFamily.bold,
-    color: "#111827",
   },
   timeText: {
     fontSize: RFValue(8),
-    color: "#9CA3AF",
     marginTop: 2,
   },
   emptyUpdateText: {
     fontSize: RFValue(10),
-    color: "#9CA3AF",
     fontFamily: FontFamily.regular,
     textAlign: "center",
     paddingVertical: 20,
@@ -522,25 +611,22 @@ const styles = StyleSheet.create({
 
   // Best Online Prices
   horizontalScrollContainer: {
-    marginHorizontal: -16, // Bleed out of padding
+    marginHorizontal: -16,
     marginBottom: 24,
   },
   priceCard: {
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 12,
-    marginLeft: 16, // Restore padding
+    marginLeft: 16,
     width: width * 0.42,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#F3F4F6",
   },
   priceImage: {
     width: 50,
     height: 50,
     borderRadius: 8,
-    backgroundColor: "#F3F4F6",
   },
   priceInfo: {
     marginLeft: 10,
@@ -549,17 +635,14 @@ const styles = StyleSheet.create({
   priceName: {
     fontSize: RFValue(10),
     fontFamily: FontFamily.bold,
-    color: "#111827",
   },
   storeName: {
     fontSize: RFValue(9),
-    color: "#9CA3AF",
     marginBottom: 2,
   },
   priceValue: {
     fontSize: RFValue(12),
     fontFamily: FontFamily.bold,
-    color: "#0EA5E9",
   },
 
   // For You
@@ -567,11 +650,9 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   forYouCard: {
-    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 12,
     flexDirection: "row",
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
     shadowRadius: 2,
@@ -581,14 +662,12 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 12,
-    backgroundColor: "#F3F4F6",
   },
   forYouContent: {
     flex: 1,
     marginLeft: 12,
   },
   tagBadge: {
-    backgroundColor: "#F3F4F6",
     alignSelf: "flex-start",
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -597,32 +676,27 @@ const styles = StyleSheet.create({
   },
   tagText: {
     fontSize: RFValue(7),
-    color: "#6B7280",
     fontFamily: FontFamily.medium,
   },
   forYouTitle: {
     fontSize: RFValue(11),
     fontFamily: FontFamily.bold,
-    color: "#111827",
     marginBottom: 4,
   },
   forYouDesc: {
     fontSize: RFValue(9),
-    color: "#0EA5E9",
     fontFamily: FontFamily.regular,
     fontStyle: "italic",
     lineHeight: 16,
     marginBottom: 8,
   },
   addListBtn: {
-    backgroundColor: "#111827",
     alignSelf: "flex-end",
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 8,
   },
   addListText: {
-    color: "#FFF",
     fontSize: RFValue(10),
     fontFamily: FontFamily.bold,
   },

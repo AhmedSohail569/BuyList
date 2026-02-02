@@ -34,7 +34,13 @@
 		<true/>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
+	<string>BuyList needs your location to show nearby stores and deals.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>BuyList needs access to your camera to take profile photos and capture receipts.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>BuyList needs access to your photo library to select profile photos and images.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>BuyList needs permission to save photos to your library.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIAppFonts</key>

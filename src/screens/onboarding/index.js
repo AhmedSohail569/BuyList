@@ -39,12 +39,12 @@ const OnboardingScreen = ({navigation}) => {
           </View>
 
           {/* Title */}
-          <Text variant="screenTitle" color="white" style={styles.title}>
+          <Text variant="screenTitle" style={[styles.title, {color: "#FFFFFF"}]}>
             Welcome to your{"\n"}shopping hub
           </Text>
 
           {/* Subtitle */}
-          <Text variant="bodySmall" color="muted" style={styles.subtitle}>
+          <Text variant="bodySmall" style={[styles.subtitle, {color: "#9CA3AF"}]}>
             Shop smarter together with BuyList
           </Text>
 
@@ -52,6 +52,7 @@ const OnboardingScreen = ({navigation}) => {
           <Button
             title="Get Started"
             onPress={() => navigation.navigate("GetStarted")}
+            forceLight
           />
         </View>
       </ImageBackground>

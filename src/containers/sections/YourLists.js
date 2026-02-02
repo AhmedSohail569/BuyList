@@ -8,15 +8,16 @@ import {
 } from "react-native";
 import {ProgressBar} from "react-native-paper";
 import {Text} from "~components/Common";
+import {useTheme} from "~context/ThemeContext";
 
-const ListCard = ({item, onPress}) => (
+const ListCard = ({item, onPress, colors, isDark}) => (
   <TouchableOpacity
-    style={styles.listCard}
+    style={[styles.listCard, {backgroundColor: colors.card, shadowColor: colors.shadowColor}]}
     onPress={() => onPress(item.id)}
     activeOpacity={0.7}>
     <View style={styles.listHeader}>
       <View style={styles.listTitleContainer}>
-        <Text variant="body" style={styles.listTitle}>
+        <Text variant="body" style={[styles.listTitle, {color: colors.textPrimary}]}>
           {item.name}
         </Text>
         <Text variant="caption" color="muted" style={styles.listSubtitle}>
@@ -31,7 +32,7 @@ const ListCard = ({item, onPress}) => (
               <Image
                 key={member.id}
                 source={{uri: member.avatar}}
-                style={[styles.avatar, {marginLeft: index > 0 ? -12 : 0}]}
+                style={[styles.avatar, {marginLeft: index > 0 ? -12 : 0, borderColor: colors.card}]}
               />
             ))}
           </View>
@@ -43,8 +44,8 @@ const ListCard = ({item, onPress}) => (
     <View style={styles.progressContainer}>
       <ProgressBar
         progress={item.progress / 100}
-        color="#1E9DF1"
-        style={styles.progressBar}
+        color={colors.primary}
+        style={[styles.progressBar, {backgroundColor: colors.progressTrack}]}
       />
     </View>
 
@@ -53,7 +54,7 @@ const ListCard = ({item, onPress}) => (
       <Text variant="caption" color="muted" style={styles.statsText}>
         {item.completedItems}/{item.totalItems} items
       </Text>
-      <Text variant="caption" color="muted" style={styles.statsText}>
+      <Text variant="caption" style={[styles.statsText, {color: colors.primary}]}>
         {item.progress}% Done
       </Text>
     </View>
@@ -61,6 +62,7 @@ const ListCard = ({item, onPress}) => (
 );
 
 const YourLists = ({navigation}) => {
+  const {colors, isDark} = useTheme();
   const [lists] = useState([
     {
       id: 1,
@@ -111,7 +113,7 @@ const YourLists = ({navigation}) => {
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text variant="sectionTitle" style={styles.sectionTitle}>
+        <Text variant="sectionTitle" style={[styles.sectionTitle, {color: colors.textPrimary}]}>
           Your Lists
         </Text>
       </View>
@@ -119,7 +121,7 @@ const YourLists = ({navigation}) => {
       <FlatList
         data={lists}
         renderItem={({item}) => (
-          <ListCard item={item} onPress={handleListPress} />
+          <ListCard item={item} onPress={handleListPress} colors={colors} isDark={isDark} />
         )}
         keyExtractor={item => item.id.toString()}
         scrollEnabled={false}
@@ -157,11 +159,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 2,
   },
   listCard: {
-    backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    shadowColor: "#000",
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -196,7 +196,6 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     borderWidth: 2,
-    borderColor: "#ffffff",
   },
   progressContainer: {
     marginBottom: 12,
@@ -204,7 +203,6 @@ const styles = StyleSheet.create({
   progressBar: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#E5E7EB",
   },
   statsContainer: {
     flexDirection: "row",

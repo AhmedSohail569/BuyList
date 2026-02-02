@@ -1,13 +1,16 @@
 // src/redux/reducers/authReducer.js
-import {createSlice} from "@reduxjs/toolkit";
+import { createSlice } from "@reduxjs/toolkit";
 import {
   forgotPassword,
   loginUser,
   resetPassword,
+  resendOTP,
+  resendResetOTP,
   signupUser,
   verifyEmail,
   verifyResetToken,
 } from "../actions/authActions";
+import { getProfile } from "../actions/profileActions";
 
 const initialState = {
   user: null,
@@ -23,6 +26,16 @@ const initialState = {
 
   emailVerified: false,
   verifyEmailMessage: null,
+
+  // Resend OTP states
+  resendOTPLoading: false,
+  resendOTPMessage: null,
+  resendOTPError: null,
+
+  // Resend Reset OTP states
+  resendResetOTPLoading: false,
+  resendResetOTPMessage: null,
+  resendResetOTPError: null,
 };
 
 const authSlice = createSlice({
@@ -60,6 +73,14 @@ const authSlice = createSlice({
       state.emailVerified = false;
       state.verifyEmailMessage = null;
       state.error = null;
+    },
+    clearResendOTPState(state) {
+      state.resendOTPMessage = null;
+      state.resendOTPError = null;
+    },
+    clearResendResetOTPState(state) {
+      state.resendResetOTPMessage = null;
+      state.resendResetOTPError = null;
     },
   },
   extraReducers: builder => {
@@ -165,6 +186,44 @@ const authSlice = createSlice({
       .addCase(resetPassword.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+
+      // getProfile - Update user in auth state when profile is fetched
+      .addCase(getProfile.fulfilled, (state, action) => {
+        // Update user in auth state from profile data
+        state.user = action.payload;
+      })
+
+      // resendOTP - Resend OTP for email verification
+      .addCase(resendOTP.pending, state => {
+        state.resendOTPLoading = true;
+        state.resendOTPError = null;
+        state.resendOTPMessage = null;
+      })
+      .addCase(resendOTP.fulfilled, (state, action) => {
+        state.resendOTPLoading = false;
+        state.resendOTPMessage =
+          action.payload?.message || "Verification code resent successfully";
+      })
+      .addCase(resendOTP.rejected, (state, action) => {
+        state.resendOTPLoading = false;
+        state.resendOTPError = action.payload;
+      })
+
+      // resendResetOTP - Resend OTP for reset password
+      .addCase(resendResetOTP.pending, state => {
+        state.resendResetOTPLoading = true;
+        state.resendResetOTPError = null;
+        state.resendResetOTPMessage = null;
+      })
+      .addCase(resendResetOTP.fulfilled, (state, action) => {
+        state.resendResetOTPLoading = false;
+        state.resendResetOTPMessage =
+          action.payload?.message || "Reset code resent successfully";
+      })
+      .addCase(resendResetOTP.rejected, (state, action) => {
+        state.resendResetOTPLoading = false;
+        state.resendResetOTPError = action.payload;
       });
   },
 });
@@ -178,6 +237,8 @@ export const {
   clearVerifyTokenMessage,
   clearSignupState,
   clearVerifyEmailState,
+  clearResendOTPState,
+  clearResendResetOTPState,
 } = authSlice.actions;
 
 export default authSlice.reducer;

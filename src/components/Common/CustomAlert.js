@@ -11,6 +11,7 @@ import {
 import {RFValue} from "react-native-responsive-fontsize";
 import Icon from "react-native-vector-icons/Ionicons";
 import AppText from "./Text";
+import {useTheme} from "~context/ThemeContext";
 
 const {width: SCREEN_WIDTH} = Dimensions.get("window");
 
@@ -23,33 +24,33 @@ const {width: SCREEN_WIDTH} = Dimensions.get("window");
  * - 'confirm' - Question mark icon for confirmations
  */
 
-const ALERT_CONFIGS = {
+const getAlertConfigs = isDark => ({
   default: {
     icon: "information-circle",
     iconColor: "#38BAEF",
-    iconBgColor: "#E5F6FE",
+    iconBgColor: isDark ? "rgba(56, 186, 239, 0.2)" : "#E5F6FE",
   },
   success: {
     icon: "checkmark-circle",
     iconColor: "#4CAF50",
-    iconBgColor: "#E8F5E9",
+    iconBgColor: isDark ? "rgba(76, 175, 80, 0.2)" : "#E8F5E9",
   },
   error: {
     icon: "close-circle",
     iconColor: "#F44336",
-    iconBgColor: "#FFEBEE",
+    iconBgColor: isDark ? "rgba(244, 67, 54, 0.2)" : "#FFEBEE",
   },
   warning: {
     icon: "warning",
     iconColor: "#FF9800",
-    iconBgColor: "#FFF3E0",
+    iconBgColor: isDark ? "rgba(255, 152, 0, 0.2)" : "#FFF3E0",
   },
   confirm: {
     icon: "alert-outline",
     iconColor: "#9C27B0",
-    iconBgColor: "#F3E5F5",
+    iconBgColor: isDark ? "rgba(156, 39, 176, 0.2)" : "#F3E5F5",
   },
-};
+});
 
 const CustomAlert = ({
   visible,
@@ -59,10 +60,12 @@ const CustomAlert = ({
   buttons = [{text: "OK", onPress: () => {}}],
   onClose,
 }) => {
+  const {colors, isDark} = useTheme();
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
-  const config = ALERT_CONFIGS[type] || ALERT_CONFIGS.default;
+  const alertConfigs = getAlertConfigs(isDark);
+  const config = alertConfigs[type] || alertConfigs.default;
 
   useEffect(() => {
     if (visible) {
@@ -108,13 +111,13 @@ const CustomAlert = ({
     switch (buttonStyle) {
       case "destructive":
         return {
-          backgroundColor: "#FFF0F0",
-          borderColor: "#FFE0E0",
+          backgroundColor: isDark ? "rgba(239, 68, 68, 0.15)" : "#FFF0F0",
+          borderColor: isDark ? "rgba(239, 68, 68, 0.3)" : "#FFE0E0",
         };
       case "cancel":
         return {
-          backgroundColor: "#F5F5F5",
-          borderColor: "#E0E0E0",
+          backgroundColor: isDark ? colors.surface : "#F5F5F5",
+          borderColor: colors.border,
         };
       case "success":
         return {
@@ -123,8 +126,8 @@ const CustomAlert = ({
         };
       default:
         return {
-          backgroundColor: "#38BAEF",
-          borderColor: "#38BAEF",
+          backgroundColor: colors.primary,
+          borderColor: colors.primary,
         };
     }
   };
@@ -132,9 +135,9 @@ const CustomAlert = ({
   const getButtonTextStyle = buttonStyle => {
     switch (buttonStyle) {
       case "cancel":
-        return {color: "#333"};
+        return {color: colors.textPrimary};
       case "destructive":
-        return {color: "#FF4444"};
+        return {color: colors.error};
       default:
         return {color: "#FFF"};
     }
@@ -149,12 +152,14 @@ const CustomAlert = ({
       animationType="none"
       onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
-        <Animated.View style={[styles.overlay, {opacity: opacityAnim}]}>
+        <Animated.View style={[styles.overlay, {opacity: opacityAnim, backgroundColor: colors.modalOverlay}]}>
           <TouchableWithoutFeedback>
             <Animated.View
               style={[
                 styles.alertContainer,
                 {
+                  backgroundColor: colors.modalBackground,
+                  shadowColor: colors.shadowColor,
                   transform: [{scale: scaleAnim}],
                 },
               ]}>
@@ -168,10 +173,10 @@ const CustomAlert = ({
               </View>
 
               {/* Title */}
-              {title && <AppText style={styles.title}>{title}</AppText>}
+              {title && <AppText style={[styles.title, {color: colors.textPrimary}]}>{title}</AppText>}
 
               {/* Message */}
-              {message && <AppText style={styles.message}>{message}</AppText>}
+              {message && <AppText style={[styles.message, {color: colors.textSecondary}]}>{message}</AppText>}
 
               {/* Buttons */}
               <View
@@ -210,7 +215,6 @@ const CustomAlert = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
@@ -218,11 +222,9 @@ const styles = StyleSheet.create({
   alertContainer: {
     width: SCREEN_WIDTH - 60,
     maxWidth: 340,
-    backgroundColor: "#FFF",
     borderRadius: 20,
     padding: 24,
     alignItems: "center",
-    shadowColor: "#000",
     shadowOffset: {width: 0, height: 10},
     shadowOpacity: 0.25,
     shadowRadius: 20,
@@ -239,13 +241,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: RFValue(18),
     fontWeight: "700",
-    color: "#1A1A1A",
     textAlign: "center",
     marginBottom: 8,
   },
   message: {
     fontSize: RFValue(13),
-    color: "#666",
     textAlign: "center",
     lineHeight: RFValue(20),
     marginBottom: 24,

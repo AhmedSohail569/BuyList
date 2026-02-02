@@ -1,14 +1,14 @@
-import {View, StyleSheet, Image, TouchableOpacity} from "react-native";
-import {useSafeAreaInsets} from "react-native-safe-area-context";
+import { View, StyleSheet, Image, TouchableOpacity } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import {RFPercentage, RFValue} from "react-native-responsive-fontsize";
-import {Button, Text, TextInput} from "~components/Common";
-import {Images} from "~assets";
+import { RFPercentage, RFValue } from "react-native-responsive-fontsize";
+import { Text, TextInput } from "~components/Common";
+import { Images } from "~assets";
 import OnboardingLayout from "~containers/layouts/OnboardingLayout";
 import Icon from "react-native-vector-icons/FontAwesome";
-import {useState} from "react";
+import { useState } from "react";
 
-const GetStartedScreen = ({navigation}) => {
+const GetStartedScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
 
   const [phone, setPhone] = useState("");
@@ -20,14 +20,14 @@ const GetStartedScreen = ({navigation}) => {
       {/* Content */}
       <Image
         source={Images.getStartedBg}
-        style={{height: RFPercentage(50), width: "100%", position: "absolute"}}
+        style={{ height: RFPercentage(50), width: "100%", position: "absolute" }}
         resizeMode="stretch"
       />
       <View
-        style={[styles.content, {paddingBottom: insets.bottom + RFValue(24)}]}>
+        style={[styles.content, { paddingBottom: insets.bottom + RFValue(24) }]}>
         {/* Title */}
-        <Text variant="sectionTitle" style={styles.title}>
-          Let’s get your shopping{"\n"}done with BuyList!
+        <Text variant="sectionTitle" style={[styles.title, { color: "#1B1A1F" }]}>
+          Let's get your shopping{"\n"}done with BuyList!
         </Text>
 
         <TextInput
@@ -36,40 +36,39 @@ const GetStartedScreen = ({navigation}) => {
           value={phone}
           onChangeText={setPhone}
           maxLength={15}
+          forceLight
         />
 
         {/* Subtitle */}
         <Text
           variant="bodySmall"
-          color="muted"
           align="center"
-          style={styles.subtitle}>
+          style={[styles.subtitle, { color: "#9CA3AF" }]}>
           Or connect with social media
         </Text>
 
-        <View style={[styles.socialButton, {backgroundColor: "#5383EC"}]}>
+        <View style={[styles.socialButton, { backgroundColor: "#5383EC" }]}>
           <Icon name="google" size={30} color={"#FFFFFF"} />
-          <Text variant="bodySmall" color="white" style={styles.textStyle}>
+          <Text variant="bodySmall" style={[styles.textStyle, { color: "#FFFFFF" }]}>
             Continue with Google
           </Text>
         </View>
 
-        <View style={[styles.socialButton, {backgroundColor: "#000000"}]}>
+        <View style={[styles.socialButton, { backgroundColor: "#000000" }]}>
           <Icon name="apple" size={30} color={"#FFFFFF"} />
-          <Text variant="bodySmall" color="white" style={styles.textStyle}>
+          <Text variant="bodySmall" style={[styles.textStyle, { color: "#FFFFFF" }]}>
             Continue with Apple
           </Text>
         </View>
 
-        <View style={{flexDirection: "row"}}>
-          <Text variant="bodySmall" color="muted" style={styles.textStyle}>
+        <View style={{ flexDirection: "row" }}>
+          <Text variant="bodySmall" style={[styles.textStyle, { color: "#9CA3AF" }]}>
             Already have an Account?{" "}
           </Text>
           <Text
             variant="link"
-            color="primary"
             onPress={() => navigation.replace("Login")}
-            style={styles.textStyle}>
+            style={[styles.textStyle, { color: "#1E9DF1" }]}>
             Login
           </Text>
         </View>
@@ -85,7 +84,7 @@ const GetStartedScreen = ({navigation}) => {
               bottom: insets.bottom + RFValue(20),
             },
           ]}
-          onPress={() => navigation.navigate("SelectLocation", {phone})}>
+          onPress={() => navigation.navigate("SelectLocation", { phone })}>
           <Icon name="chevron-right" size={20} color="#FFFFFF" />
         </TouchableOpacity>
       )}
@@ -135,7 +134,7 @@ const styles = StyleSheet.create({
     elevation: 6,
     shadowColor: "#000",
     shadowOpacity: 0.2,
-    shadowOffset: {width: 0, height: 3},
+    shadowOffset: { width: 0, height: 3 },
     shadowRadius: 6,
   },
 });

@@ -30,31 +30,42 @@ import {
 } from "~redux/actions/listActions";
 import { clearListsError } from "~redux/reducers/listReducer";
 import { useAlert } from "~context/AlertContext";
+import { useTheme } from "~context/ThemeContext";
 
 // --- Sub Components ---
 
-const FilterTab = ({ label, isActive, onPress }) => (
+const FilterTab = ({ label, isActive, onPress, colors, isDark }) => (
   <TouchableOpacity
     onPress={onPress}
-    style={[styles.filterTab, isActive && styles.filterTabActive]}>
-    <Text style={[styles.filterText, isActive && styles.filterTextActive]}>
+    style={[
+      styles.filterTab,
+      {
+        backgroundColor: isActive ? (isDark ? colors.primary : "#111827") : colors.card,
+        borderColor: isActive ? (isDark ? colors.primary : "#111827") : colors.border,
+      },
+    ]}>
+    <Text
+      style={[
+        styles.filterText,
+        { color: isActive ? "#ffffff" : colors.textMuted },
+      ]}>
       {label}
     </Text>
   </TouchableOpacity>
 );
 
-const ProgressBar = ({ completed, total, color, label, percentage }) => {
+const ProgressBar = ({ completed, total, color, label, percentage, colors }) => {
   return (
     <View style={styles.progressContainer}>
       <View style={styles.progressTextRow}>
-        <Text style={styles.progressStats}>
+        <Text style={[styles.progressStats, { color: colors.textSecondary }]}>
           {label} items
         </Text>
         <Text style={[styles.progressPercentage, { color: color }]}>
           {percentage}%
         </Text>
       </View>
-      <View style={styles.track}>
+      <View style={[styles.track, { backgroundColor: colors.progressTrack }]}>
         <View
           style={[
             styles.fill,
@@ -77,6 +88,7 @@ const ListCard = React.memo(
     onCloseMenu,
     onRequestDelete,
   }) => {
+    const { colors, isDark } = useTheme();
     const totalItems = item.progress?.total || 0;
     const completedItems =
       item.progress?.purchased || 0;
@@ -86,7 +98,7 @@ const ListCard = React.memo(
     return (
       <TouchableOpacity
         key={item.id || item._id}
-        style={styles.card}
+        style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}
         onPress={onPress}
         disabled={isDeleting}>
         <View
@@ -99,15 +111,15 @@ const ListCard = React.memo(
         <View style={styles.cardContent}>
           <View style={styles.cardHeader}>
             <View style={styles.titleRow}>
-              <Text style={styles.cardTitle}>{item.name}</Text>
+              <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>{item.name}</Text>
               {item.shareWithCircle && (
-                <View style={styles.sharedBadge}>
+                <View style={[styles.sharedBadge, { backgroundColor: isDark ? "rgba(14, 165, 233, 0.2)" : "#e0f2fe" }]}>
                   <Users
                     size={10}
                     color="#0ea5e9"
                     style={{ marginRight: 2 }}
                   />
-                  <Text style={styles.sharedText}>Shared</Text>
+                  <Text style={[styles.sharedText, { color: colors.primary }]}>Shared</Text>
                 </View>
               )}
             </View>
@@ -116,10 +128,10 @@ const ListCard = React.memo(
               onDismiss={onCloseMenu}
               anchor={
                 <TouchableOpacity onPress={onOpenMenu} disabled={isDeleting}>
-                  <MoreHorizontal size={20} color="#9ca3af" />
+                  <MoreHorizontal size={20} color={colors.iconMuted} />
                 </TouchableOpacity>
               }
-              contentStyle={styles.menuContent}>
+              contentStyle={[styles.menuContent, { backgroundColor: colors.card }]}>
               <Menu.Item
                 title="Delete"
                 titleStyle={styles.menuItemDelete}
@@ -131,7 +143,7 @@ const ListCard = React.memo(
             </Menu>
           </View>
 
-          <Text style={styles.subtitle}>
+          <Text style={[styles.subtitle, { color: colors.textMuted }]}>
             {item.category} • {formatDate(item.createdAt)}
           </Text>
 
@@ -142,12 +154,13 @@ const ListCard = React.memo(
               color={progressColor}
               percentage={item.progress?.percentage}
               label={item.progress?.label}
+              colors={colors}
             />
           </View>
 
           <View style={styles.cardFooter}>
             {isCompleted && (
-              <View style={styles.completedBadge}>
+              <View style={[styles.completedBadge, { backgroundColor: isDark ? "rgba(22, 163, 74, 0.2)" : "#dcfce7" }]}>
                 <Check
                   size={12}
                   color="#16a34a"
@@ -163,6 +176,8 @@ const ListCard = React.memo(
   },
   (prevProps, nextProps) => {
     // Compare all relevant fields that affect rendering
+    // Note: colors/isDark are now accessed via useTheme hook inside component,
+    // so they don't need to be in the comparison
     return (
       prevProps.item.id === nextProps.item.id &&
       prevProps.item.items?.length === nextProps.item.items?.length &&
@@ -196,6 +211,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
   const dispatch = useDispatch();
   const { lists, loading, error } = useSelector(state => state.lists);
   const { showAlert, showError } = useAlert();
+  const { colors, isDark } = useTheme();
 
   const [activeTab, setActiveTab] = useState("All Lists");
   const [isCreateListVisible, setCreateListVisible] = useState(false);
@@ -243,20 +259,24 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
     }, [dispatch]),
   );
 
-  // Handle navigation params to switch tabs
-  useEffect(() => {
-    const filter = route?.params?.filter;
-    if (filter) {
-      const filterParam = String(filter).toLowerCase();
-      if (filterParam === "shared") {
-        setActiveTab("Shared Lists");
-      } else if (filterParam === "personal") {
-        setActiveTab("Personal Lists");
-      } else {
-        setActiveTab("All Lists");
+  // Handle navigation params to switch tabs - use useFocusEffect to handle when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      const filter = route?.params?.filter;
+      if (filter) {
+        const filterParam = String(filter).toLowerCase();
+        if (filterParam === "shared") {
+          setActiveTab("Shared Lists");
+        } else if (filterParam === "personal") {
+          setActiveTab("Personal Lists");
+        } else {
+          setActiveTab("All Lists");
+        }
+        // Clear the filter param after processing to allow re-navigation
+        navigation.setParams?.({ filter: undefined });
       }
-    }
-  }, [route?.params?.filter]);
+    }, [route?.params?.filter, navigation])
+  );
 
   // Handle API errors
   useEffect(() => {
@@ -459,13 +479,13 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
   }, [activeMenuListId]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header
         variant="title"
         title={"Your Lists"}
         rightAction={
-          <TouchableOpacity style={styles.searchButton}>
-            <Search size={RFValue(20)} color="#111827" />
+          <TouchableOpacity style={[styles.searchButton, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
+            <Search size={RFValue(20)} color={colors.textPrimary} />
           </TouchableOpacity>
         }
         showTabs={
@@ -474,16 +494,22 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
               label="All Lists"
               isActive={activeTab === "All Lists"}
               onPress={() => setActiveTab("All Lists")}
+              colors={colors}
+              isDark={isDark}
             />
             <FilterTab
               label="Personal Lists"
               isActive={activeTab === "Personal Lists"}
               onPress={() => setActiveTab("Personal Lists")}
+              colors={colors}
+              isDark={isDark}
             />
             <FilterTab
               label="Shared Lists"
               isActive={activeTab === "Shared Lists"}
               onPress={() => setActiveTab("Shared Lists")}
+              colors={colors}
+              isDark={isDark}
             />
           </View>
         }
@@ -491,7 +517,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
 
       {loading && lists.length === 0 ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0ea5e9" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
         <ScrollView
@@ -501,28 +527,28 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              tintColor="#0ea5e9"
+              tintColor={colors.primary}
             />
           }>
           {/* Smart Suggestions */}
           <View style={styles.smartSuggestionContainer}>
             <View style={styles.smartHeader}>
-              <Sparkles size={16} color="#0ea5e9" fill="#0ea5e9" />
-              <Text style={styles.smartTitle}>SMART SUGGESTIONS</Text>
+              <Sparkles size={16} color={colors.primary} fill={colors.primary} />
+              <Text style={[styles.smartTitle, { color: colors.textMuted }]}>SMART SUGGESTIONS</Text>
             </View>
-            <View style={styles.suggestionCard}>
+            <View style={[styles.suggestionCard, { backgroundColor: isDark ? "rgba(16, 185, 129, 0.15)" : "#ecfdf5", borderColor: isDark ? "rgba(16, 185, 129, 0.3)" : "#d1fae5" }]}>
               <View style={styles.suggestionContent}>
                 <View style={styles.suggestionTitleRow}>
-                  <Text style={styles.suggestionText}>Reorder Soon</Text>
-                  <View style={styles.aiBadge}>
-                    <Text style={styles.aiText}>AI</Text>
+                  <Text style={[styles.suggestionText, { color: colors.textPrimary }]}>Reorder Soon</Text>
+                  <View style={[styles.aiBadge, { backgroundColor: isDark ? "rgba(16, 185, 129, 0.3)" : "#a7f3d0" }]}>
+                    <Text style={[styles.aiText, { color: isDark ? "#34d399" : "#065f46" }]}>AI</Text>
                   </View>
                 </View>
-                <Text style={styles.suggestionSubText}>
+                <Text style={[styles.suggestionSubText, { color: colors.textMuted }]}>
                   Based on your purchase history
                 </Text>
               </View>
-              <TouchableOpacity style={styles.suggestionAddBtn}>
+              <TouchableOpacity style={[styles.suggestionAddBtn, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
                 <Plus size={20} color="#10b981" />
               </TouchableOpacity>
             </View>
@@ -530,7 +556,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
 
           {/* Section Header */}
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{activeTab.toUpperCase()}</Text>
+            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{activeTab.toUpperCase()}</Text>
             <Menu
               visible={showSortMenu}
               onDismiss={() => {
@@ -543,13 +569,13 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
               }}
               anchor={
                 <TouchableOpacity
-                  style={styles.sortButton}
+                  style={[styles.sortButton, { backgroundColor: colors.card, borderColor: colors.border }]}
                   onPress={handleSortMenuToggle}>
-                  <ListFilter size={14} color="#6b7280" style={{ marginRight: 4 }} />
-                  <Text style={styles.sortText}>Sort</Text>
+                  <ListFilter size={14} color={colors.iconMuted} style={{ marginRight: 4 }} />
+                  <Text style={[styles.sortText, { color: colors.textMuted }]}>Sort</Text>
                 </TouchableOpacity>
               }
-              contentStyle={styles.sortMenuContent}>
+              contentStyle={[styles.sortMenuContent, { backgroundColor: colors.card }]}>
               <Menu.Item
                 onPress={() => {
                   isDismissingRef.current = true;
@@ -562,7 +588,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
                 title="Created On"
                 titleStyle={[
                   styles.sortMenuItem,
-                  sortOption === "createdOn" && styles.sortMenuItemActive,
+                  { color: sortOption === "createdOn" ? colors.primary : colors.textPrimary },
                 ]}
               />
               <Menu.Item
@@ -577,7 +603,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
                 title="Recently Updated"
                 titleStyle={[
                   styles.sortMenuItem,
-                  sortOption === "recentlyUpdated" && styles.sortMenuItemActive,
+                  { color: sortOption === "recentlyUpdated" ? colors.primary : colors.textPrimary },
                 ]}
               />
               <Menu.Item
@@ -592,7 +618,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
                 title="Alphabetical A-Z"
                 titleStyle={[
                   styles.sortMenuItem,
-                  sortOption === "alphabetical" && styles.sortMenuItemActive,
+                  { color: sortOption === "alphabetical" ? colors.primary : colors.textPrimary },
                 ]}
               />
               <Menu.Item
@@ -607,7 +633,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
                 title="Most Items"
                 titleStyle={[
                   styles.sortMenuItem,
-                  sortOption === "mostItems" && styles.sortMenuItemActive,
+                  { color: sortOption === "mostItems" ? colors.primary : colors.textPrimary },
                 ]}
               />
               <Menu.Item
@@ -622,7 +648,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
                 title="Least Items"
                 titleStyle={[
                   styles.sortMenuItem,
-                  sortOption === "leastItems" && styles.sortMenuItemActive,
+                  { color: sortOption === "leastItems" ? colors.primary : colors.textPrimary },
                 ]}
               />
             </Menu>
@@ -647,7 +673,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
 
             {filteredData.length === 0 && !loading && (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>
+                <Text style={[styles.emptyText, { color: colors.textMuted }]}>
                   No lists found in this category.
                 </Text>
               </View>
@@ -660,7 +686,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
 
       {/* Floating Action Button */}
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { backgroundColor: colors.primary, shadowColor: colors.primary }]}
         onPress={() => setCreateListVisible(true)}>
         <Plus size={32} color="#fff" />
       </TouchableOpacity>
@@ -679,7 +705,6 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f9fafb",
   },
   loadingContainer: {
     flex: 1,
@@ -713,20 +738,10 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
-    backgroundColor: "#fff",
-  },
-  filterTabActive: {
-    backgroundColor: "#111827",
-    borderColor: "#111827",
   },
   filterText: {
     fontSize: RFValue(9),
     fontFamily: FontFamily.bold,
-    color: "#6b7280",
-  },
-  filterTextActive: {
-    color: "#ffffff",
   },
   smartSuggestionContainer: {
     marginBottom: 24,
@@ -827,11 +842,6 @@ const styles = StyleSheet.create({
   sortMenuItem: {
     fontSize: RFValue(12),
     fontFamily: FontFamily.medium,
-    color: "#111827",
-  },
-  sortMenuItemActive: {
-    color: "#0ea5e9",
-    fontFamily: FontFamily.bold,
   },
   cardsContainer: {
     gap: 16,

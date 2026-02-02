@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -21,8 +21,10 @@ import { RFValue } from "react-native-responsive-fontsize";
 import { FontFamily } from "~theme/fonts";
 import Header from "~components/Header";
 import { useDispatch, useSelector } from "react-redux";
+import { useFocusEffect } from "@react-navigation/native";
 import { fetchOwnedCircle } from "~redux/actions/circleActions";
-import { fetchRecentActivities } from "~redux/actions/listActions";
+import { fetchRecentActivities, fetchAllLists } from "~redux/actions/listActions";
+import { useTheme } from "~context/ThemeContext";
 
 // Helper function to get initials from a name
 const getInitials = (name) => {
@@ -89,22 +91,23 @@ const buildConnections = (ownedCircle) => {
   return connections;
 };
 
-const SHARED_LISTS = [
-  {
-    id: 1,
-    title: "Weekly Groceries",
-    progress: 75,
-    updated: "Updated 2m ago",
-    avatars: [null, null], // Will show initials
-  },
-  {
-    id: 2,
-    title: "Weekend BBQ",
-    progress: 17,
-    updated: "Updated 1h ago",
-    avatars: [null, null], // Will show initials
-  },
-];
+// Helper function to format time ago for lists
+const formatListTimeAgo = (isoDate) => {
+  if (!isoDate) return "Updated recently";
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return "Updated recently";
+
+  const diffMs = Date.now() - date.getTime();
+  const mins = Math.floor(diffMs / 60000);
+  const hours = Math.floor(diffMs / 3600000);
+  const days = Math.floor(diffMs / 86400000);
+
+  if (mins < 1) return "Updated just now";
+  if (mins < 60) return `Updated ${mins}m ago`;
+  if (hours < 24) return `Updated ${hours}h ago`;
+  if (days < 7) return `Updated ${days}d ago`;
+  return `Updated ${Math.floor(days / 7)}w ago`;
+};
 
 // ---- Recent Activity Helpers (from /activities/recent) ----
 const formatTimeAgo = isoDate => {
@@ -127,7 +130,6 @@ const formatTimeAgo = isoDate => {
 // Format activity action type to readable text
 const formatActivityAction = (action, metadata) => {
   const itemCount = metadata?.itemCount || 1;
-  const listName = metadata?.listName || "";
 
   switch (action) {
     case "PURCHASE_ITEMS":
@@ -181,7 +183,7 @@ const normalizeActivity = (activity, index) => {
 // --- Sub Components ---
 
 // Avatar Component with initials fallback
-const Avatar = ({ image, name, size = 56, style }) => {
+const Avatar = ({ image, name, size = 56, style, colors }) => {
   const hasImage = hasProfilePicture(image);
   const initials = getInitials(name || "User");
 
@@ -208,7 +210,7 @@ const Avatar = ({ image, name, size = 56, style }) => {
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: "#e0f2fe",
+          backgroundColor: colors?.badgeBackground || "#e0f2fe",
           justifyContent: "center",
           alignItems: "center",
         },
@@ -217,9 +219,7 @@ const Avatar = ({ image, name, size = 56, style }) => {
       <Text
         style={{
           fontSize: RFValue(size * 0.30),
-          color: "#0ea5e9",
-          // lineHeight: size * 0.30,
-
+          color: colors?.primary || "#0ea5e9",
         }}>
         {initials}
       </Text>
@@ -228,7 +228,7 @@ const Avatar = ({ image, name, size = 56, style }) => {
 };
 
 // Avatar Stack Component
-const AvatarStack = ({ items, size = 24, limit = 3 }) => {
+const AvatarStack = ({ items, size = 24, limit = 3, colors }) => {
   // items can be array of {image, name} objects or array of image strings (for backward compatibility)
   const avatarItems = items.map((item, index) => {
     if (typeof item === "string") {
@@ -251,38 +251,38 @@ const AvatarStack = ({ items, size = 24, limit = 3 }) => {
             image={item.image}
             name={item.name}
             size={size}
-            style={styles.stackAvatar}
+            style={[styles.stackAvatar, { borderColor: colors?.card || "#fff" }]}
+            colors={colors}
           />
         </View>
       ))}
-      {/* Fake "+1" badge for the Family Card */}
-      {/* {limit === 3 && avatarItems.length >= 2 && (
-        <View style={[styles.plusOneBadge, {marginLeft: -8, zIndex: 0}]}>
-          <Text style={styles.plusOneText}>+1</Text>
-        </View>
-      )} */}
     </View>
   );
 };
 
-const ProgressBar = ({ percentage }) => (
+const ProgressBar = ({ percentage, colors, isDark }) => (
   <View style={styles.progressContainer}>
-    <View style={styles.track}>
-      <View style={[styles.fill, { width: `${percentage}%` }]} />
+    <View style={[styles.track, { backgroundColor: colors?.progressTrack || "#f3f4f6" }]}>
+      <View style={[styles.fill, { width: `${percentage}%`, backgroundColor: colors?.primary || "#0ea5e9" }]} />
     </View>
-    <Text style={styles.progressText}>{percentage}%</Text>
+    <Text style={[styles.progressText, { color: colors?.primary || "#0ea5e9" }]}>{percentage}%</Text>
   </View>
 );
 
 const CircleTab = ({ navigation }) => {
   const dispatch = useDispatch();
+  const { colors, isDark } = useTheme();
   const { ownedCircle } = useSelector(state => state.circles);
-  const { recentActivities } = useSelector(state => state.lists);
+  const { recentActivities, lists } = useSelector(state => state.lists);
 
-  useEffect(() => {
-    dispatch(fetchOwnedCircle());
-    dispatch(fetchRecentActivities());
-  }, [dispatch]);
+  // Fetch data when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      dispatch(fetchOwnedCircle());
+      dispatch(fetchRecentActivities());
+      dispatch(fetchAllLists());
+    }, [dispatch])
+  );
 
   // Build connections from ownedCircle data
   const connections = buildConnections(ownedCircle);
@@ -294,15 +294,42 @@ const CircleTab = ({ navigation }) => {
     return source.slice(0, 5).map(normalizeActivity);
   }, [recentActivities]);
 
+  // Filter and format shared lists
+  const sharedLists = useMemo(() => {
+    const filtered = lists.filter(list => list.type === "shared");
+    return filtered.slice(0, 3).map(list => {
+      const progress = list.progress || { total: 0, purchased: 0, percentage: 0 };
+
+      // Get member avatars if available
+      const members = list.shareWithCircle?.members || [];
+      const avatars = members
+        .slice(0, 2)
+        .map(member => member?.userId?.profilePicture || member?.profilePicture)
+        .filter(Boolean);
+
+      return {
+        id: list.id || list._id,
+        title: list.name || "Untitled List",
+        progress: progress.percentage,
+        updated: formatListTimeAgo(list.updatedAt || list.createdAt),
+        avatars: avatars.length > 0 ? avatars : [null, null], // Show initials if no avatars
+      };
+    });
+  }, [lists]);
+
+  const handleListPress = useCallback((listId) => {
+    navigation.navigate("ListDetails", { listId });
+  }, [navigation]);
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header
         variant="title"
         title={"Your Circle"}
         subtitle={"Shared shopping with your household"}
         rightAction={
-          <TouchableOpacity style={styles.addUserButton}>
-            <UserPlus size={20} color="#0ea5e9" />
+          <TouchableOpacity style={[styles.addUserButton, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
+            <UserPlus size={20} color={colors.primary} />
           </TouchableOpacity>
         }
       />
@@ -312,34 +339,34 @@ const CircleTab = ({ navigation }) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
         {/* Family Home Card */}
-        <View style={styles.familyCard}>
+        <View style={[styles.familyCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
           {/* Decorative Corner */}
-          <View style={styles.decorativeCorner} />
+          <View style={[styles.decorativeCorner, { backgroundColor: isDark ? "rgba(14, 165, 233, 0.1)" : "#f0f9ff" }]} />
 
           <View style={styles.familyHeaderRow}>
-            <View style={styles.iconBg}>
-              <ShoppingBag size={20} color="#0ea5e9" />
+            <View style={[styles.iconBg, { backgroundColor: isDark ? "rgba(14, 165, 233, 0.2)" : "#e0f2fe" }]}>
+              <ShoppingBag size={20} color={colors.primary} />
             </View>
             <View style={styles.familyTitleContainer}>
-              <Text style={styles.familyTitle}>{circleName}</Text>
-              <View style={styles.ownerBadge}>
-                <Text style={styles.ownerText}>Owner</Text>
+              <Text style={[styles.familyTitle, { color: colors.textPrimary }]}>{circleName}</Text>
+              <View style={[styles.ownerBadge, { backgroundColor: isDark ? "rgba(14, 165, 233, 0.15)" : "#eff6ff", borderColor: isDark ? "rgba(14, 165, 233, 0.3)" : "#dbeafe" }]}>
+                <Text style={[styles.ownerText, { color: colors.primary }]}>Owner</Text>
               </View>
             </View>
             <TouchableOpacity
               style={styles.settingsIcon}
               onPress={() => navigation.navigate("CircleSettings")}>
-              <Settings size={20} color="#9ca3af" />
+              <Settings size={20} color={colors.iconMuted} />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.addressRow}>
-            <MapPin size={16} color="#0ea5e9" style={{ marginRight: 6 }} />
-            <Text style={styles.addressText}>
+          <View style={[styles.addressRow, { backgroundColor: colors.surfaceSecondary }]}>
+            <MapPin size={16} color={colors.primary} style={{ marginRight: 6 }} />
+            <Text style={[styles.addressText, { color: colors.textSecondary }]}>
               123 Maple Street, Springfield
             </Text>
             <TouchableOpacity style={{ marginLeft: "auto" }}>
-              <Pencil size={14} color="#9ca3af" />
+              <Pencil size={14} color={colors.iconMuted} />
             </TouchableOpacity>
           </View>
 
@@ -350,24 +377,25 @@ const CircleTab = ({ navigation }) => {
                 name: conn.name,
               }))}
               size={32}
+              colors={colors}
             />
             <TouchableOpacity
-              style={styles.manageBtn}
+              style={[styles.manageBtn, { borderColor: colors.primary }]}
               onPress={() => navigation.navigate("ManageConnections")}
             >
-              <Text style={styles.manageBtnText}>Manage Circle</Text>
+              <Text style={[styles.manageBtnText, { color: colors.primary }]}>Manage Circle</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Connections Section */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionHeader}>Connections</Text>
+          <Text style={[styles.sectionHeader, { color: colors.textPrimary }]}>Connections</Text>
           <TouchableOpacity
             style={styles.viewAllBtn}
             onPress={() => navigation.navigate("ManageConnections")}>
-            <Text style={styles.viewAllText}>View All</Text>
-            <ChevronRight size={14} color="#0ea5e9" />
+            <Text style={[styles.viewAllText, { color: colors.primary }]}>View All</Text>
+            <ChevronRight size={14} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
@@ -382,12 +410,13 @@ const CircleTab = ({ navigation }) => {
                   image={user.image}
                   name={user.name}
                   size={56}
+                  colors={colors}
                 />
                 {/* Only show online dot for owner if needed */}
-                {user.isOwner && <View style={styles.onlineDot} />}
+                {user.isOwner && <View style={[styles.onlineDot, { backgroundColor: colors.primary, borderColor: colors.card }]} />}
               </View>
-              <Text style={styles.connectionName}>{user.name}</Text>
-              <Text style={styles.connectionRole}>{user.role}</Text>
+              <Text style={[styles.connectionName, { color: colors.textPrimary }]}>{user.name}</Text>
+              <Text style={[styles.connectionRole, { color: colors.textMuted }]}>{user.role}</Text>
             </View>
           ))}
           {/* Always show invite button */}
@@ -396,71 +425,88 @@ const CircleTab = ({ navigation }) => {
             onPress={() =>
               navigation.navigate("ManageConnections", { tab: "Invite" })
             }>
-            <View style={styles.inviteCircle}>
-              <UserPlus size={20} color="#9ca3af" />
+            <View style={[styles.inviteCircle, { borderColor: colors.border }]}>
+              <UserPlus size={20} color={colors.iconMuted} />
             </View>
-            <Text style={styles.inviteText}>Invite</Text>
+            <Text style={[styles.inviteText, { color: colors.textMuted }]}>Invite</Text>
           </TouchableOpacity>
         </ReactScrollView>
 
         {/* Shared Lists Section */}
-        <Text style={styles.sectionHeader}>Shared Lists</Text>
-        <View style={styles.listsContainer}>
-          {SHARED_LISTS.map(list => (
-            <View key={list.id} style={styles.listCard}>
-              <View style={styles.listHeader}>
-                <Text style={styles.listTitle}>{list.title}</Text>
-                <View style={styles.syncedBadge}>
-                  <Text style={styles.syncedText}>Synced</Text>
+        <Text style={[styles.sectionHeader, { color: colors.textPrimary }]}>Shared Lists</Text>
+        {sharedLists.length === 0 ? (
+          <View style={[styles.emptyListsContainer, { backgroundColor: colors.card }]}>
+            <Text style={[styles.emptyListsText, { color: colors.textMuted }]}>
+              No shared lists yet. Create a list and share it with your circle.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.listsContainer}>
+            {sharedLists.map(list => (
+              <TouchableOpacity
+                key={list.id}
+                style={[styles.listCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}
+                onPress={() => handleListPress(list.id)}
+                activeOpacity={0.7}>
+                <View style={styles.listHeader}>
+                  <Text style={[styles.listTitle, { color: colors.textPrimary }]}>{list.title}</Text>
+                  <View style={[styles.syncedBadge, { backgroundColor: isDark ? "rgba(16, 185, 129, 0.2)" : "#d1fae5" }]}>
+                    <Text style={[styles.syncedText, { color: isDark ? "#34d399" : "#059669" }]}>Synced</Text>
+                  </View>
                 </View>
-              </View>
-              <ProgressBar percentage={list.progress} />
-              <View style={styles.listFooter}>
-                <View style={styles.listMeta}>
-                  <AvatarStack
-                    items={list.avatars.map(avatar => ({
-                      image: avatar,
-                      name: "User",
-                    }))}
-                    size={35}
-                    limit={2}
-                  />
-                  <Text style={styles.listUpdated}>{list.updated}</Text>
+                <ProgressBar percentage={list.progress} colors={colors} isDark={isDark} />
+                <View style={styles.listFooter}>
+                  <View style={styles.listMeta}>
+                    <AvatarStack
+                      items={list.avatars.map(avatar => ({
+                        image: avatar,
+                        name: "User",
+                      }))}
+                      size={35}
+                      limit={2}
+                      colors={colors}
+                    />
+                    <Text style={[styles.listUpdated, { color: colors.textMuted }]}>{list.updated}</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleListPress(list.id);
+                    }}>
+                    <Text style={[styles.viewListText, { color: colors.primary }]}>View List</Text>
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity>
-                  <Text style={styles.viewListText}>View List</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
-        </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {/* Recent Activity Section */}
-        <Text style={styles.sectionHeader}>Recent Activity</Text>
-        <View style={styles.activityCard}>
+        <Text style={[styles.sectionHeader, { color: colors.textPrimary }]}>Recent Activity</Text>
+        <View style={[styles.activityCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
           {activityItems.length === 0 ? (
-            <Text style={styles.emptyActivityText}>No recent updates yet.</Text>
+            <Text style={[styles.emptyActivityText, { color: colors.textMuted }]}>No recent updates yet.</Text>
           ) : (
             activityItems.map((item, index) => (
               <View
                 key={item.id}
                 style={[
                   styles.activityRow,
-                  index !== 0 && styles.activityBorder,
+                  index !== 0 && [styles.activityBorder, { borderTopColor: colors.divider }],
                 ]}>
                 <View style={{ marginRight: 12 }}>
-                  <Avatar image={item.userAvatar} name={item.userName} size={32} />
+                  <Avatar image={item.userAvatar} name={item.userName} size={32} colors={colors} />
                 </View>
                 <View style={styles.activityContent}>
-                  <Text style={styles.activityText}>
-                    <Text style={styles.activityUser}>{item.userName} </Text>
+                  <Text style={[styles.activityText, { color: colors.textSecondary }]}>
+                    <Text style={[styles.activityUser, { color: colors.textPrimary }]}>{item.userName} </Text>
                     {item.actionText}{" "}
-                    {!!item.targetText ? (
-                      <Text style={styles.activityTarget}>{item.targetText}</Text>
+                    {item.targetText ? (
+                      <Text style={[styles.activityTarget, { color: colors.primary }]}>{item.targetText}</Text>
                     ) : null}
                   </Text>
-                  {!!item.timeText ? (
-                    <Text style={styles.activityTime}>{item.timeText}</Text>
+                  {item.timeText ? (
+                    <Text style={[styles.activityTime, { color: colors.textMuted }]}>{item.timeText}</Text>
                   ) : null}
                 </View>
               </View>
@@ -469,24 +515,24 @@ const CircleTab = ({ navigation }) => {
         </View>
 
         {/* Grow Your Circle Banner */}
-        <View style={styles.growBanner}>
+        <View style={[styles.growBanner, { backgroundColor: isDark ? "rgba(14, 165, 233, 0.15)" : "#eff6ff", borderColor: isDark ? "rgba(14, 165, 233, 0.3)" : "#dbeafe" }]}>
           <View style={styles.growHeader}>
             <View>
-              <Text style={styles.growTitle}>Grow your Circle</Text>
-              <Text style={styles.growSubtitle}>
+              <Text style={[styles.growTitle, { color: colors.textPrimary }]}>Grow your Circle</Text>
+              <Text style={[styles.growSubtitle, { color: colors.textMuted }]}>
                 Anyone you invite can help add or manage lists.
               </Text>
             </View>
-            <View style={styles.growIconBox}>
+            <View style={[styles.growIconBox, { backgroundColor: colors.primary }]}>
               <UserPlus size={20} color="#ffffff" />
             </View>
           </View>
           <View style={styles.growActions}>
-            <TouchableOpacity style={styles.inviteLinkBtn}>
-              <Share2 size={16} color="#0ea5e9" style={{ marginRight: 8 }} />
-              <Text style={styles.inviteLinkText}>Invite via Link</Text>
+            <TouchableOpacity style={[styles.inviteLinkBtn, { backgroundColor: colors.card, borderColor: colors.primary }]}>
+              <Share2 size={16} color={colors.primary} style={{ marginRight: 8 }} />
+              <Text style={[styles.inviteLinkText, { color: colors.primary }]}>Invite via Link</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.qrCodeBtn}>
+            <TouchableOpacity style={[styles.qrCodeBtn, { backgroundColor: colors.primary }]}>
               <QrCode size={16} color="#ffffff" style={{ marginRight: 8 }} />
               <Text style={styles.qrCodeText}>QR Code</Text>
             </TouchableOpacity>
@@ -503,7 +549,6 @@ const CircleTab = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f9fafb",
   },
 
   addUserButton: {
@@ -624,22 +669,6 @@ const styles = StyleSheet.create({
   },
   stackAvatar: {
     borderWidth: 2,
-    borderColor: "#fff",
-  },
-  plusOneBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#e5e7eb",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#fff",
-  },
-  plusOneText: {
-    fontSize: RFValue(10),
-    fontFamily: FontFamily.bold,
-    color: "#6b7280",
   },
 
   // Connections
@@ -801,6 +830,27 @@ const styles = StyleSheet.create({
     fontSize: RFValue(10),
     fontFamily: FontFamily.bold,
     color: "#0ea5e9",
+  },
+
+  emptyActivityText: {
+    fontSize: RFValue(11),
+    fontFamily: FontFamily.regular,
+    color: "#9ca3af",
+    textAlign: "center",
+  },
+  emptyListsContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    alignItems: "center",
+  },
+  emptyListsText: {
+    fontSize: RFValue(11),
+    fontFamily: FontFamily.regular,
+    color: "#9ca3af",
+    textAlign: "center",
+    lineHeight: RFValue(16),
   },
 
   // Activity

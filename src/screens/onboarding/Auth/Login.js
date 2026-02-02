@@ -1,20 +1,21 @@
-import {useEffect, useState} from "react";
-import {View, StyleSheet, Image} from "react-native";
-import {useSafeAreaInsets} from "react-native-safe-area-context";
-import {RFPercentage, RFValue} from "react-native-responsive-fontsize";
-import {useDispatch, useSelector} from "react-redux";
+import { useEffect, useState } from "react";
+import { View, StyleSheet, Image } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { RFPercentage, RFValue } from "react-native-responsive-fontsize";
+import { useDispatch, useSelector } from "react-redux";
 import Toast from "react-native-toast-message";
 
-import {Button, Text, TextInput} from "~components/Common";
-import {Images} from "~assets";
+import { Button, Text, TextInput } from "~components/Common";
+import { Images } from "~assets";
 import OnboardingLayout from "~containers/layouts/OnboardingLayout";
-import {loginUser} from "~redux/actions/authActions";
-import {clearError} from "~redux/reducers/authReducer";
-import {validateEmail, validatePassword} from "~utils/validation";
+import { loginUser } from "~redux/actions/authActions";
+import { clearError } from "~redux/reducers/authReducer";
+import { getProfile } from "~redux/actions/profileActions";
+import { validateEmail, validatePassword } from "~utils/validation";
 
-const LoginScreen = ({navigation}) => {
+const LoginScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const {loading, error} = useSelector(state => state.auth);
+  const { loading, error } = useSelector(state => state.auth);
   const dispatch = useDispatch();
 
   const [email, setEmail] = useState("");
@@ -33,6 +34,7 @@ const LoginScreen = ({navigation}) => {
         type: "error",
         text1: "Login Failed",
         text2: typeof error === "string" ? error : "Something went wrong",
+        props: { forceLight: true },
       });
       dispatch(clearError());
     }
@@ -42,14 +44,14 @@ const LoginScreen = ({navigation}) => {
   const handleEmailChange = value => {
     setEmail(value);
     if (errors.email) {
-      setErrors(prev => ({...prev, email: null}));
+      setErrors(prev => ({ ...prev, email: null }));
     }
   };
 
   const handlePasswordChange = value => {
     setPassword(value);
     if (errors.password) {
-      setErrors(prev => ({...prev, password: null}));
+      setErrors(prev => ({ ...prev, password: null }));
     }
   };
 
@@ -65,22 +67,28 @@ const LoginScreen = ({navigation}) => {
     return !emailError && !passwordError;
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!validateForm()) {
       Toast.show({
         type: "error",
         text1: "Validation Error",
         text2: "Please fill in all fields correctly",
+        props: { forceLight: true },
       });
       return;
     }
 
-    dispatch(
+    const result = await dispatch(
       loginUser({
         email: email.trim(),
         password: password,
       }),
     );
+
+    // If login successful, fetch user profile
+    if (loginUser.fulfilled.match(result)) {
+      dispatch(getProfile());
+    }
   };
 
   return (
@@ -97,15 +105,15 @@ const LoginScreen = ({navigation}) => {
         resizeMode="contain"
       />
       <View
-        style={[styles.content, {paddingBottom: insets.bottom + RFValue(24)}]}>
+        style={[styles.content, { paddingBottom: insets.bottom + RFValue(24) }]}>
         <View>
           {/* Title */}
-          <Text variant="sectionTitle" style={styles.title}>
+          <Text variant="sectionTitle" style={[styles.title, { color: "#1B1A1F" }]}>
             Log in
           </Text>
 
           {/* Subtitle */}
-          <Text variant="bodySmall" color="muted" style={styles.subtitle}>
+          <Text variant="bodySmall" style={[styles.subtitle, { color: "#9CA3AF" }]}>
             Enter your credentials to continue
           </Text>
 
@@ -119,6 +127,7 @@ const LoginScreen = ({navigation}) => {
             keyboardType="email-address"
             autoCapitalize="none"
             error={errors.email}
+            forceLight
           />
 
           <TextInput
@@ -130,13 +139,13 @@ const LoginScreen = ({navigation}) => {
             leftIcon="lock"
             type={2}
             error={errors.password}
+            forceLight
           />
 
           <Text
             variant="bodySmall"
-            color="error"
             align="right"
-            style={{marginBottom: RFValue(10), fontSize: RFValue(10)}}
+            style={{ marginBottom: RFValue(10), fontSize: RFValue(10), color: "#EF4444" }}
             onPress={() => navigation.navigate("ForgotPassword")}>
             Forgot Password?
           </Text>
@@ -146,20 +155,21 @@ const LoginScreen = ({navigation}) => {
             title="Log in"
             onPress={() => handleLogin()}
             loading={loading}
+            forceLight
           />
 
-          <View style={{flexDirection: "row", alignSelf: "center"}}>
-            <Text variant="bodySmall" style={styles.textStyle}>
+          <View style={{ flexDirection: "row", alignSelf: "center" }}>
+            <Text variant="bodySmall" style={[styles.textStyle, { color: "#9CA3AF" }]}>
               Don't have an account?{" "}
             </Text>
             <Text
               variant="link"
-              color="primary"
               onPress={() => navigation.replace("GetStarted")}
               style={[
                 styles.textStyle,
                 {
                   textDecorationLine: "underline",
+                  color: "#1E9DF1",
                 },
               ]}>
               Sign Up

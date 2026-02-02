@@ -10,6 +10,7 @@ import Icon from "react-native-vector-icons/Ionicons";
 import {Text} from "~components/Common";
 import {RFValue} from "react-native-responsive-fontsize";
 import {Mic, ScanLine, Search} from "lucide-react-native";
+import {useTheme} from "~context/ThemeContext";
 
 const SearchBar = ({
   type = 1,
@@ -21,8 +22,11 @@ const SearchBar = ({
   onPress,
   filterIcon = false,
   style,
-  iconColor = "#777",
+  iconColor,
 }) => {
+  const {colors, isDark} = useTheme();
+  const defaultIconColor = iconColor || colors.iconMuted;
+
   const handlePress = () => {
     if (!editable && onPress) {
       Keyboard.dismiss();
@@ -33,24 +37,36 @@ const SearchBar = ({
   const Container = editable ? View : TouchableOpacity;
 
   return (
-    <View style={[styles.wrapper, style]}>
-      {title && <Text style={styles.title}>{title}</Text>}
+    <View
+      style={[
+        styles.wrapper,
+        {backgroundColor: colors.headerBackground},
+        style,
+      ]}>
+      {title && (
+        <Text style={[styles.title, {color: colors.textSecondary}]}>
+          {title}
+        </Text>
+      )}
 
       {type === 1 && (
         <Container
           activeOpacity={0.8}
           onPress={handlePress}
-          style={styles.searchContainer}>
+          style={[
+            styles.searchContainer,
+            {backgroundColor: isDark ? colors.surface : "#F3F4F6"},
+          ]}>
           <Icon
             name="search"
             size={20}
-            color={iconColor}
+            color={defaultIconColor}
             style={{marginLeft: 10}}
           />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, {color: colors.textPrimary}]}
             placeholder={placeholder}
-            placeholderTextColor="#777"
+            placeholderTextColor={colors.inputPlaceholder}
             editable={editable}
             value={value}
             onChangeText={onChangeText}
@@ -60,17 +76,17 @@ const SearchBar = ({
             <Icon
               name="funnel"
               size={20}
-              color={"#38BAEF"}
+              color={colors.primary}
               style={{position: "absolute", right: 15}}
             />
           )}
           <View style={styles.searchActions}>
-            <View style={styles.divider} />
+            <View style={[styles.divider, {backgroundColor: colors.border}]} />
             <TouchableOpacity>
-              <Mic size={20} color="#1E9DF1" />
+              <Mic size={20} color={colors.primary} />
             </TouchableOpacity>
             <TouchableOpacity>
-              <ScanLine size={20} color="#0F1419" />
+              <ScanLine size={20} color={colors.icon} />
             </TouchableOpacity>
           </View>
         </Container>
@@ -81,21 +97,34 @@ const SearchBar = ({
           activeOpacity={0.8}
           onPress={handlePress}
           style={styles.searchRow}>
-          <View style={styles.searchInputContainer}>
-            <Search size={20} color="#9ca3af" />
+          <View
+            style={[
+              styles.searchInputContainer,
+              {backgroundColor: isDark ? colors.surface : "#f3f4f6"},
+            ]}>
+            <Search size={20} color={colors.iconMuted} />
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, {color: colors.textPrimary}]}
               placeholder="Search items, brands..."
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor={colors.inputPlaceholder}
               editable={editable}
               pointerEvents={editable ? "auto" : "none"}
             />
           </View>
-          <TouchableOpacity style={styles.iconButton}>
-            <Mic size={22} color="#0ea5e9" />
+          <TouchableOpacity
+            style={[
+              styles.iconButton,
+              {backgroundColor: isDark ? colors.surface : "#e0f2fe"},
+            ]}>
+            <Mic size={22} color={colors.primary} />
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.iconButton, styles.scanButton]}>
-            <ScanLine size={22} color="#1f2937" />
+          <TouchableOpacity
+            style={[
+              styles.iconButton,
+              styles.scanButton,
+              {backgroundColor: isDark ? colors.surface : "#f3f4f6"},
+            ]}>
+            <ScanLine size={22} color={colors.icon} />
           </TouchableOpacity>
         </Container>
       )}
@@ -105,20 +134,17 @@ const SearchBar = ({
 
 const styles = StyleSheet.create({
   wrapper: {
-    backgroundColor: "#FFFFFF",
     paddingVertical: 10,
     paddingHorizontal: 20,
   },
   title: {
     fontSize: RFValue(12),
-    color: "#444",
     marginBottom: 6,
     fontWeight: "500",
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F3F4F6",
     borderRadius: 30,
     paddingVertical: 5,
   },
@@ -126,9 +152,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 8,
     fontSize: RFValue(13),
-    color: "#000",
   },
-
   searchActions: {
     flexDirection: "row",
     alignItems: "center",
@@ -138,9 +162,7 @@ const styles = StyleSheet.create({
   divider: {
     width: 1,
     height: 20,
-    backgroundColor: "#D1D5DB",
   },
-
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -151,23 +173,18 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f3f4f6",
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 48,
   },
-
   iconButton: {
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: "#e0f2fe", // Light blue bg for Mic
     justifyContent: "center",
     alignItems: "center",
   },
-  scanButton: {
-    backgroundColor: "#f3f4f6", // Light gray for Scan
-  },
+  scanButton: {},
 });
 
 export default SearchBar;

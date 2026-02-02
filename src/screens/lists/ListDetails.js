@@ -31,11 +31,13 @@ import {
 } from "~redux/actions/listActions";
 import { clearListsError } from "~redux/reducers/listReducer";
 import { useAlert } from "~context/AlertContext";
+import { useTheme } from "~context/ThemeContext";
 
 const ListDetailsScreen = ({ navigation, route }) => {
   const dispatch = useDispatch();
   const { listById, loading, error } = useSelector(state => state.lists);
   const { showAlert, showError } = useAlert();
+  const { colors } = useTheme();
 
   const listId = route?.params?.listId;
   const list = listId ? listById[listId] : null;
@@ -275,11 +277,11 @@ const ListDetailsScreen = ({ navigation, route }) => {
             activeOpacity={item.status === "pending" ? 0.8 : 1}
             disabled={isPending}>
             {item.status === "purchased" ? (
-              <View style={styles.checkedCircle}>
+              <View style={[styles.checkedCircle, { backgroundColor: colors.success }]}>
                 <Check size={12} color="#fff" strokeWidth={3} />
               </View>
             ) : (
-              <View style={styles.uncheckedCircle} />
+              <View style={[styles.uncheckedCircle, { borderColor: colors.border }]} />
             )}
           </TouchableOpacity>
 
@@ -287,14 +289,14 @@ const ListDetailsScreen = ({ navigation, route }) => {
             <Text
               style={[
                 styles.itemName,
-                item.status === "purchased" && styles.itemNameStrike,
+                { color: colors.textPrimary },
+                item.status === "purchased" && [styles.itemNameStrike, { color: colors.textSecondary }],
               ]}>
               {item.name}
             </Text>
             <View style={styles.itemMetaRow}>
-              <Text style={styles.itemMetaText}>
+              <Text style={[styles.itemMetaText, { color: colors.textMuted }]}>
                 {item.status === "purchased" ? "Purchased" : "Pending"}
-                {console.log("item", item)}
               </Text>
             </View>
           </View>
@@ -308,17 +310,17 @@ const ListDetailsScreen = ({ navigation, route }) => {
                 onPress={() => item.status === "pending" ? setActiveItemMenuId(itemId) : null}
                 hitSlop={10}
                 disabled={isPending}>
-                <MoreHorizontal size={20} color="#d1d5db" />
+                <MoreHorizontal size={20} color={colors.iconMuted} />
               </TouchableOpacity>
             }
-            contentStyle={styles.menuContent}>
+            contentStyle={[styles.menuContent, { backgroundColor: colors.card }]}>
             <Menu.Item
               onPress={() => {
                 item.status === "pending" && setActiveItemMenuId(null);
                 item.status === "pending" && toggleItemStatus(itemId);
               }}
-              title={item.status === "purchased" ? "Mark Pending" : "Mark Purchased"}
-              titleStyle={styles.menuItemTitle}
+              title={item.status === "purchased" ? "Pending" : "Purchased"}
+              titleStyle={[styles.menuItemTitle, { color: colors.textPrimary }]}
             />
             <Menu.Item
               onPress={() => {
@@ -337,14 +339,15 @@ const ListDetailsScreen = ({ navigation, route }) => {
       toggleItemStatus,
       handleDeleteItem,
       isActionPending,
+      colors,
     ],
   );
 
   // Loading state
   if (loading && !list) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0ea5e9" />
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -352,21 +355,21 @@ const ListDetailsScreen = ({ navigation, route }) => {
   // List not found
   if (!list && !loading) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <Header
           variant="screen"
           title="List Not Found"
           onBack={() => navigation.goBack()}
         />
         <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>List not found or has been deleted.</Text>
+          <Text style={[styles.emptyText, { color: colors.textMuted }]}>List not found or has been deleted.</Text>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header
         variant="screen"
         title={list?.name || "List"}
@@ -374,7 +377,7 @@ const ListDetailsScreen = ({ navigation, route }) => {
         rightAction={
           <View style={styles.headerActions}>
             <TouchableOpacity style={styles.iconButton}>
-              <Share2 size={22} color="#1f2937" />
+              <Share2 size={22} color={colors.icon} />
             </TouchableOpacity>
             <Menu
               visible={showHeaderMenu}
@@ -389,17 +392,17 @@ const ListDetailsScreen = ({ navigation, route }) => {
                 <TouchableOpacity
                   style={styles.iconButton}
                   onPress={handleHeaderMenuToggle}>
-                  <MoreVertical size={22} color="#1f2937" />
+                  <MoreVertical size={22} color={colors.icon} />
                 </TouchableOpacity>
               }
-              contentStyle={styles.menuContent}>
+              contentStyle={[styles.menuContent, { backgroundColor: colors.card }]}>
               <Menu.Item
                 onPress={() => {
                   setShowHeaderMenu(false);
                   // Handle edit action
                 }}
                 title="Edit"
-                titleStyle={styles.menuItemTitle}
+                titleStyle={[styles.menuItemTitle, { color: colors.textPrimary }]}
               />
               <Menu.Item
                 onPress={() => {
@@ -423,24 +426,24 @@ const ListDetailsScreen = ({ navigation, route }) => {
         {/* Progress Bar */}
         <View style={styles.progressContainer}>
           <View style={styles.progressLabels}>
-            <Text style={styles.progressText}>
+            <Text style={[styles.progressText, { color: colors.textSecondary }]}>
               {purchasedItems}/{totalItems} purchased
             </Text>
-            <Text style={styles.progressPercentText}>
+            <Text style={[styles.progressPercentText, { color: colors.primary }]}>
               {Math.round(progressPercent)}%
             </Text>
           </View>
-          <View style={styles.track}>
-            <View style={[styles.fill, { width: `${progressPercent}%` }]} />
+          <View style={[styles.track, { backgroundColor: colors.progressTrack }]}>
+            <View style={[styles.fill, { width: `${progressPercent}%`, backgroundColor: colors.primary }]} />
           </View>
         </View>
 
         {/* Add Item Input */}
-        <View style={styles.inputContainer}>
+        <View style={[styles.inputContainer, { borderColor: colors.border, backgroundColor: colors.card }]}>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: colors.textPrimary }]}
             placeholder="Add an item..."
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor={colors.inputPlaceholder}
             value={newItemText}
             onChangeText={setNewItemText}
             onSubmitEditing={handleAddItem}
@@ -450,38 +453,41 @@ const ListDetailsScreen = ({ navigation, route }) => {
           <TouchableOpacity
             style={[
               styles.addButton,
+              { backgroundColor: colors.backgroundSecondary },
               !newItemText.trim() && styles.addButtonDisabled,
             ]}
             onPress={handleAddItem}
             disabled={!newItemText.trim() || isActionPending(`add-${listId}`)}>
-            <Plus size={20} color={newItemText.trim() ? "#0ea5e9" : "#d1d5db"} />
+            <Plus size={20} color={newItemText.trim() ? colors.primary : colors.iconMuted} />
           </TouchableOpacity>
         </View>
 
         {/* Tabs */}
-        <View style={styles.tabsContainer}>
+        <View style={[styles.tabsContainer, { borderBottomColor: colors.divider }]}>
           <TouchableOpacity
             style={[
               styles.tab,
-              activeTab === "All Items" && styles.activeTab,
+              activeTab === "All Items" && [styles.activeTab, { borderBottomColor: colors.textPrimary }],
             ]}
             onPress={() => setActiveTab("All Items")}>
             <Text
               style={[
                 styles.tabText,
-                activeTab === "All Items" && styles.activeTabText,
+                { color: colors.textMuted },
+                activeTab === "All Items" && [styles.activeTabText, { color: colors.textPrimary }],
               ]}>
               All Items
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.tab, activeTab === "To Buy" && styles.activeTab]}
+            style={[styles.tab, activeTab === "To Buy" && [styles.activeTab, { borderBottomColor: colors.textPrimary }]]}
             onPress={() => setActiveTab("To Buy")}>
             <Text
               style={[
                 styles.tabText,
-                activeTab === "To Buy" && styles.activeTabText,
+                { color: colors.textMuted },
+                activeTab === "To Buy" && [styles.activeTabText, { color: colors.textPrimary }],
               ]}>
               To Buy ({pendingItems.length})
             </Text>
@@ -499,7 +505,7 @@ const ListDetailsScreen = ({ navigation, route }) => {
                 scrollEnabled={false}
               />
             ) : (
-              <Text style={styles.emptyText}>All caught up! Nothing to buy.</Text>
+              <Text style={[styles.emptyText, { color: colors.textMuted }]}>All caught up! Nothing to buy.</Text>
             )
           ) : (
             <>
@@ -516,8 +522,8 @@ const ListDetailsScreen = ({ navigation, route }) => {
               {/* Purchased items should always render when present (even if all items are purchased) */}
               {doneItems.length > 0 ? (
                 <>
-                  <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>PURCHASED</Text>
+                  <View style={[styles.sectionHeader, { backgroundColor: colors.backgroundSecondary }]}>
+                    <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>PURCHASED</Text>
                   </View>
                   <FlatList
                     data={doneItems}
@@ -530,7 +536,7 @@ const ListDetailsScreen = ({ navigation, route }) => {
 
               {/* Empty state when there are no items at all */}
               {displayItems.length === 0 && doneItems.length === 0 ? (
-                <Text style={styles.emptyText}>No items in this list.</Text>
+                <Text style={[styles.emptyText, { color: colors.textMuted }]}>No items in this list.</Text>
               ) : null}
             </>
           )}
@@ -545,8 +551,6 @@ const ListDetailsScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#ffffff",
-    // paddingTop: 40,
   },
   loadingContainer: {
     flex: 1,
@@ -574,29 +578,24 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: RFValue(11),
-    color: "#4b5563",
     fontFamily: FontFamily.medium,
   },
   progressPercentText: {
     fontSize: RFValue(11),
-    color: "#0ea5e9",
     fontFamily: FontFamily.bold,
   },
   track: {
     height: 6,
-    backgroundColor: "#f3f4f6",
     borderRadius: 3,
   },
   fill: {
     height: "100%",
-    backgroundColor: "#0ea5e9",
     borderRadius: 3,
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#e5e7eb",
     borderRadius: 12,
     paddingHorizontal: 16,
     height: 50,
@@ -606,12 +605,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: RFValue(12),
     fontFamily: FontFamily.regular,
-    color: "#111827",
   },
   addButton: {
     width: 32,
     height: 32,
-    backgroundColor: "#e5e7eb",
     borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
@@ -622,7 +619,6 @@ const styles = StyleSheet.create({
   tabsContainer: {
     flexDirection: "row",
     borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
     marginBottom: 20,
     gap: 24,
   },
@@ -631,16 +627,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: "transparent",
   },
-  activeTab: {
-    borderBottomColor: "#111827",
-  },
+  activeTab: {},
   tabText: {
     fontSize: RFValue(12),
     fontFamily: FontFamily.medium,
-    color: "#6b7280",
   },
   activeTabText: {
-    color: "#111827",
     fontFamily: FontFamily.bold,
   },
   listContainer: {
@@ -649,14 +641,12 @@ const styles = StyleSheet.create({
   sectionHeader: {
     paddingVertical: 10,
     marginTop: 10,
-    backgroundColor: "#f9fafb",
     paddingHorizontal: 10,
     borderRadius: 8,
   },
   sectionTitle: {
     fontSize: RFValue(10),
     fontFamily: FontFamily.bold,
-    color: "#9ca3af",
     letterSpacing: 0.5,
   },
   emptyState: {
@@ -667,7 +657,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     textAlign: "center",
-    color: "#9ca3af",
     marginTop: 20,
     fontFamily: FontFamily.regular,
     fontSize: RFValue(12),
@@ -687,13 +676,11 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 1.5,
-    borderColor: "#d1d5db",
   },
   checkedCircle: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: "#22c55e",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -704,12 +691,10 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: RFValue(12),
     fontFamily: FontFamily.medium,
-    color: "#1f2937",
     marginBottom: 4,
   },
   itemNameStrike: {
     textDecorationLine: "line-through",
-    color: "#4b5563",
   },
   itemMetaRow: {
     flexDirection: "row",
@@ -718,10 +703,8 @@ const styles = StyleSheet.create({
   itemMetaText: {
     fontSize: RFValue(9),
     fontFamily: FontFamily.regular,
-    color: "#9ca3af",
   },
   menuContent: {
-    backgroundColor: "#ffffff",
     borderRadius: 12,
     paddingVertical: 4,
     minWidth: 150,
@@ -729,7 +712,6 @@ const styles = StyleSheet.create({
   menuItemTitle: {
     fontSize: RFValue(12),
     fontFamily: FontFamily.medium,
-    color: "#374151",
   },
   menuItemTitleDelete: {
     fontSize: RFValue(12),

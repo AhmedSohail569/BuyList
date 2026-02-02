@@ -12,6 +12,7 @@ import Header from "~components/Header";
 import {ScrollView, Text} from "~components/Common";
 import {RFValue} from "react-native-responsive-fontsize";
 import {FontFamily} from "~theme/fonts";
+import {useTheme} from "~context/ThemeContext";
 
 const NotificationRow = ({
   icon: Icon,
@@ -21,9 +22,10 @@ const NotificationRow = ({
   isEnabled,
   onToggle,
   isLast,
+  colors,
 }) => {
   return (
-    <View style={[styles.rowContainer, !isLast && styles.separator]}>
+    <View style={[styles.rowContainer, {backgroundColor: colors.card}, !isLast && [styles.separator, {borderBottomColor: colors.divider}]]}>
       {/* Icon */}
       <View style={[styles.iconBox, {backgroundColor: color}]}>
         <Icon size={RFValue(18)} color="#fff" strokeWidth={1.5} />
@@ -31,17 +33,17 @@ const NotificationRow = ({
 
       {/* Text Content */}
       <View style={styles.textContainer}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.description} numberOfLines={2}>
+        <Text style={[styles.title, {color: colors.textPrimary}]}>{title}</Text>
+        <Text style={[styles.description, {color: colors.textSecondary}]} numberOfLines={2}>
           {description}
         </Text>
       </View>
 
       {/* Switch */}
       <Switch
-        trackColor={{false: "#E5E7EB", true: "#0ea5e9"}}
+        trackColor={{false: colors.border, true: colors.primary}}
         thumbColor={"#ffffff"}
-        ios_backgroundColor="#E5E7EB"
+        ios_backgroundColor={colors.border}
         onValueChange={onToggle}
         value={isEnabled}
         style={styles.switch}
@@ -51,6 +53,7 @@ const NotificationRow = ({
 };
 
 const NotificationsScreen = ({onQuickAction, navigation}) => {
+  const {colors, isDark} = useTheme();
   const [toggles, setToggles] = useState({
     sharedList: true,
     priceDrop: true,
@@ -64,7 +67,7 @@ const NotificationsScreen = ({onQuickAction, navigation}) => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, {backgroundColor: colors.background}]}>
       <Header
         variant="screen"
         title={"Notifications"}
@@ -75,54 +78,59 @@ const NotificationsScreen = ({onQuickAction, navigation}) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
         {/* Main Settings Card */}
-        <View style={styles.card}>
+        <View style={[styles.card, {backgroundColor: colors.card, shadowColor: colors.shadowColor}]}>
           <NotificationRow
             icon={Users}
-            color="#a855f7" // Purple
+            color="#a855f7"
             title="Shared List Updates"
             description="When members add or check items"
             isEnabled={toggles.sharedList}
             onToggle={() => handleToggle("sharedList")}
+            colors={colors}
           />
           <NotificationRow
             icon={Tag}
-            color="#22c55e" // Green
+            color="#22c55e"
             title="Price Drop Alerts"
             description="Notify when watched items go on sale"
             isEnabled={toggles.priceDrop}
             onToggle={() => handleToggle("priceDrop")}
+            colors={colors}
           />
           <NotificationRow
             icon={ShoppingCart}
-            color="#f97316" // Orange
+            color="#f97316"
             title="New Items Added"
             description="Alerts when someone adds to your lists"
             isEnabled={toggles.newItems}
             onToggle={() => handleToggle("newItems")}
+            colors={colors}
           />
           <NotificationRow
             icon={Calendar}
-            color="#3b82f6" // Blue
+            color="#3b82f6"
             title="Weekly Reminders"
             description="Remind me to shop on weekends"
             isEnabled={toggles.weekly}
             onToggle={() => handleToggle("weekly")}
+            colors={colors}
           />
           <NotificationRow
             icon={Bell}
-            color="#ec4899" // Pink
+            color="#ec4899"
             title="Promotions & Tips"
             description="News, updates, and shopping tips"
             isEnabled={toggles.promotions}
             onToggle={() => handleToggle("promotions")}
             isLast
+            colors={colors}
           />
         </View>
 
         {/* Info Box */}
-        <View style={styles.infoBox}>
-          <Info size={RFValue(18)} color="#3b82f6" style={styles.infoIcon} />
-          <Text style={styles.infoText}>
+        <View style={[styles.infoBox, {backgroundColor: isDark ? "rgba(59, 130, 246, 0.15)" : "#eff6ff"}]}>
+          <Info size={RFValue(18)} color={colors.primary} style={styles.infoIcon} />
+          <Text style={[styles.infoText, {color: colors.primary}]}>
             You can also manage system-level notifications for BuyList in your
             device settings.
           </Text>
@@ -137,18 +145,14 @@ const NotificationsScreen = ({onQuickAction, navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f9fafb", // Light Gray Background
   },
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
   },
   card: {
-    backgroundColor: "#ffffff",
     borderRadius: 16,
     paddingVertical: 8,
-    // Soft Shadow
-    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -165,7 +169,6 @@ const styles = StyleSheet.create({
   },
   separator: {
     borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
   },
   iconBox: {
     width: 40,
@@ -182,13 +185,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: RFValue(12),
     fontFamily: FontFamily.bold,
-    color: "#111827",
     marginBottom: 2,
   },
   description: {
     fontSize: RFValue(10),
     fontFamily: FontFamily.regular,
-    color: "#6b7280",
     lineHeight: RFValue(14),
   },
   switch: {
@@ -198,7 +199,6 @@ const styles = StyleSheet.create({
   // Info Box Styles
   infoBox: {
     marginTop: 24,
-    backgroundColor: "#eff6ff", // Blue-50
     borderRadius: 12,
     padding: 16,
     flexDirection: "row",
@@ -212,7 +212,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: RFValue(9),
     fontFamily: FontFamily.regular,
-    color: "#2563eb", // Blue-600
     lineHeight: RFValue(16),
   },
 });

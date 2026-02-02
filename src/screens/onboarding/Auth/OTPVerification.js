@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -8,26 +8,46 @@ import {
   ActivityIndicator,
 } from "react-native";
 
-import {RFPercentage, RFValue} from "react-native-responsive-fontsize";
-import {Text, TextInput} from "~components/Common";
+import { RFPercentage, RFValue } from "react-native-responsive-fontsize";
+import { Text, TextInput } from "~components/Common";
 import OnboardingLayout from "~containers/layouts/OnboardingLayout";
 import Icon from "react-native-vector-icons/FontAwesome";
-import {useDispatch, useSelector} from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import Toast from "react-native-toast-message";
 
-import {verifyEmail} from "~redux/actions/authActions";
-import {clearVerifyEmailState, clearError} from "~redux/reducers/authReducer";
-import {validateOTP} from "~utils/validation";
+import { verifyEmail, resendOTP } from "~redux/actions/authActions";
+import {
+  clearVerifyEmailState,
+  clearError,
+  clearResendOTPState,
+} from "~redux/reducers/authReducer";
+import { validateOTP } from "~utils/validation";
 
-const OTPVerficationScreen = ({navigation, route}) => {
-  const {email} = route?.params || {};
+const OTPVerficationScreen = ({ navigation, route }) => {
+  const { email } = route?.params || {};
 
-  const {emailVerified, loading, error} = useSelector(state => state.auth);
+  const {
+    emailVerified,
+    loading,
+    error,
+    resendOTPLoading,
+    resendOTPMessage,
+    resendOTPError,
+  } = useSelector(state => state.auth);
 
   const dispatch = useDispatch();
 
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      dispatch(clearResendOTPState());
+      setResendCooldown(0);
+    };
+  }, [dispatch]);
 
   // Handle successful email verification
   useEffect(() => {
@@ -36,6 +56,7 @@ const OTPVerficationScreen = ({navigation, route}) => {
         type: "success",
         text1: "Email Verified",
         text2: "Your email has been verified successfully",
+        props: { forceLight: true },
       });
       navigation.navigate("Login", {
         email,
@@ -53,10 +74,59 @@ const OTPVerficationScreen = ({navigation, route}) => {
         type: "error",
         text1: "Verification Failed",
         text2: typeof error === "string" ? error : "Invalid verification code",
+        props: { forceLight: true },
       });
       dispatch(clearError());
     }
   }, [error, dispatch]);
+
+  // Handle resend OTP success
+  useEffect(() => {
+    if (resendOTPMessage) {
+      Toast.show({
+        type: "success",
+        text1: "Code Resent",
+        text2: resendOTPMessage,
+        props: { forceLight: true },
+      });
+      // Set cooldown timer (60 seconds)
+      setResendCooldown(60);
+      dispatch(clearResendOTPState());
+    }
+  }, [resendOTPMessage, dispatch]);
+
+  // Handle resend OTP error
+  useEffect(() => {
+    if (resendOTPError) {
+      Toast.show({
+        type: "error",
+        text1: "Resend Failed",
+        text2: typeof resendOTPError === "string" ? resendOTPError : "Failed to resend code",
+        props: { forceLight: true },
+      });
+      dispatch(clearResendOTPState());
+    }
+  }, [resendOTPError, dispatch]);
+
+  // Cooldown timer countdown
+  useEffect(() => {
+    let interval = null;
+    if (resendCooldown > 0) {
+      interval = setInterval(() => {
+        setResendCooldown(prev => {
+          if (prev <= 1) {
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [resendCooldown]);
 
   // Clear error when user starts typing
   const handleCodeChange = value => {
@@ -76,6 +146,7 @@ const OTPVerficationScreen = ({navigation, route}) => {
         type: "error",
         text1: "Validation Error",
         text2: otpError,
+        props: { forceLight: true },
       });
       return;
     }
@@ -89,12 +160,29 @@ const OTPVerficationScreen = ({navigation, route}) => {
   };
 
   const handleResendCode = () => {
-    Toast.show({
-      type: "info",
-      text1: "Code Resent",
-      text2: "A new verification code has been sent to your email",
-    });
-    console.log("Resend Code");
+    // Prevent resend if cooldown is active or email is missing
+    if (resendCooldown > 0) {
+      Toast.show({
+        type: "info",
+        text1: "Please wait",
+        text2: `You can resend code in ${resendCooldown} seconds`,
+        props: { forceLight: true },
+      });
+      return;
+    }
+
+    if (!email) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Email is required to resend code",
+        props: { forceLight: true },
+      });
+      return;
+    }
+
+    // Dispatch resend OTP action
+    dispatch(resendOTP({ email: email.trim() }));
   };
 
   const showFab = code.length === 4;
@@ -102,17 +190,17 @@ const OTPVerficationScreen = ({navigation, route}) => {
   return (
     <OnboardingLayout>
       <KeyboardAvoidingView
-        style={{flex: 1}}
+        style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}>
         {/* OTP CONTENT */}
         <View style={styles.content}>
-          <Text variant="sectionTitle" style={styles.title}>
+          <Text variant="sectionTitle" style={[styles.title, { color: "#1B1A1F" }]}>
             Enter your 4-digit code
           </Text>
 
-          <Text variant="bodySmall" color="muted" style={styles.subtitle}>
+          <Text variant="bodySmall" style={[styles.subtitle, { color: "#9CA3AF" }]}>
             We've sent a verification code to{" "}
-            <Text style={{color: "#1E9DF1"}}>{email}</Text>
+            <Text style={{ color: "#1E9DF1" }}>{email}</Text>
           </Text>
 
           <TextInput
@@ -124,16 +212,28 @@ const OTPVerficationScreen = ({navigation, route}) => {
             maxLength={4}
             type={2}
             error={codeError}
+            forceLight
           />
         </View>
 
         {/* BOTTOM ACTIONS */}
         <View style={styles.bottomActions}>
           {/* Resend Code */}
-          <TouchableOpacity activeOpacity={0.7} onPress={handleResendCode}>
-            <Text variant="link" color="primary">
-              Resend code
-            </Text>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={handleResendCode}
+            disabled={resendOTPLoading || resendCooldown > 0}>
+            {resendCooldown > 0 ? (
+              <Text variant="bodySmall" style={{ color: "#9CA3AF" }}>
+                Resend code in {resendCooldown}s
+              </Text>
+            ) : (
+              <Text
+                variant="link"
+                style={{ color: resendOTPLoading ? "#9CA3AF" : "#1E9DF1" }}>
+                {resendOTPLoading ? "Sending..." : "Resend code"}
+              </Text>
+            )}
           </TouchableOpacity>
 
           {/* FAB */}
@@ -194,7 +294,7 @@ const styles = StyleSheet.create({
     elevation: 6,
     shadowColor: "#000",
     shadowOpacity: 0.2,
-    shadowOffset: {width: 0, height: 3},
+    shadowOffset: { width: 0, height: 3 },
     shadowRadius: 6,
   },
 });

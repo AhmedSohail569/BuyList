@@ -2,7 +2,7 @@
  * Circle Management Slice
  * Handles circle state with optimistic updates and rollback logic
  */
-import {createSlice} from "@reduxjs/toolkit";
+import { createSlice } from "@reduxjs/toolkit";
 import {
   fetchOwnedCircle,
   fetchAllCircles,
@@ -12,6 +12,7 @@ import {
   addMemberToCircle,
   updateMemberRole,
 } from "../actions/circleActions";
+import { logout } from "./authReducer";
 
 // ============================================
 // INITIAL STATE
@@ -110,7 +111,7 @@ const circleSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchCircleMembers.fulfilled, (state, action) => {
-        const {circleId, members} = action.payload;
+        const { circleId, members } = action.payload;
         state.membersLoading = false;
         state.membersByCircleId[circleId] = Array.isArray(members) ? members : [];
         // Track that we've loaded members for this circle
@@ -128,7 +129,7 @@ const circleSlice = createSlice({
       // ============================================
       // OPTIMISTIC: Remove member immediately on pending
       .addCase(removeMemberFromCircle.pending, (state, action) => {
-        const {circleId, memberId} = action.meta.arg;
+        const { circleId, memberId } = action.meta.arg;
         const currentMembers = state.membersByCircleId[circleId] || [];
         // Optimistically remove the member
         state.membersByCircleId[circleId] = currentMembers.filter(
@@ -141,7 +142,7 @@ const circleSlice = createSlice({
       })
       // ROLLBACK: Restore previous members on failure
       .addCase(removeMemberFromCircle.rejected, (state, action) => {
-        const {previousMembers, circleId, message} = action.payload || {};
+        const { previousMembers, circleId, message } = action.payload || {};
         if (circleId && previousMembers) {
           // Rollback to previous state
           state.membersByCircleId[circleId] = previousMembers;
@@ -154,24 +155,24 @@ const circleSlice = createSlice({
       // ============================================
       // OPTIMISTIC: Update name immediately on pending
       .addCase(editCircleName.pending, (state, action) => {
-        const {circleId, name} = action.meta.arg;
+        const { circleId, name } = action.meta.arg;
 
         // Update in ownedCircle if it matches
         if (state.ownedCircle && (state.ownedCircle.id === circleId || state.ownedCircle._id === circleId)) {
-          state.ownedCircle = {...state.ownedCircle, name};
+          state.ownedCircle = { ...state.ownedCircle, name };
         }
 
         // Update in allCircles array
         state.allCircles = state.allCircles.map(circle =>
           circle.id === circleId || circle._id === circleId
-            ? {...circle, name}
+            ? { ...circle, name }
             : circle,
         );
       })
       .addCase(editCircleName.fulfilled, (state, action) => {
         // Name already updated optimistically
         // Only update name and updatedAt from response, preserve all other data
-        const {circleId, response} = action.payload;
+        const { circleId, response } = action.payload;
         if (response) {
           // Extract only name and updatedAt from response
           const updates = {};
@@ -185,11 +186,11 @@ const circleSlice = createSlice({
           // Only update if we have something to update
           if (Object.keys(updates).length > 0) {
             if (state.ownedCircle && (state.ownedCircle.id === circleId || state.ownedCircle._id === circleId)) {
-              state.ownedCircle = {...state.ownedCircle, ...updates};
+              state.ownedCircle = { ...state.ownedCircle, ...updates };
             }
             state.allCircles = state.allCircles.map(circle =>
               circle.id === circleId || circle._id === circleId
-                ? {...circle, ...updates}
+                ? { ...circle, ...updates }
                 : circle,
             );
           }
@@ -198,7 +199,7 @@ const circleSlice = createSlice({
       })
       // ROLLBACK: Restore previous circle data on failure
       .addCase(editCircleName.rejected, (state, action) => {
-        const {previousOwnedCircle, previousAllCircles, message} =
+        const { previousOwnedCircle, previousAllCircles, message } =
           action.payload || {};
         if (previousOwnedCircle !== undefined) {
           state.ownedCircle = previousOwnedCircle;
@@ -214,18 +215,18 @@ const circleSlice = createSlice({
       // ============================================
       // OPTIMISTIC: Add temporary member immediately on pending
       .addCase(addMemberToCircle.pending, (state, action) => {
-        const {circleId, tempMember} = action.meta.arg;
+        const { circleId, tempMember } = action.meta.arg;
         if (tempMember) {
           const currentMembers = state.membersByCircleId[circleId] || [];
           // Add temporary member with a temp flag
           state.membersByCircleId[circleId] = [
             ...currentMembers,
-            {...tempMember, _isOptimistic: true},
+            { ...tempMember, _isOptimistic: true },
           ];
         }
       })
       .addCase(addMemberToCircle.fulfilled, (state, action) => {
-        const {circleId, member, tempMemberId} = action.payload;
+        const { circleId, member, tempMemberId } = action.payload;
         const currentMembers = state.membersByCircleId[circleId] || [];
 
         if (tempMemberId) {
@@ -246,7 +247,7 @@ const circleSlice = createSlice({
       })
       // ROLLBACK: Restore previous members on failure
       .addCase(addMemberToCircle.rejected, (state, action) => {
-        const {previousMembers, circleId, message} = action.payload || {};
+        const { previousMembers, circleId, message } = action.payload || {};
         if (circleId && previousMembers) {
           // Rollback to previous state
           state.membersByCircleId[circleId] = previousMembers;
@@ -259,24 +260,24 @@ const circleSlice = createSlice({
       // ============================================
       // OPTIMISTIC: Update role immediately on pending
       .addCase(updateMemberRole.pending, (state, action) => {
-        const {circleId, memberId, role} = action.meta.arg;
+        const { circleId, memberId, role } = action.meta.arg;
         const currentMembers = state.membersByCircleId[circleId] || [];
         // Optimistically update the member's role
         state.membersByCircleId[circleId] = currentMembers.map(member =>
           member.id === memberId || member._id === memberId
-            ? {...member, role}
+            ? { ...member, role }
             : member,
         );
       })
       .addCase(updateMemberRole.fulfilled, (state, action) => {
         // Role already updated optimistically
         // Optionally merge with server response
-        const {circleId, memberId, response} = action.payload;
+        const { circleId, memberId, response } = action.payload;
         if (response) {
           const currentMembers = state.membersByCircleId[circleId] || [];
           state.membersByCircleId[circleId] = currentMembers.map(member =>
             member.id === memberId || member._id === memberId
-              ? {...member, ...response}
+              ? { ...member, ...response }
               : member,
           );
         }
@@ -284,12 +285,17 @@ const circleSlice = createSlice({
       })
       // ROLLBACK: Restore previous members on failure
       .addCase(updateMemberRole.rejected, (state, action) => {
-        const {previousMembers, circleId, message} = action.payload || {};
+        const { previousMembers, circleId, message } = action.payload || {};
         if (circleId && previousMembers) {
           // Rollback to previous state
           state.membersByCircleId[circleId] = previousMembers;
         }
         state.error = message || action.payload;
+      })
+
+      // Clear circle state on logout
+      .addCase(logout, () => {
+        return initialState;
       });
   },
 });

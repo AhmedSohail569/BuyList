@@ -9,23 +9,24 @@ import {
 import {MapPin, ArrowRight} from "lucide-react-native";
 import {Text} from "~components/Common";
 import {Images} from "~assets";
+import {useTheme} from "~context/ThemeContext";
 
-const StoreCard = ({item, onPress}) => (
+const StoreCard = ({item, onPress, colors}) => (
   <TouchableOpacity
-    style={styles.storeCard}
+    style={[styles.storeCard, {backgroundColor: colors.card, shadowColor: colors.shadowColor}]}
     onPress={() => onPress(item.id)}
     activeOpacity={0.7}>
-    <View style={styles.storeImageContainer}>
+    <View style={[styles.storeImageContainer, {backgroundColor: colors.surfaceSecondary}]}>
       <Image source={item.image} style={styles.storeImage} />
       <View style={[styles.badge, {backgroundColor: item.badgeColor}]}>
         <Text style={styles.badgeText}>{item.badge}</Text>
       </View>
     </View>
     <View style={styles.storeInfo}>
-      <Text style={styles.storeName}>{item.name}</Text>
+      <Text style={[styles.storeName, {color: colors.textPrimary}]}>{item.name}</Text>
       <View style={styles.storeDetails}>
-        <MapPin size={14} color="#6B7280" />
-        <Text style={styles.storeDistance}>{item.distance}</Text>
+        <MapPin size={14} color={colors.iconMuted} />
+        <Text style={[styles.storeDistance, {color: colors.textMuted}]}>{item.distance}</Text>
         <View style={[styles.statusBadge, {backgroundColor: item.statusColor}]}>
           <Text style={styles.statusText}>{item.status}</Text>
         </View>
@@ -35,6 +36,7 @@ const StoreCard = ({item, onPress}) => (
 );
 
 const NearbyStores = ({navigation}) => {
+  const {colors} = useTheme();
   const [stores] = useState([
     {
       id: 1,
@@ -79,11 +81,11 @@ const NearbyStores = ({navigation}) => {
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Nearby Stores</Text>
+        <Text style={[styles.sectionTitle, {color: colors.textPrimary}]}>Nearby Stores</Text>
         <TouchableOpacity onPress={handleMapPress} activeOpacity={0.6}>
           <View style={styles.mapLink}>
-            <Text style={styles.mapText}>Map </Text>
-            <ArrowRight size={14} color="#1E9DF1" />
+            <Text style={[styles.mapText, {color: colors.primary}]}>Map </Text>
+            <ArrowRight size={14} color={colors.primary} />
           </View>
         </TouchableOpacity>
       </View>
@@ -91,7 +93,7 @@ const NearbyStores = ({navigation}) => {
       <FlatList
         data={stores}
         renderItem={({item}) => (
-          <StoreCard item={item} onPress={handleStorePress} />
+          <StoreCard item={item} onPress={handleStorePress} colors={colors} />
         )}
         keyExtractor={item => item.id.toString()}
         horizontal
@@ -116,11 +118,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 17,
     fontWeight: "700",
-    color: "#0F1419",
   },
   mapText: {
     fontSize: 12,
-    color: "#1E9DF1",
     fontWeight: "600",
   },
   mapLink: {
@@ -131,15 +131,12 @@ const styles = StyleSheet.create({
     paddingRight: 20,
     paddingBottom: 10,
     paddingLeft: 2,
-    // left: -20,
   },
   storeCard: {
     width: 180,
     marginRight: 12,
-    backgroundColor: "#ffffff",
     borderRadius: 16,
     overflow: "hidden",
-    shadowColor: "#000",
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -149,7 +146,6 @@ const styles = StyleSheet.create({
     position: "relative",
     width: "100%",
     height: 110,
-    backgroundColor: "#f3f4f6",
   },
   storeImage: {
     width: "100%",
@@ -174,7 +170,6 @@ const styles = StyleSheet.create({
   storeName: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#1F2937",
     marginBottom: 8,
   },
   storeDetails: {
@@ -184,7 +179,6 @@ const styles = StyleSheet.create({
   },
   storeDistance: {
     fontSize: 11,
-    color: "#6B7280",
     marginRight: 6,
   },
   statusBadge: {

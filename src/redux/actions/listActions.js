@@ -49,6 +49,7 @@ export const fetchListById = createAsyncThunk(
   async ({ listId }, { rejectWithValue }) => {
     try {
       const response = await axios.get(`/lists/get-by-id/${listId}`);
+      console.log("responseById=>>", response)
       return {
         listId,
         list: response.data?.data || response.data,

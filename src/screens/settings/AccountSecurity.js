@@ -18,6 +18,7 @@ import Header from "~components/Header";
 import {ScrollView, Text} from "~components/Common";
 import {RFValue} from "react-native-responsive-fontsize";
 import {FontFamily} from "~theme/fonts";
+import {useTheme} from "~context/ThemeContext";
 
 const SecurityRow = ({
   icon: Icon,
@@ -27,12 +28,13 @@ const SecurityRow = ({
   rightElement,
   onPress,
   isLast,
+  colors,
 }) => {
   return (
     <TouchableOpacity
       activeOpacity={onPress ? 0.7 : 1}
       onPress={onPress}
-      style={[styles.rowContainer, !isLast && styles.separator]}>
+      style={[styles.rowContainer, {backgroundColor: colors.card}, !isLast && [styles.separator, {borderBottomColor: colors.divider}]]}>
       {/* Icon */}
       <View style={[styles.iconBox, {backgroundColor: color}]}>
         <Icon
@@ -44,13 +46,13 @@ const SecurityRow = ({
 
       {/* Text Content */}
       <View style={styles.textContainer}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.subtitle}>{subtitle}</Text>
+        <Text style={[styles.title, {color: colors.textPrimary}]}>{title}</Text>
+        <Text style={[styles.subtitle, {color: colors.textSecondary}]}>{subtitle}</Text>
       </View>
 
       {/* Right Element (Switch or Chevron) */}
       <View style={styles.rightContainer}>
-        {rightElement || <ChevronRight size={RFValue(16)} color="#d1d5db" />}
+        {rightElement || <ChevronRight size={RFValue(16)} color={colors.iconMuted} />}
       </View>
     </TouchableOpacity>
   );
@@ -63,14 +65,15 @@ const SessionRow = ({
   isCurrent,
   onLogout,
   isLast,
+  colors,
 }) => {
   return (
-    <View style={[styles.rowContainer, !isLast && styles.separator]}>
+    <View style={[styles.rowContainer, {backgroundColor: colors.card}, !isLast && [styles.separator, {borderBottomColor: colors.divider}]]}>
       {/* Device Icon */}
       <View style={styles.deviceIconBox}>
         <Icon
           size={RFValue(20)}
-          color={isCurrent ? "#0ea5e9" : "#6b7280"}
+          color={isCurrent ? colors.primary : colors.iconSecondary}
           strokeWidth={1.5}
         />
       </View>
@@ -78,20 +81,20 @@ const SessionRow = ({
       {/* Session Info */}
       <View style={styles.textContainer}>
         <View style={styles.deviceHeader}>
-          <Text style={styles.title}>{device}</Text>
+          <Text style={[styles.title, {color: colors.textPrimary}]}>{device}</Text>
           {isCurrent && (
-            <View style={styles.currentBadge}>
-              <Text style={styles.currentBadgeText}>Current</Text>
+            <View style={[styles.currentBadge, {backgroundColor: colors.badgeBackground}]}>
+              <Text style={[styles.currentBadgeText, {color: colors.badgeText}]}>Current</Text>
             </View>
           )}
         </View>
-        <Text style={styles.subtitle}>{location}</Text>
+        <Text style={[styles.subtitle, {color: colors.textSecondary}]}>{location}</Text>
       </View>
 
       {/* Logout Action */}
       {!isCurrent && (
-        <TouchableOpacity style={styles.logoutSmallBtn} onPress={onLogout}>
-          <Text style={styles.logoutSmallText}>Log Out</Text>
+        <TouchableOpacity style={[styles.logoutSmallBtn, {borderColor: colors.logoutBorder}]} onPress={onLogout}>
+          <Text style={[styles.logoutSmallText, {color: colors.error}]}>Log Out</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -99,10 +102,11 @@ const SessionRow = ({
 };
 
 const SecurityScreen = ({onQuickAction, navigation}) => {
+  const {colors, isDark} = useTheme();
   const [is2FAEnabled, setIs2FAEnabled] = useState(true);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, {backgroundColor: colors.background}]}>
       <Header
         variant="screen"
         title={"Account Security"}
@@ -113,26 +117,28 @@ const SecurityScreen = ({onQuickAction, navigation}) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
         {/* LOGIN & RECOVERY SECTION */}
-        <Text style={styles.sectionHeader}>LOGIN & RECOVERY</Text>
-        <View style={styles.card}>
+        <Text style={[styles.sectionHeader, {color: colors.textMuted}]}>LOGIN & RECOVERY</Text>
+        <View style={[styles.card, {backgroundColor: colors.card, shadowColor: colors.shadowColor}]}>
           <SecurityRow
             icon={Lock}
-            color="#e0f2fe" // Light Blue
+            color={isDark ? "rgba(14, 165, 233, 0.2)" : "#e0f2fe"}
             title="Change Password"
             subtitle="Last changed 3 months ago"
             onPress={() => {}}
+            colors={colors}
           />
           <SecurityRow
             icon={ShieldCheck}
-            color="#dcfce7" // Light Green
+            color={isDark ? "rgba(34, 197, 94, 0.2)" : "#dcfce7"}
             title="Two-Factor Auth"
             subtitle="Secure your account"
             isLast
+            colors={colors}
             rightElement={
               <Switch
-                trackColor={{false: "#E5E7EB", true: "#0ea5e9"}}
+                trackColor={{false: colors.border, true: colors.primary}}
                 thumbColor={"#ffffff"}
-                ios_backgroundColor="#E5E7EB"
+                ios_backgroundColor={colors.border}
                 onValueChange={setIs2FAEnabled}
                 value={is2FAEnabled}
                 style={styles.switch}
@@ -142,13 +148,14 @@ const SecurityScreen = ({onQuickAction, navigation}) => {
         </View>
 
         {/* ACTIVE SESSIONS SECTION */}
-        <Text style={styles.sectionHeader}>ACTIVE SESSIONS</Text>
-        <View style={styles.card}>
+        <Text style={[styles.sectionHeader, {color: colors.textMuted}]}>ACTIVE SESSIONS</Text>
+        <View style={[styles.card, {backgroundColor: colors.card, shadowColor: colors.shadowColor}]}>
           <SessionRow
             icon={Smartphone}
             device="iPhone 14 Pro"
             location="San Francisco, US • Active now"
             isCurrent={true}
+            colors={colors}
           />
           <SessionRow
             icon={Laptop}
@@ -156,13 +163,14 @@ const SecurityScreen = ({onQuickAction, navigation}) => {
             location="San Francisco, US • 2 days ago"
             isLast={true}
             onLogout={() => console.log("Logging out macbook")}
+            colors={colors}
           />
         </View>
 
         {/* SIGN OUT ALL BUTTON */}
-        <TouchableOpacity style={styles.signOutAllButton}>
-          <LogOut size={RFValue(16)} color="#ef4444" style={{marginRight: 8}} />
-          <Text style={styles.signOutAllText}>Sign out of all devices</Text>
+        <TouchableOpacity style={[styles.signOutAllButton, {backgroundColor: colors.logoutBackground, borderColor: colors.logoutBorder}]}>
+          <LogOut size={RFValue(16)} color={colors.error} style={{marginRight: 8}} />
+          <Text style={[styles.signOutAllText, {color: colors.error}]}>Sign out of all devices</Text>
         </TouchableOpacity>
 
         <View style={{height: 40}} />
@@ -174,7 +182,6 @@ const SecurityScreen = ({onQuickAction, navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f9fafb", // Light Gray Background
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -185,7 +192,6 @@ const styles = StyleSheet.create({
   sectionHeader: {
     fontSize: RFValue(10),
     fontFamily: FontFamily.bold,
-    color: "#9ca3af", // Gray-400
     marginBottom: 10,
     marginLeft: 4,
     marginTop: 8,
@@ -195,11 +201,8 @@ const styles = StyleSheet.create({
 
   // Card & Rows
   card: {
-    backgroundColor: "#ffffff",
     borderRadius: 16,
     marginBottom: 24,
-    // Soft Shadow
-    shadowColor: "#000",
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.05,
     shadowRadius: 3.84,
@@ -211,11 +214,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 16,
     paddingHorizontal: 16,
-    backgroundColor: "#fff",
   },
   separator: {
     borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
   },
 
   // Icon Styling
@@ -242,13 +243,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: RFValue(12),
     fontFamily: FontFamily.bold,
-    color: "#111827",
     marginBottom: 4,
   },
   subtitle: {
     fontSize: RFValue(10),
     fontFamily: FontFamily.regular,
-    color: "#6b7280",
     lineHeight: RFValue(14),
   },
 
@@ -276,26 +275,22 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   currentBadge: {
-    backgroundColor: "#e0f2fe", // Sky-100
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
     marginLeft: 8,
   },
   currentBadgeText: {
-    color: "#0284c7", // Sky-600
     fontSize: RFValue(8),
     fontFamily: FontFamily.bold,
   },
   logoutSmallBtn: {
     borderWidth: 1,
-    borderColor: "#fee2e2",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
   logoutSmallText: {
-    color: "#ef4444",
     fontSize: RFValue(10),
     fontFamily: FontFamily.bold,
   },
@@ -305,15 +300,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#fff", // Or very faint red '#fff5f5'
     borderWidth: 1,
-    borderColor: "#fee2e2",
     paddingVertical: 16,
     borderRadius: 12,
     marginTop: 8,
   },
   signOutAllText: {
-    color: "#ef4444", // Red-500
     fontSize: RFValue(12),
     fontFamily: FontFamily.medium,
   },

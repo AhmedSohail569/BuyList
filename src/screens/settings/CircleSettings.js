@@ -26,6 +26,7 @@ import SelectionModal from "~containers/modals/SelectionModal";
 import {DEFAULT_ROLES} from "~constants";
 import {editCircleName} from "~redux/actions/circleActions";
 import {clearCircleError} from "~redux/reducers/circleReducer";
+import {useTheme} from "~context/ThemeContext";
 
 const SettingsRow = ({
   icon: Icon,
@@ -37,19 +38,20 @@ const SettingsRow = ({
   onPress,
   isLast,
   titleStyle,
+  colors,
 }) => {
   return (
     <TouchableOpacity
       activeOpacity={onPress ? 0.7 : 1}
       onPress={onPress}
-      style={[styles.rowContainer, !isLast && styles.separator]}>
+      style={[styles.rowContainer, {backgroundColor: colors.card}, !isLast && [styles.separator, {borderBottomColor: colors.divider}]]}>
       {/* Icon */}
       {Icon && (
         <View
-          style={[styles.iconBox, {backgroundColor: iconBgColor || "#f3f4f6"}]}>
+          style={[styles.iconBox, {backgroundColor: iconBgColor || colors.backgroundSecondary}]}>
           <Icon
             size={RFValue(18)}
-            color={iconColor || "#6b7280"}
+            color={iconColor || colors.iconSecondary}
             strokeWidth={1.5}
           />
         </View>
@@ -57,13 +59,13 @@ const SettingsRow = ({
 
       {/* Text Content */}
       <View style={styles.textContainer}>
-        <Text style={[styles.title, titleStyle]}>{title}</Text>
-        {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+        <Text style={[styles.title, {color: colors.textPrimary}, titleStyle]}>{title}</Text>
+        {subtitle && <Text style={[styles.subtitle, {color: colors.textSecondary}]}>{subtitle}</Text>}
       </View>
 
       {/* Right Element */}
       <View style={styles.rightContainer}>
-        {rightElement || <ChevronRight size={RFValue(16)} color="#d1d5db" />}
+        {rightElement || <ChevronRight size={RFValue(16)} color={colors.iconMuted} />}
       </View>
     </TouchableOpacity>
   );
@@ -72,6 +74,7 @@ const SettingsRow = ({
 const CircleSettingsScreen = ({onQuickAction, navigation}) => {
   const dispatch = useDispatch();
   const {ownedCircle, loading, error} = useSelector(state => state.circles);
+  const {colors, isDark} = useTheme();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState(null);
@@ -191,7 +194,7 @@ const CircleSettingsScreen = ({onQuickAction, navigation}) => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, {backgroundColor: colors.background}]}>
       <Header
         variant="screen"
         title={"Circle Settings"}
@@ -202,50 +205,54 @@ const CircleSettingsScreen = ({onQuickAction, navigation}) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
         {/* GENERAL SECTION */}
-        <Text style={styles.sectionHeader}>GENERAL</Text>
-        <View style={styles.card}>
+        <Text style={[styles.sectionHeader, {color: colors.textMuted}]}>GENERAL</Text>
+        <View style={[styles.card, {backgroundColor: colors.card, shadowColor: colors.shadowColor}]}>
           <SettingsRow
             icon={ShoppingBag}
-            iconBgColor="#e0f2fe" // Light Blue
-            iconColor="#0ea5e9" // Blue
+            iconBgColor={isDark ? "rgba(14, 165, 233, 0.2)" : "#e0f2fe"}
+            iconColor={colors.primary}
             title="Circle Name"
             subtitle={circleName || "Family Home"}
-            rightElement={<Pencil size={RFValue(16)} color="#9ca3af" />}
+            rightElement={<Pencil size={RFValue(16)} color={colors.iconMuted} />}
             onPress={() => openModal("circleName")}
+            colors={colors}
           />
           <SettingsRow
             icon={MapPin}
-            iconBgColor="#ffedd5" // Light Orange
-            iconColor="#f97316" // Orange
+            iconBgColor={isDark ? "rgba(249, 115, 22, 0.2)" : "#ffedd5"}
+            iconColor="#f97316"
             title="Home Location"
             subtitle="123 Maple Street, Springfield"
             isLast
+            colors={colors}
           />
         </View>
 
         {/* PREFERENCES SECTION */}
-        <Text style={styles.sectionHeader}>PREFERENCES</Text>
-        <View style={styles.card}>
+        <Text style={[styles.sectionHeader, {color: colors.textMuted}]}>PREFERENCES</Text>
+        <View style={[styles.card, {backgroundColor: colors.card, shadowColor: colors.shadowColor}]}>
           <SettingsRow
             icon={Shield}
-            iconBgColor="#f3e8ff" // Light Purple
-            iconColor="#a855f7" // Purple
+            iconBgColor={isDark ? "rgba(168, 85, 247, 0.2)" : "#f3e8ff"}
+            iconColor="#a855f7"
             title="Default Role"
             subtitle="New connections join as Editors"
             onPress={() => openModal("defaultRole")}
+            colors={colors}
           />
           <SettingsRow
             icon={Bell}
-            iconBgColor="#fef9c3" // Light Yellow
-            iconColor="#eab308" // Yellow
+            iconBgColor={isDark ? "rgba(234, 179, 8, 0.2)" : "#fef9c3"}
+            iconColor="#eab308"
             title="Notifications"
             subtitle="All activity"
             isLast
+            colors={colors}
             rightElement={
               <Switch
-                trackColor={{false: "#E5E7EB", true: "#0ea5e9"}}
+                trackColor={{false: colors.border, true: colors.primary}}
                 thumbColor={"#ffffff"}
-                ios_backgroundColor="#E5E7EB"
+                ios_backgroundColor={colors.border}
                 onValueChange={setNotificationsEnabled}
                 value={notificationsEnabled}
                 style={styles.switch}
@@ -258,30 +265,32 @@ const CircleSettingsScreen = ({onQuickAction, navigation}) => {
         <Text style={[styles.sectionHeader, styles.dangerHeader]}>
           DANGER ZONE
         </Text>
-        <View style={styles.card}>
+        <View style={[styles.card, {backgroundColor: colors.card, shadowColor: colors.shadowColor}]}>
           <SettingsRow
             icon={LogOut}
             iconBgColor="transparent"
-            iconColor="#4b5563"
+            iconColor={colors.iconSecondary}
             title="Leave Circle"
             titleStyle={{fontFamily: FontFamily.medium}}
             rightElement={<View />}
             onPress={() => openModal("leave")}
+            colors={colors}
           />
           <SettingsRow
             icon={Trash2}
             iconBgColor="transparent"
-            iconColor="#ef4444"
+            iconColor={colors.error}
             title="Delete Circle"
-            titleStyle={{color: "#ef4444"}} // Red text
-            rightElement={<View />} // No chevron for delete usually, or empty view
+            titleStyle={{color: colors.error}}
+            rightElement={<View />}
             onPress={() => openModal("delete")}
             isLast
+            colors={colors}
           />
         </View>
 
         {/* Footer Note */}
-        <Text style={styles.footerNote}>
+        <Text style={[styles.footerNote, {color: colors.textMuted}]}>
           Deleting a circle is permanent and will remove all shared lists and
           history for everyone.
         </Text>
@@ -335,7 +344,6 @@ const CircleSettingsScreen = ({onQuickAction, navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f9fafb", // Light Gray Background
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -346,7 +354,6 @@ const styles = StyleSheet.create({
   sectionHeader: {
     fontSize: RFValue(10),
     fontFamily: FontFamily.bold,
-    color: "#9ca3af", // Gray-400
     marginBottom: 8,
     marginLeft: 4,
     marginTop: 8,
@@ -359,12 +366,9 @@ const styles = StyleSheet.create({
 
   // Card Styles
   card: {
-    backgroundColor: "#ffffff",
     borderRadius: 16,
     marginBottom: 20,
     overflow: "hidden",
-    // Soft Shadow
-    shadowColor: "#000",
     shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -377,11 +381,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 14,
     paddingHorizontal: 16,
-    backgroundColor: "#fff",
   },
   separator: {
     borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
   },
 
   // Icon Styles
@@ -402,13 +404,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: RFValue(12),
     fontFamily: FontFamily.bold,
-    color: "#111827",
     marginBottom: 2,
   },
   subtitle: {
     fontSize: RFValue(10),
     fontFamily: FontFamily.regular,
-    color: "#6b7280",
   },
 
   // Right Element Styles
@@ -425,9 +425,8 @@ const styles = StyleSheet.create({
   footerNote: {
     fontSize: RFValue(10),
     fontFamily: FontFamily.regular,
-    color: "#9ca3af",
     lineHeight: RFValue(14),
-    marginTop: -8, // Pull closer to the card above
+    marginTop: -8,
     marginLeft: 4,
   },
 });

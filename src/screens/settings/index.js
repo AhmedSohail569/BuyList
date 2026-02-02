@@ -1,5 +1,5 @@
-import {View, TouchableOpacity, StyleSheet} from "react-native";
-import {useDispatch} from "react-redux";
+import { View, TouchableOpacity, StyleSheet, Switch } from "react-native";
+import { useDispatch } from "react-redux";
 
 import {
   User,
@@ -16,34 +16,61 @@ import {
   ChevronRight,
 } from "lucide-react-native";
 import Header from "~components/Header";
-import {ScrollView, Text} from "~components/Common";
-import {RFValue} from "react-native-responsive-fontsize";
-import {FontFamily} from "~theme/fonts";
-import {useState} from "react";
+import { ScrollView, Text } from "~components/Common";
+import { RFValue } from "react-native-responsive-fontsize";
+import { FontFamily } from "~theme/fonts";
+import { useState } from "react";
 import SelectionModal from "~containers/modals/SelectionModal";
-import {DISTANCE_OPTIONS, LANGUAGE_OPTIONS, THEME_OPTIONS} from "~constants";
-import {logout} from "~redux/reducers/authReducer";
-import {clearAccessToken} from "~utils";
-import {useAlert} from "~context/AlertContext";
+import { DISTANCE_OPTIONS, LANGUAGE_OPTIONS } from "~constants";
+import { logout } from "~redux/reducers/authReducer";
+import { clearAccessToken } from "~utils";
+import { useAlert } from "~context/AlertContext";
+import { useTheme } from "~context/ThemeContext";
 
 /**
  * Reusable component for a single setting row
  */
-const SettingsOption = ({icon: Icon, color, label, value, onPress, isLast}) => {
+const SettingsOption = ({
+  icon: Icon,
+  color,
+  label,
+  value,
+  onPress,
+  isLast,
+  rightComponent,
+}) => {
+  const { colors } = useTheme();
+
   return (
     <TouchableOpacity
-      style={styles.optionContainer}
+      style={[styles.optionContainer, { backgroundColor: colors.card }]}
       onPress={onPress}
-      activeOpacity={0.7}>
-      <View style={[styles.iconBox, {backgroundColor: color}]}>
+      activeOpacity={0.7}
+      disabled={!onPress}>
+      <View style={[styles.iconBox, { backgroundColor: color }]}>
         <Icon size={RFValue(18)} color="#fff" strokeWidth={1.5} />
       </View>
 
-      <View style={[styles.contentWrapper, !isLast && styles.separator]}>
-        <Text style={styles.optionLabel}>{label}</Text>
+      <View
+        style={[
+          styles.contentWrapper,
+          !isLast && styles.separator,
+          { borderBottomColor: colors.divider },
+        ]}>
+        <Text style={[styles.optionLabel, { color: colors.textPrimary }]}>
+          {label}
+        </Text>
         <View style={styles.rightContent}>
-          {value && <Text style={styles.valueText}>{value}</Text>}
-          <ChevronRight size={RFValue(16)} color="#d1d5db" />
+          {value && (
+            <Text style={[styles.valueText, { color: colors.textMuted }]}>
+              {value}
+            </Text>
+          )}
+          {rightComponent ? (
+            rightComponent
+          ) : (
+            <ChevronRight size={RFValue(16)} color={colors.textDisabled} />
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -53,21 +80,30 @@ const SettingsOption = ({icon: Icon, color, label, value, onPress, isLast}) => {
 /**
  * Reusable component for the section header and container
  */
-const SettingsSection = ({title, children}) => (
-  <View style={styles.section}>
-    <Text style={styles.sectionHeader}>{title}</Text>
-    <View style={styles.cardContainer}>{children}</View>
-  </View>
-);
+const SettingsSection = ({ title, children }) => {
+  const { colors } = useTheme();
 
-const SettingsTab = ({onQuickAction, navigation}) => {
-  const {showAlert, showError} = useAlert();
+  return (
+    <View style={styles.section}>
+      <Text style={[styles.sectionHeader, { color: colors.textMuted }]}>
+        {title}
+      </Text>
+      <View style={[styles.cardContainer, { backgroundColor: colors.card }]}>
+        {children}
+      </View>
+    </View>
+  );
+};
+
+const SettingsTab = ({ onQuickAction, navigation }) => {
+  const { showAlert, showError } = useAlert();
   const dispatch = useDispatch();
+  const { colors, isDark, toggleTheme } = useTheme();
+
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalType, setModalType] = useState(null); // 'theme' | 'language'
+  const [modalType, setModalType] = useState(null); // 'language' | 'distance'
 
   // Value State
-  const [theme, setTheme] = useState("Light");
   const [language, setLanguage] = useState("English");
   const [distance, setDistance] = useState("Miles");
 
@@ -78,10 +114,8 @@ const SettingsTab = ({onQuickAction, navigation}) => {
   };
 
   const handleSave = newValue => {
-    if (modalType === "theme") setTheme(newValue);
     if (modalType === "language") setLanguage(newValue);
     if (modalType === "distance") setDistance(newValue);
-    console.log(`Saved ${modalType}:`, newValue);
   };
 
   const handleLogout = () => {
@@ -99,12 +133,7 @@ const SettingsTab = ({onQuickAction, navigation}) => {
           style: "destructive",
           onPress: async () => {
             try {
-              // Clear token from AsyncStorage
               await clearAccessToken();
-
-              // Clear Redux state (this will also set hasLoggedOut flag)
-              // RootNavigator will automatically switch to OnboardingNavigator
-              // OnboardingNavigator will start at Login due to hasLoggedOut flag
               dispatch(logout());
             } catch (err) {
               console.error("Logout error:", err);
@@ -117,12 +146,11 @@ const SettingsTab = ({onQuickAction, navigation}) => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header
         variant="screen"
-        title={"Settings"}
+        title="Settings"
         showProfile
-        avatar={{uri: "https://i.pravatar.cc/150"}}
       />
 
       <ScrollView
@@ -130,21 +158,15 @@ const SettingsTab = ({onQuickAction, navigation}) => {
         showsVerticalScrollIndicator={false}>
         {/* ACCOUNT */}
         <SettingsSection title="ACCOUNT">
-          {/* <SettingsOption
-            icon={DollarSign}
-            color="#FF3F3F" // Red
-            label="Edit Subscription"
-            onPress={() => navigation.navigate("EditSubscription")}
-          /> */}
           <SettingsOption
             icon={User}
-            color="#3B82F6" // Blue
+            color="#3B82F6"
             label="Profile Settings"
             onPress={() => navigation.navigate("EditProfile")}
           />
           <SettingsOption
             icon={ShieldCheck}
-            color="#22C55E" // Green
+            color="#22C55E"
             label="Security"
             onPress={() => navigation.navigate("AccountSecurity")}
             isLast
@@ -155,20 +177,28 @@ const SettingsTab = ({onQuickAction, navigation}) => {
         <SettingsSection title="PREFERENCES">
           <SettingsOption
             icon={Bell}
-            color="#F97316" // Orange
+            color="#F97316"
             label="Notifications"
             onPress={() => navigation.navigate("Notifications")}
           />
           <SettingsOption
             icon={Moon}
-            color="#A855F7" // Purple
-            label="Theme"
-            value={theme}
-            onPress={() => openModal("theme")}
+            color="#A855F7"
+            label="Dark Mode"
+            rightComponent={
+              <Switch
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={"#ffffff"}
+                ios_backgroundColor={colors.border}
+                onValueChange={toggleTheme}
+                value={isDark}
+                style={styles.switch}
+              />
+            }
           />
           <SettingsOption
             icon={Globe}
-            color="#6366F1" // Indigo
+            color="#6366F1"
             label="Language"
             value={language}
             onPress={() => openModal("language")}
@@ -180,15 +210,28 @@ const SettingsTab = ({onQuickAction, navigation}) => {
         <SettingsSection title="BUYLIST FEATURES">
           <SettingsOption
             icon={Users}
-            color="#EC4899" // Pink
+            color="#EC4899"
             label="Manage Circle"
             onPress={() => navigation.navigate("CircleSettings")}
           />
           <SettingsOption
             icon={List}
-            color="#14B8A6" // Cyan
+            color="#14B8A6"
             label="Shared Lists"
-            onPress={() => navigation.navigate("SharedLists")}
+            onPress={() => {
+              const tabNav = navigation.getParent?.();
+              if (tabNav?.navigate) {
+                tabNav.navigate("Lists", {
+                  screen: "ListsTab",
+                  params: { filter: "shared", _timestamp: Date.now() },
+                });
+              } else {
+                navigation.navigate("Lists", {
+                  screen: "ListsTab",
+                  params: { filter: "shared", _timestamp: Date.now() },
+                });
+              }
+            }}
             isLast
           />
         </SettingsSection>
@@ -197,7 +240,7 @@ const SettingsTab = ({onQuickAction, navigation}) => {
         <SettingsSection title="LOCATION">
           <SettingsOption
             icon={MapPin}
-            color="#6B7280" // Slate
+            color="#6B7280"
             label="Distance"
             value={distance}
             onPress={() => openModal("distance")}
@@ -209,12 +252,12 @@ const SettingsTab = ({onQuickAction, navigation}) => {
         <SettingsSection title="SUPPORT">
           <SettingsOption
             icon={HelpCircle}
-            color="#EAB308" // Yellow
+            color="#EAB308"
             label="Help & Support"
           />
           <SettingsOption
             icon={FileText}
-            color="#60A5FA" // Blue
+            color="#60A5FA"
             label="Legal"
             onPress={() => navigation.navigate("Legal")}
             isLast
@@ -222,43 +265,37 @@ const SettingsTab = ({onQuickAction, navigation}) => {
         </SettingsSection>
 
         {/* LOGOUT BUTTON */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <TouchableOpacity
+          style={[
+            styles.logoutButton,
+            {
+              backgroundColor: colors.logoutBackground,
+              borderColor: colors.logoutBorder,
+            },
+          ]}
+          onPress={handleLogout}>
           <LogOut
             size={RFValue(18)}
-            color="#EF4444"
+            color={colors.logoutText}
             style={styles.logoutIcon}
           />
-          <Text style={styles.logoutText}>Log Out</Text>
+          <Text style={[styles.logoutText, { color: colors.logoutText }]}>
+            Log Out
+          </Text>
         </TouchableOpacity>
 
         {/* Bottom Padding */}
-        <View style={{height: 40}} />
+        <View style={{ height: 40 }} />
       </ScrollView>
       <SelectionModal
         isVisible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSave={handleSave}
         title={
-          modalType === "theme"
-            ? "Select Theme"
-            : modalType === "language"
-            ? "Select Language"
-            : "Select Distance"
+          modalType === "language" ? "Select Language" : "Select Distance"
         }
-        initialValue={
-          modalType === "theme"
-            ? theme
-            : modalType === "language"
-            ? language
-            : distance
-        }
-        options={
-          modalType === "theme"
-            ? THEME_OPTIONS
-            : modalType === "language"
-            ? LANGUAGE_OPTIONS
-            : DISTANCE_OPTIONS
-        }
+        initialValue={modalType === "language" ? language : distance}
+        options={modalType === "language" ? LANGUAGE_OPTIONS : DISTANCE_OPTIONS}
       />
     </View>
   );
@@ -267,7 +304,6 @@ const SettingsTab = ({onQuickAction, navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f3f4f6", // Matches screenshot background
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -281,16 +317,14 @@ const styles = StyleSheet.create({
   sectionHeader: {
     fontSize: RFValue(10),
     fontFamily: FontFamily.bold,
-    color: "#9ca3af", // Gray-400
     marginBottom: 8,
     marginLeft: 4,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   cardContainer: {
-    backgroundColor: "#ffffff",
     borderRadius: 16,
-    overflow: "hidden", // Ensures children don't bleed out of radius
+    overflow: "hidden",
   },
 
   // Option Row Styles
@@ -298,7 +332,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingLeft: 16,
-    backgroundColor: "#fff",
   },
   iconBox: {
     width: 32,
@@ -318,12 +351,10 @@ const styles = StyleSheet.create({
   },
   separator: {
     borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6", // Very light divider
   },
   optionLabel: {
-    fontSize: RFValue(12), // approx 14-15px
-    fontFamily: FontFamily.medium, // Semi-bold look
-    color: "#1f2937", // Gray-800
+    fontSize: RFValue(12),
+    fontFamily: FontFamily.medium,
     fontWeight: "600",
   },
   rightContent: {
@@ -332,32 +363,31 @@ const styles = StyleSheet.create({
   },
   valueText: {
     fontSize: RFValue(11),
-    color: "#9ca3af", // Gray-400
     marginRight: 6,
     fontFamily: FontFamily.regular,
   },
 
   // Logout Button Styles
   logoutButton: {
-    backgroundColor: "#FEF2F2", // Red-100
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: 14,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#FEE2E2",
     marginTop: 8,
     marginBottom: 24,
   },
   logoutText: {
-    color: "#EF4444", // Red-500
     fontSize: RFValue(12),
     fontFamily: FontFamily.bold,
     fontWeight: "700",
   },
   logoutIcon: {
     marginRight: 8,
+  },
+  switch: {
+    transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }],
   },
 });
 

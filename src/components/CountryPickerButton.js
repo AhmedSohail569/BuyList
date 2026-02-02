@@ -1,14 +1,29 @@
-import React, {useState} from "react";
-import {TouchableOpacity, Text, StyleSheet, View} from "react-native";
+import { useState } from "react";
+import { TouchableOpacity, Text, StyleSheet } from "react-native";
 import CountryPicker from "react-native-country-picker-modal";
-import {RFValue} from "react-native-responsive-fontsize";
+import { RFValue } from "react-native-responsive-fontsize";
+import { useTheme } from "~context/ThemeContext";
 
-const CountryPickerButton = ({onSelect}) => {
+// Light mode colors for forceLight prop
+const lightModeColors = {
+  textPrimary: "#1B1A1F",
+  modalBackground: "#FFFFFF",
+  inputPlaceholder: "#9AA0A6",
+  border: "#E5E7EB",
+};
+
+const CountryPickerButton = ({ onSelect, forceLight = false, disabled = false }) => {
+  const { colors, isDark } = useTheme();
   const [countryCode, setCountryCode] = useState("PK");
   const [callingCode, setCallingCode] = useState("92");
   const [visible, setVisible] = useState(false);
 
+  // Use light mode colors if forceLight is true
+  const activeColors = forceLight ? lightModeColors : colors;
+  const effectiveIsDark = forceLight ? false : isDark;
+
   const handleSelect = country => {
+    if (disabled) return;
     setCountryCode(country.cca2);
     setCallingCode(country.callingCode[0]);
 
@@ -21,10 +36,12 @@ const CountryPickerButton = ({onSelect}) => {
 
   return (
     <TouchableOpacity
-      activeOpacity={0.7}
+      activeOpacity={disabled ? 1 : 0.7}
       style={styles.container}
-      onPress={() => setVisible(true)}>
+      onPress={() => !disabled && setVisible(true)}
+      disabled={disabled}>
       <CountryPicker
+
         withFilter
         withFlag
         withCallingCode
@@ -33,9 +50,15 @@ const CountryPickerButton = ({onSelect}) => {
         visible={visible}
         onClose={() => setVisible(false)}
         onSelect={handleSelect}
+        theme={effectiveIsDark ? {
+          backgroundColor: activeColors.modalBackground,
+          onBackgroundTextColor: activeColors.textPrimary,
+          filterPlaceholderTextColor: activeColors.inputPlaceholder,
+          primaryColorVariant: activeColors.border,
+        } : undefined}
       />
 
-      <Text style={styles.text}>+{callingCode}</Text>
+      <Text style={[styles.text, { color: activeColors.textPrimary }]}>+{callingCode}</Text>
     </TouchableOpacity>
   );
 };
@@ -50,7 +73,6 @@ const styles = StyleSheet.create({
   text: {
     fontSize: RFValue(12),
     marginLeft: 6,
-    color: "#111827",
     fontWeight: "500",
   },
 });

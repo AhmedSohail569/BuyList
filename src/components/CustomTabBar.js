@@ -1,13 +1,26 @@
-import React from "react";
-import {View, TouchableOpacity, StyleSheet} from "react-native";
+// CustomTabBar component for bottom navigation
+import { View, TouchableOpacity, StyleSheet } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
-import {RFValue} from "react-native-responsive-fontsize";
-import {Text} from "./Common";
+import { RFValue } from "react-native-responsive-fontsize";
+import { Text } from "./Common";
+import { useTheme } from "~context/ThemeContext";
 
-const Tab = ({state, descriptors, navigation}) => {
+const Tab = ({ state, descriptors, navigation }) => {
+  const { colors, isDark } = useTheme();
+
   return (
-    <View style={styles.container}>
-      <View style={styles.tabBar}>
+    <View style={{ backgroundColor: colors.background }}>
+      <View
+        style={[
+          styles.tabBar,
+          {
+            backgroundColor: colors.tabBar,
+            shadowColor: colors.shadowColor,
+            shadowOpacity: isDark ? 0.3 : 0.08,
+            borderTopWidth: isDark ? 1 : 0,
+            borderTopColor: colors.border,
+          },
+        ]}>
         {state.routes.map((route, index) => {
           const isFocused = state.index === index;
 
@@ -34,13 +47,13 @@ const Tab = ({state, descriptors, navigation}) => {
               <Icon
                 name={icons[route.name]}
                 size={RFValue(22)}
-                color={isFocused ? "#2F80ED" : "#9CA3AF"}
+                color={isFocused ? colors.tabActive : colors.tabInactive}
               />
               <Text
                 variant="small"
                 style={[
                   styles.label,
-                  {color: isFocused ? "#2F80ED" : "#9CA3AF"},
+                  { color: isFocused ? colors.tabActive : colors.tabInactive },
                 ]}>
                 {route.name}
               </Text>
@@ -53,20 +66,13 @@ const Tab = ({state, descriptors, navigation}) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: "transparent",
-  },
-
   tabBar: {
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
     height: RFValue(78),
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingBottom: RFValue(10),
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowOffset: {width: 0, height: -4},
+    shadowOffset: { width: 0, height: -4 },
     shadowRadius: 12,
     elevation: 12,
   },

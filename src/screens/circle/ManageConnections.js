@@ -28,6 +28,7 @@ import {
   removeMemberFromCircle,
 } from "~redux/actions/circleActions";
 import { useAlert } from "~context/AlertContext";
+import { useTheme } from "~context/ThemeContext";
 
 // Helper function to get initials from a name
 const getInitials = (name) => {
@@ -54,7 +55,7 @@ const formatRole = (role) => {
 };
 
 // Build connections list from ownedCircle data
-const buildConnections = (ownedCircle) => {
+const buildConnections = (ownedCircle, colors) => {
   if (!ownedCircle) return [];
 
   const connections = [];
@@ -67,8 +68,8 @@ const buildConnections = (ownedCircle) => {
       role: "Owner",
       avatar: ownedCircle.owner.profilePicture,
       isOwner: true,
-      badgeColor: "#eff6ff",
-      textColor: "#0ea5e9",
+      badgeColor: colors.badgeBackground,
+      textColor: colors.primary,
     });
   }
 
@@ -78,11 +79,11 @@ const buildConnections = (ownedCircle) => {
       if (member.userId) {
         const role = formatRole(member.role);
         // Determine badge colors based on role
-        let badgeColor = "#f3f4f6";
-        let textColor = "#6b7280";
+        let badgeColor = colors.backgroundSecondary;
+        let textColor = colors.textSecondary;
         if (role === "Editor") {
-          badgeColor = "#ecfdf5";
-          textColor = "#10b981";
+          badgeColor = colors.successLight;
+          textColor = colors.success;
         }
 
         connections.push({
@@ -102,7 +103,7 @@ const buildConnections = (ownedCircle) => {
 };
 
 // Avatar Component with initials fallback
-const Avatar = ({ image, name, size = 40 }) => {
+const Avatar = ({ image, name, size = 40, colors }) => {
   const hasImage = hasProfilePicture(image);
   const initials = getInitials(name || "User");
 
@@ -127,7 +128,7 @@ const Avatar = ({ image, name, size = 40 }) => {
         width: size,
         height: size,
         borderRadius: size / 2,
-        backgroundColor: "#e0f2fe",
+        backgroundColor: colors.badgeBackground,
         justifyContent: "center",
         alignItems: "center",
         marginRight: 12,
@@ -135,7 +136,7 @@ const Avatar = ({ image, name, size = 40 }) => {
       <Text
         style={{
           fontSize: RFValue(size * 0.35),
-          color: "#0ea5e9",
+          color: colors.primary,
           fontFamily: FontFamily.bold,
         }}>
         {initials}
@@ -146,6 +147,7 @@ const Avatar = ({ image, name, size = 40 }) => {
 
 const ManageConnectionsScreen = ({ navigation, route }) => {
   const dispatch = useDispatch();
+  const { colors } = useTheme();
   const { ownedCircle, loading } = useSelector(state => state.circles);
   const { showAlert, showError } = useAlert();
   const { tab } = route.params || {};
@@ -164,7 +166,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
   }, [dispatch, ownedCircle]);
 
   // Build connections from ownedCircle data
-  const connections = useMemo(() => buildConnections(ownedCircle), [ownedCircle]);
+  const connections = useMemo(() => buildConnections(ownedCircle, colors), [ownedCircle, colors]);
 
   // Handle menu toggle with proper state management
   const handleMenuToggle = useCallback(
@@ -274,13 +276,13 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
       key={item.id}
       style={[
         styles.connectionRow,
-        !isLast && styles.separator,
+        !isLast && [styles.separator, { borderBottomColor: colors.divider }],
         { zIndex: activeMenuId === item.id ? 10 : 1 },
       ]}>
-      <Avatar image={item.avatar} name={item.name} size={40} />
+      <Avatar image={item.avatar} name={item.name} size={40} colors={colors} />
 
       <View style={styles.infoContainer}>
-        <Text style={styles.nameText}>{item.name}</Text>
+        <Text style={[styles.nameText, { color: colors.textPrimary }]}>{item.name}</Text>
         <View style={[styles.roleBadge, { backgroundColor: item.badgeColor }]}>
           {item.isOwner && (
             <Shield
@@ -305,16 +307,16 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
               hitSlop={10}
               onPress={() => handleMenuToggle(item.id)}
               disabled={loading}>
-              <MoreHorizontal size={20} color="#9ca3af" />
+              <MoreHorizontal size={20} color={colors.iconMuted} />
             </TouchableOpacity>
           }
-          contentStyle={styles.menuContent}>
+          contentStyle={[styles.menuContent, { backgroundColor: colors.card }]}>
           {/* Show Editor option only if current role is not Editor */}
           {item.role.toLowerCase() !== "editor" && (
             <Menu.Item
               onPress={() => handleUpdateRole(item.id, "Editor")}
               title="Editor"
-              titleStyle={styles.menuItemTitle}
+              titleStyle={[styles.menuItemTitle, { color: colors.textPrimary }]}
             />
           )}
           {/* Show Viewer option only if current role is not Viewer */}
@@ -322,7 +324,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
             <Menu.Item
               onPress={() => handleUpdateRole(item.id, "Viewer")}
               title="Viewer"
-              titleStyle={styles.menuItemTitle}
+              titleStyle={[styles.menuItemTitle, { color: colors.textPrimary }]}
             />
           )}
           {/* Always show Remove option */}
@@ -337,7 +339,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header
         variant="screen"
         title={"Manage Connections"}
@@ -345,25 +347,27 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
       />
 
       {/* Tabs */}
-      <View style={styles.tabContainer}>
+      <View style={[styles.tabContainer, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === "Connections" && styles.activeTab]}
+          style={[styles.tab, activeTab === "Connections" && [styles.activeTab, { borderBottomColor: colors.primary }]]}
           onPress={() => setActiveTab("Connections")}>
           <Text
             style={[
               styles.tabText,
-              activeTab === "Connections" && styles.activeTabText,
+              { color: colors.textMuted },
+              activeTab === "Connections" && [styles.activeTabText, { color: colors.primary }],
             ]}>
             Connections ({connections.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === "Invite" && styles.activeTab]}
+          style={[styles.tab, activeTab === "Invite" && [styles.activeTab, { borderBottomColor: colors.primary }]]}
           onPress={() => setActiveTab("Invite")}>
           <Text
             style={[
               styles.tabText,
-              activeTab === "Invite" && styles.activeTabText,
+              { color: colors.textMuted },
+              activeTab === "Invite" && [styles.activeTabText, { color: colors.primary }],
             ]}>
             Invite People
           </Text>
@@ -376,18 +380,18 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
         {/* --- CONNECTIONS TAB --- */}
         {activeTab === "Connections" && (
           <>
-            <View style={styles.searchContainer}>
-              <Search size={18} color="#9ca3af" style={{ marginRight: 8 }} />
+            <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Search size={18} color={colors.iconMuted} style={{ marginRight: 8 }} />
               <TextInput
                 placeholder="Search connections..."
-                placeholderTextColor="#9ca3af"
-                style={styles.searchInput}
+                placeholderTextColor={colors.inputPlaceholder}
+                style={[styles.searchInput, { color: colors.textPrimary }]}
               />
             </View>
 
-            <View style={styles.listCard}>
+            <View style={[styles.listCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
               {connections.length === 0 ? (
-                <Text style={styles.emptyConnectionsText}>
+                <Text style={[styles.emptyConnectionsText, { color: colors.textMuted }]}>
                   No connections yet. Invite members to get started.
                 </Text>
               ) : (
@@ -400,7 +404,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
               )}
             </View>
 
-            <Text style={styles.footerNote}>
+            <Text style={[styles.footerNote, { color: colors.textMuted }]}>
               Only Owners can remove connections or change roles.
             </Text>
           </>
@@ -410,30 +414,24 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
         {activeTab === "Invite" && (
           <>
             {/* Main Invite Card */}
-            <View style={styles.inviteCard}>
-              <View style={styles.inviteIconCircle}>
-                <UserPlus size={24} color="#0ea5e9" />
-                {/* <View style={styles.plusBadge}>
-                  <Text
-                    style={{fontSize: 10, color: "#fff", fontWeight: "bold"}}>
-                    +
-                  </Text>
-                </View> */}
+            <View style={[styles.inviteCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
+              <View style={[styles.inviteIconCircle, { backgroundColor: colors.badgeBackground }]}>
+                <UserPlus size={24} color={colors.primary} />
               </View>
 
-              <Text style={styles.inviteTitle}>Invite to Family Home</Text>
-              <Text style={styles.inviteDesc}>
+              <Text style={[styles.inviteTitle, { color: colors.textPrimary }]}>Invite to Family Home</Text>
+              <Text style={[styles.inviteDesc, { color: colors.textSecondary }]}>
                 Share the link below to let others join your shopping circle.
                 They will need the app installed.
               </Text>
 
               {/* Copy Link Box */}
-              <View style={styles.copyBox}>
-                <LinkIcon size={16} color="#9ca3af" style={{ marginRight: 8 }} />
-                <Text style={styles.linkText} numberOfLines={1}>
+              <View style={[styles.copyBox, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
+                <LinkIcon size={16} color={colors.iconMuted} style={{ marginRight: 8 }} />
+                <Text style={[styles.linkText, { color: colors.textSecondary }]} numberOfLines={1}>
                   buylist.app/join/fam-123
                 </Text>
-                <TouchableOpacity style={styles.copyButton}>
+                <TouchableOpacity style={[styles.copyButton, { backgroundColor: colors.primary }]}>
                   <Text style={styles.copyButtonText}>Copy</Text>
                 </TouchableOpacity>
               </View>
@@ -441,17 +439,17 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
 
             {/* Bottom Action Grid */}
             <View style={styles.actionGrid}>
-              <TouchableOpacity style={styles.actionCard}>
-                <QrCode size={24} color="#111827" style={{ marginBottom: 8 }} />
-                <Text style={styles.actionText}>Show QR Code</Text>
+              <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
+                <QrCode size={24} color={colors.textPrimary} style={{ marginBottom: 8 }} />
+                <Text style={[styles.actionText, { color: colors.textPrimary }]}>Show QR Code</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.actionCard}>
+              <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
                 <Smartphone
                   size={24}
-                  color="#111827"
+                  color={colors.textPrimary}
                   style={{ marginBottom: 8 }}
                 />
-                <Text style={styles.actionText}>From Contacts</Text>
+                <Text style={[styles.actionText, { color: colors.textPrimary }]}>From Contacts</Text>
               </TouchableOpacity>
             </View>
           </>
@@ -466,15 +464,12 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f9fafb", // Light background
   },
 
   // Tabs
   tabContainer: {
     flexDirection: "row",
-    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
   },
   tab: {
     flex: 1,
@@ -483,16 +478,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: "transparent",
   },
-  activeTab: {
-    borderBottomColor: "#0ea5e9",
-  },
+  activeTab: {},
   tabText: {
     fontSize: RFValue(11),
     fontFamily: FontFamily.medium,
-    color: "#9ca3af",
   },
   activeTabText: {
-    color: "#0ea5e9",
     fontFamily: FontFamily.bold,
   },
 
@@ -505,9 +496,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
     borderWidth: 1,
-    borderColor: "#e5e7eb",
     borderRadius: 12,
     paddingHorizontal: 16,
     height: 48,
@@ -517,13 +506,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: RFValue(11),
     fontFamily: FontFamily.regular,
-    color: "#111827",
   },
   listCard: {
-    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 16,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
     shadowRadius: 2,
@@ -533,17 +519,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 12,
-    position: "relative", // Context for dropdown
+    position: "relative",
   },
   separator: {
     borderBottomWidth: 1,
-    borderBottomColor: "#f9fafb", // Very light divider
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
   },
   infoContainer: {
     flex: 1,
@@ -551,7 +530,6 @@ const styles = StyleSheet.create({
   nameText: {
     fontSize: RFValue(11),
     fontFamily: FontFamily.bold,
-    color: "#111827",
     marginBottom: 4,
   },
   roleBadge: {
@@ -566,65 +544,24 @@ const styles = StyleSheet.create({
     fontSize: RFValue(8),
     fontFamily: FontFamily.bold,
   },
-  dropdownMenu: {
-    position: "absolute",
-    right: 0,
-    top: 35,
-    width: 120,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: "#f3f4f6",
-    zIndex: 100,
-  },
-  menuItem: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  menuItemActive: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: "#eff6ff",
-  },
-  menuText: {
-    fontSize: RFValue(10),
-    fontFamily: FontFamily.medium,
-    color: "#374151",
-  },
-  menuTextBlue: {
-    fontSize: RFValue(10),
-    fontFamily: FontFamily.medium,
-    color: "#0ea5e9",
-  },
-  menuTextRed: {
-    fontSize: RFValue(10),
-    fontFamily: FontFamily.medium,
-    color: "#ef4444",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#f3f4f6",
+  emptyConnectionsText: {
+    textAlign: "center",
+    fontSize: RFValue(11),
+    fontFamily: FontFamily.regular,
+    paddingVertical: 20,
   },
   footerNote: {
     textAlign: "center",
     fontSize: RFValue(9),
     fontFamily: FontFamily.regular,
-    color: "#9ca3af",
     marginTop: 20,
   },
 
   // --- INVITE STYLES ---
   inviteCard: {
-    backgroundColor: "#fff",
     borderRadius: 20,
     padding: 24,
     alignItems: "center",
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
     shadowRadius: 4,
@@ -635,33 +572,19 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "#eff6ff", // Light Blue
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
     position: "relative",
   },
-  plusBadge: {
-    position: "absolute",
-    top: 14,
-    right: 18,
-    backgroundColor: "#0ea5e9",
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   inviteTitle: {
     fontSize: RFValue(13),
     fontFamily: FontFamily.bold,
-    color: "#111827",
     marginBottom: 8,
   },
   inviteDesc: {
     fontSize: RFValue(10),
     fontFamily: FontFamily.regular,
-    color: "#6b7280",
     textAlign: "center",
     lineHeight: 18,
     marginBottom: 24,
@@ -669,9 +592,7 @@ const styles = StyleSheet.create({
   copyBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f9fafb",
     borderWidth: 1,
-    borderColor: "#f3f4f6",
     borderRadius: 12,
     paddingLeft: 16,
     paddingRight: 6,
@@ -682,10 +603,8 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: RFValue(11),
     fontFamily: FontFamily.regular,
-    color: "#4b5563",
   },
   copyButton: {
-    backgroundColor: "#0ea5e9",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -701,12 +620,10 @@ const styles = StyleSheet.create({
   },
   actionCard: {
     flex: 1,
-    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 20,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
     shadowRadius: 2,
@@ -715,10 +632,8 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: RFValue(10),
     fontFamily: FontFamily.bold,
-    color: "#111827",
   },
   menuContent: {
-    backgroundColor: "#ffffff",
     borderRadius: 12,
     paddingVertical: 4,
     minWidth: 150,
@@ -726,7 +641,6 @@ const styles = StyleSheet.create({
   menuItemTitle: {
     fontSize: RFValue(12),
     fontFamily: FontFamily.medium,
-    color: "#374151",
   },
   menuItemTitleDelete: {
     fontSize: RFValue(12),
