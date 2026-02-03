@@ -18,6 +18,21 @@ export const loginUser = createAsyncThunk(
 
       return data?.data || data;
     } catch (err) {
+      // Check if error is 403 with email verification required
+      const statusCode = err.response?.status;
+      const errorData = err.response?.data;
+
+
+      if (statusCode === 403 && errorData?.data?.isEmailVerified === false) {
+        // Return special error payload for email verification flow
+        return rejectWithValue({
+          requiresEmailVerification: true,
+          email,
+          password,
+          message: errorData?.message || "Please verify your email first.",
+        });
+      }
+
       const message = getErrorMessage(err);
       return rejectWithValue(message);
     }

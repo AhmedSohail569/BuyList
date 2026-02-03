@@ -41,6 +41,8 @@
 	<string>BuyList needs access to your photo library to select profile photos and images.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>BuyList needs permission to save photos to your library.</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>This app does not directly access Apple Music. This permission may be required by a third-party library used in the app.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIAppFonts</key>

@@ -1,4 +1,4 @@
-import {useState, useEffect} from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -16,17 +16,20 @@ import {
   ChevronRight,
   Pencil,
 } from "lucide-react-native";
-import {useDispatch, useSelector} from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import Toast from "react-native-toast-message";
 import Header from "~components/Header";
-import {ScrollView, Text} from "~components/Common";
-import {RFValue} from "react-native-responsive-fontsize";
-import {FontFamily} from "~theme/fonts";
+import { ScrollView, Text } from "~components/Common";
+import { RFValue } from "react-native-responsive-fontsize";
+import { FontFamily } from "~theme/fonts";
 import SelectionModal from "~containers/modals/SelectionModal";
-import {DEFAULT_ROLES} from "~constants";
-import {editCircleName} from "~redux/actions/circleActions";
-import {clearCircleError} from "~redux/reducers/circleReducer";
-import {useTheme} from "~context/ThemeContext";
+import { DEFAULT_ROLES } from "~constants";
+import {
+  editCircleName,
+  updateCircleDefaultMemberRole,
+} from "~redux/actions/circleActions";
+import { clearCircleError } from "~redux/reducers/circleReducer";
+import { useTheme } from "~context/ThemeContext";
 
 const SettingsRow = ({
   icon: Icon,
@@ -44,11 +47,11 @@ const SettingsRow = ({
     <TouchableOpacity
       activeOpacity={onPress ? 0.7 : 1}
       onPress={onPress}
-      style={[styles.rowContainer, {backgroundColor: colors.card}, !isLast && [styles.separator, {borderBottomColor: colors.divider}]]}>
+      style={[styles.rowContainer, { backgroundColor: colors.card }, !isLast && [styles.separator, { borderBottomColor: colors.divider }]]}>
       {/* Icon */}
       {Icon && (
         <View
-          style={[styles.iconBox, {backgroundColor: iconBgColor || colors.backgroundSecondary}]}>
+          style={[styles.iconBox, { backgroundColor: iconBgColor || colors.backgroundSecondary }]}>
           <Icon
             size={RFValue(18)}
             color={iconColor || colors.iconSecondary}
@@ -59,8 +62,8 @@ const SettingsRow = ({
 
       {/* Text Content */}
       <View style={styles.textContainer}>
-        <Text style={[styles.title, {color: colors.textPrimary}, titleStyle]}>{title}</Text>
-        {subtitle && <Text style={[styles.subtitle, {color: colors.textSecondary}]}>{subtitle}</Text>}
+        <Text style={[styles.title, { color: colors.textPrimary }, titleStyle]}>{title}</Text>
+        {subtitle && <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>}
       </View>
 
       {/* Right Element */}
@@ -71,17 +74,19 @@ const SettingsRow = ({
   );
 };
 
-const CircleSettingsScreen = ({onQuickAction, navigation}) => {
+const CircleSettingsScreen = ({ onQuickAction, navigation }) => {
   const dispatch = useDispatch();
-  const {ownedCircle, loading, error} = useSelector(state => state.circles);
-  const {colors, isDark} = useTheme();
+  const { ownedCircle, loading, error } = useSelector(state => state.circles);
+  const { colors, isDark } = useTheme();
+
+  console.log("ownedCircle", ownedCircle);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState(null);
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [defaultRole, setDefaultRole] = useState("Editor");
-  
+
   // Initialize circle name from Redux state
   const [circleName, setCircleName] = useState(
     ownedCircle?.name || "Family Home",
@@ -93,6 +98,13 @@ const CircleSettingsScreen = ({onQuickAction, navigation}) => {
       setCircleName(ownedCircle.name);
     }
   }, [ownedCircle?.name]);
+
+  // Initialize/update default role from Redux state (if backend provides it)
+  useEffect(() => {
+    const apiRole = ownedCircle?.defaultMemberRole;
+    if (apiRole === "editor") setDefaultRole("Editor");
+    else if (apiRole === "viewer") setDefaultRole("Viewer");
+  }, [ownedCircle?.defaultMemberRole]);
 
   // Handle API errors with toast
   useEffect(() => {
@@ -128,7 +140,53 @@ const CircleSettingsScreen = ({onQuickAction, navigation}) => {
 
   const handleSave = async newValue => {
     if (modalType === "defaultRole") {
-      setDefaultRole(newValue);
+      const circleId = ownedCircle?._id || ownedCircle?.id;
+      if (!circleId) {
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: "Circle not found",
+        });
+        return;
+      }
+
+      const label = typeof newValue === "string" ? newValue : defaultRole;
+      const apiRole = String(label || "").toLowerCase();
+      if (apiRole !== "editor" && apiRole !== "viewer") {
+        Toast.show({
+          type: "error",
+          text1: "Validation Error",
+          text2: "Please select a valid default role",
+        });
+        return;
+      }
+
+      // No change → close modal
+      if (apiRole === ownedCircle?.defaultMemberRole) {
+        setDefaultRole(label);
+        setModalVisible(false);
+        return;
+      }
+
+      try {
+        await dispatch(
+          updateCircleDefaultMemberRole({
+            circleId,
+            defaultMemberRole: apiRole,
+          }),
+        ).unwrap();
+
+        setDefaultRole(label);
+        setModalVisible(false);
+
+        Toast.show({
+          type: "success",
+          text1: "Default Role Updated",
+          text2: `New connections will join as ${label}s`,
+        });
+      } catch (err) {
+        // Error is handled by useEffect above (toast + clearCircleError)
+      }
       return;
     }
 
@@ -194,7 +252,7 @@ const CircleSettingsScreen = ({onQuickAction, navigation}) => {
   };
 
   return (
-    <View style={[styles.container, {backgroundColor: colors.background}]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header
         variant="screen"
         title={"Circle Settings"}
@@ -205,8 +263,8 @@ const CircleSettingsScreen = ({onQuickAction, navigation}) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
         {/* GENERAL SECTION */}
-        <Text style={[styles.sectionHeader, {color: colors.textMuted}]}>GENERAL</Text>
-        <View style={[styles.card, {backgroundColor: colors.card, shadowColor: colors.shadowColor}]}>
+        <Text style={[styles.sectionHeader, { color: colors.textMuted }]}>GENERAL</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
           <SettingsRow
             icon={ShoppingBag}
             iconBgColor={isDark ? "rgba(14, 165, 233, 0.2)" : "#e0f2fe"}
@@ -229,14 +287,14 @@ const CircleSettingsScreen = ({onQuickAction, navigation}) => {
         </View>
 
         {/* PREFERENCES SECTION */}
-        <Text style={[styles.sectionHeader, {color: colors.textMuted}]}>PREFERENCES</Text>
-        <View style={[styles.card, {backgroundColor: colors.card, shadowColor: colors.shadowColor}]}>
+        <Text style={[styles.sectionHeader, { color: colors.textMuted }]}>PREFERENCES</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
           <SettingsRow
             icon={Shield}
             iconBgColor={isDark ? "rgba(168, 85, 247, 0.2)" : "#f3e8ff"}
             iconColor="#a855f7"
             title="Default Role"
-            subtitle="New connections join as Editors"
+            subtitle={`New connections join as ${defaultRole}s`}
             onPress={() => openModal("defaultRole")}
             colors={colors}
           />
@@ -250,7 +308,7 @@ const CircleSettingsScreen = ({onQuickAction, navigation}) => {
             colors={colors}
             rightElement={
               <Switch
-                trackColor={{false: colors.border, true: colors.primary}}
+                trackColor={{ false: colors.border, true: colors.primary }}
                 thumbColor={"#ffffff"}
                 ios_backgroundColor={colors.border}
                 onValueChange={setNotificationsEnabled}
@@ -265,13 +323,13 @@ const CircleSettingsScreen = ({onQuickAction, navigation}) => {
         <Text style={[styles.sectionHeader, styles.dangerHeader]}>
           DANGER ZONE
         </Text>
-        <View style={[styles.card, {backgroundColor: colors.card, shadowColor: colors.shadowColor}]}>
+        <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
           <SettingsRow
             icon={LogOut}
             iconBgColor="transparent"
             iconColor={colors.iconSecondary}
             title="Leave Circle"
-            titleStyle={{fontFamily: FontFamily.medium}}
+            titleStyle={{ fontFamily: FontFamily.medium }}
             rightElement={<View />}
             onPress={() => openModal("leave")}
             colors={colors}
@@ -281,7 +339,7 @@ const CircleSettingsScreen = ({onQuickAction, navigation}) => {
             iconBgColor="transparent"
             iconColor={colors.error}
             title="Delete Circle"
-            titleStyle={{color: colors.error}}
+            titleStyle={{ color: colors.error }}
             rightElement={<View />}
             onPress={() => openModal("delete")}
             isLast
@@ -290,12 +348,12 @@ const CircleSettingsScreen = ({onQuickAction, navigation}) => {
         </View>
 
         {/* Footer Note */}
-        <Text style={[styles.footerNote, {color: colors.textMuted}]}>
+        <Text style={[styles.footerNote, { color: colors.textMuted }]}>
           Deleting a circle is permanent and will remove all shared lists and
           history for everyone.
         </Text>
 
-        <View style={{height: 40}} />
+        <View style={{ height: 40 }} />
       </ScrollView>
       <SelectionModal
         isVisible={modalVisible}
@@ -311,30 +369,32 @@ const CircleSettingsScreen = ({onQuickAction, navigation}) => {
           modalType === "defaultRole"
             ? "selection"
             : modalType === "circleName"
-            ? "input"
-            : "confirmation"
+              ? "input"
+              : "confirmation"
         }
         title={
           modalType === "defaultRole"
             ? "Change Default Role"
             : modalType === "leave"
-            ? "Leave Circle"
-            : modalType === "delete"
-            ? "Delete Circle"
-            : "Edit Circle Name"
+              ? "Leave Circle"
+              : modalType === "delete"
+                ? "Delete Circle"
+                : "Edit Circle Name"
         }
         initialValue={modalType === "defaultRole" ? defaultRole : circleName}
         description={
           modalType === "leave"
             ? "Leaving this circle will remove you from all shared lists. Do you want to continue?"
             : modalType === "delete"
-            ? "Deleting this circle will permanently remove all shared lists and connections."
-            : ""
+              ? "Deleting this circle will permanently remove all shared lists and connections."
+              : ""
         }
         danger={modalType === "leave" || modalType === "delete" ? true : false}
         options={DEFAULT_ROLES}
         confirmLabel={
-          modalType === "circleName" && loading ? "Saving..." : "Save"
+          (modalType === "circleName" || modalType === "defaultRole") && loading
+            ? "Saving..."
+            : "Save"
         }
       />
     </View>
@@ -369,7 +429,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 20,
     overflow: "hidden",
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
@@ -417,7 +477,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   switch: {
-    transform: Platform.OS === "ios" ? [{scaleX: 0.8}, {scaleY: 0.8}] : [],
+    transform: Platform.OS === "ios" ? [{ scaleX: 0.8 }, { scaleY: 0.8 }] : [],
     marginRight: -4,
   },
 

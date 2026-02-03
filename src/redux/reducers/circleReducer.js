@@ -11,6 +11,7 @@ import {
   editCircleName,
   addMemberToCircle,
   updateMemberRole,
+  updateCircleDefaultMemberRole,
 } from "../actions/circleActions";
 import { logout } from "./authReducer";
 
@@ -291,6 +292,62 @@ const circleSlice = createSlice({
           state.membersByCircleId[circleId] = previousMembers;
         }
         state.error = message || action.payload;
+      })
+
+      // ============================================
+      // 8️⃣ UPDATE DEFAULT ROLE FOR INVITED MEMBERS
+      // ============================================
+      .addCase(updateCircleDefaultMemberRole.pending, (state, action) => {
+        state.loading = true;
+        state.error = null;
+
+        const { circleId, defaultMemberRole } = action.meta.arg || {};
+        if (!circleId) return;
+
+        // Optimistically update in ownedCircle if it matches
+        if (
+          state.ownedCircle &&
+          (state.ownedCircle.id === circleId || state.ownedCircle._id === circleId)
+        ) {
+          state.ownedCircle = { ...state.ownedCircle, defaultMemberRole };
+        }
+
+        // Optimistically update in allCircles array
+        state.allCircles = state.allCircles.map(circle =>
+          circle.id === circleId || circle._id === circleId
+            ? { ...circle, defaultMemberRole }
+            : circle,
+        );
+      })
+      .addCase(updateCircleDefaultMemberRole.fulfilled, (state, action) => {
+        state.loading = false;
+        state.error = null;
+
+        const { circleId, defaultMemberRole, response } = action.payload || {};
+        if (!circleId) return;
+
+        const updates = {};
+        if (defaultMemberRole !== undefined) updates.defaultMemberRole = defaultMemberRole;
+        if (response?.updatedAt !== undefined) updates.updatedAt = response.updatedAt;
+
+        if (Object.keys(updates).length === 0) return;
+
+        if (
+          state.ownedCircle &&
+          (state.ownedCircle.id === circleId || state.ownedCircle._id === circleId)
+        ) {
+          state.ownedCircle = { ...state.ownedCircle, ...updates };
+        }
+
+        state.allCircles = state.allCircles.map(circle =>
+          circle.id === circleId || circle._id === circleId
+            ? { ...circle, ...updates }
+            : circle,
+        );
+      })
+      .addCase(updateCircleDefaultMemberRole.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       })
 
       // Clear circle state on logout

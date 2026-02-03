@@ -742,6 +742,7 @@ const styles = StyleSheet.create({
   avatarInitials: {
     fontSize: RFValue(28),
     fontFamily: FontFamily.bold,
+    lineHeight: RFValue(50),
   },
   uploadingOverlay: {
     position: "absolute",

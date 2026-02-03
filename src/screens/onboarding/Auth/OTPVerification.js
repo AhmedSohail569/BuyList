@@ -15,12 +15,14 @@ import Icon from "react-native-vector-icons/FontAwesome";
 import { useDispatch, useSelector } from "react-redux";
 import Toast from "react-native-toast-message";
 
-import { verifyEmail, resendOTP } from "~redux/actions/authActions";
+import { verifyEmail, resendOTP, loginUser } from "~redux/actions/authActions";
 import {
   clearVerifyEmailState,
   clearError,
   clearResendOTPState,
+  clearPendingLoginCredentials,
 } from "~redux/reducers/authReducer";
+import { getProfile } from "~redux/actions/profileActions";
 import { validateOTP } from "~utils/validation";
 
 const OTPVerficationScreen = ({ navigation, route }) => {
@@ -33,6 +35,8 @@ const OTPVerficationScreen = ({ navigation, route }) => {
     resendOTPLoading,
     resendOTPMessage,
     resendOTPError,
+    pendingLoginEmail,
+    pendingLoginPassword,
   } = useSelector(state => state.auth);
 
   const dispatch = useDispatch();
@@ -52,20 +56,56 @@ const OTPVerficationScreen = ({ navigation, route }) => {
   // Handle successful email verification
   useEffect(() => {
     if (emailVerified) {
-      Toast.show({
-        type: "success",
-        text1: "Email Verified",
-        text2: "Your email has been verified successfully",
-        props: { forceLight: true },
-      });
-      navigation.navigate("Login", {
-        email,
-        otp: code || "0000",
-      });
+      // Check if we have pending login credentials (from login flow)
+      if (pendingLoginEmail && pendingLoginPassword) {
+        // Automatically login after email verification
+        dispatch(loginUser({
+          email: pendingLoginEmail,
+          password: pendingLoginPassword,
+        }))
+          .then((result) => {
+            if (loginUser.fulfilled.match(result)) {
+              // Fetch user profile
+              dispatch(getProfile());
+              // Clear pending credentials
+              dispatch(clearPendingLoginCredentials());
+              Toast.show({
+                type: "success",
+                text1: "Welcome Back!",
+                text2: "You have been logged in successfully",
+                props: { forceLight: true },
+              });
+            } else {
+              // Login failed, navigate to login screen
+              Toast.show({
+                type: "error",
+                text1: "Login Failed",
+                text2: "Please try logging in again",
+                props: { forceLight: true },
+              });
+              navigation.navigate("Login", {
+                email: pendingLoginEmail,
+              });
+              dispatch(clearPendingLoginCredentials());
+            }
+          });
+      } else {
+        // Normal verification flow (from signup)
+        Toast.show({
+          type: "success",
+          text1: "Email Verified",
+          text2: "Your email has been verified successfully",
+          props: { forceLight: true },
+        });
+        navigation.navigate("Login", {
+          email,
+          otp: code || "0000",
+        });
+      }
 
       dispatch(clearVerifyEmailState());
     }
-  }, [emailVerified, navigation, email, code, dispatch]);
+  }, [emailVerified, navigation, email, code, dispatch, pendingLoginEmail, pendingLoginPassword]);
 
   // Handle API errors with toast
   useEffect(() => {
@@ -278,10 +318,11 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: RFValue(20),
     right: RFValue(20),
-    bottom: 0,
+    bottom: Platform.OS === "ios" ? RFValue(40) : RFValue(30),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingBottom: RFValue(10),
   },
 
   fab: {

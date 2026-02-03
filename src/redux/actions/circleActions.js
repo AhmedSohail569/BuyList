@@ -2,9 +2,9 @@
  * Circle Management Async Thunks
  * Handles all circle-related API operations with optimistic updates
  */
-import {createAsyncThunk} from "@reduxjs/toolkit";
+import { createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "~utils/axiosInstance";
-import {getErrorMessage} from "~utils";
+import { getErrorMessage } from "~utils";
 
 // ============================================
 // 1️⃣ GET USER OWNED CIRCLE
@@ -12,7 +12,7 @@ import {getErrorMessage} from "~utils";
 // ============================================
 export const fetchOwnedCircle = createAsyncThunk(
   "circles/fetchOwnedCircle",
-  async (_, {rejectWithValue}) => {
+  async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get("/circles/owned");
       return response.data?.data || response.data;
@@ -29,7 +29,7 @@ export const fetchOwnedCircle = createAsyncThunk(
 // ============================================
 export const fetchAllCircles = createAsyncThunk(
   "circles/fetchAllCircles",
-  async (_, {rejectWithValue}) => {
+  async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get("/circles/my-circles");
       return response.data?.data || response.data;
@@ -45,7 +45,7 @@ export const fetchAllCircles = createAsyncThunk(
 // ============================================
 export const fetchCircleMembers = createAsyncThunk(
   "circles/fetchCircleMembers",
-  async ({circleId}, {rejectWithValue}) => {
+  async ({ circleId }, { rejectWithValue }) => {
     try {
       const response = await axios.get(`/circles/members/${circleId}`);
       return {
@@ -65,7 +65,7 @@ export const fetchCircleMembers = createAsyncThunk(
 // ============================================
 export const removeMemberFromCircle = createAsyncThunk(
   "circles/removeMember",
-  async ({circleId, memberId}, {rejectWithValue, getState}) => {
+  async ({ circleId, memberId }, { rejectWithValue, getState }) => {
     // Store previous members for rollback
     const previousMembers = getState().circles.membersByCircleId[circleId] || [];
 
@@ -81,7 +81,7 @@ export const removeMemberFromCircle = createAsyncThunk(
     } catch (err) {
       const message = getErrorMessage(err);
       // Return previous members for rollback
-      return rejectWithValue({message, previousMembers, circleId});
+      return rejectWithValue({ message, previousMembers, circleId });
     }
   },
 );
@@ -92,7 +92,7 @@ export const removeMemberFromCircle = createAsyncThunk(
 // ============================================
 export const editCircleName = createAsyncThunk(
   "circles/editCircleName",
-  async ({circleId, name}, {rejectWithValue, getState}) => {
+  async ({ circleId, name }, { rejectWithValue, getState }) => {
     // Store previous state for rollback
     const state = getState().circles;
     const previousOwnedCircle = state.ownedCircle;
@@ -104,7 +104,7 @@ export const editCircleName = createAsyncThunk(
       });
 
       console.log("response", response);
-      
+
       return {
         circleId,
         name,
@@ -129,7 +129,7 @@ export const editCircleName = createAsyncThunk(
 // ============================================
 export const addMemberToCircle = createAsyncThunk(
   "circles/addMember",
-  async ({circleId, userId, role = "member", tempMember}, {rejectWithValue, getState}) => {
+  async ({ circleId, userId, role = "member", tempMember }, { rejectWithValue, getState }) => {
     // Store previous members for rollback
     const previousMembers = getState().circles.membersByCircleId[circleId] || [];
 
@@ -146,7 +146,7 @@ export const addMemberToCircle = createAsyncThunk(
     } catch (err) {
       const message = getErrorMessage(err);
       // Return previous members for rollback
-      return rejectWithValue({message, previousMembers, circleId});
+      return rejectWithValue({ message, previousMembers, circleId });
     }
   },
 );
@@ -157,14 +157,14 @@ export const addMemberToCircle = createAsyncThunk(
 // ============================================
 export const updateMemberRole = createAsyncThunk(
   "circles/updateMemberRole",
-  async ({circleId, memberId, role}, {rejectWithValue, getState}) => {
+  async ({ circleId, memberId, role }, { rejectWithValue, getState }) => {
     // Store previous members for rollback
     const previousMembers = getState().circles.membersByCircleId[circleId] || [];
 
     try {
       const response = await axios.put(
         `/circles/members/${circleId}/${memberId}`,
-        {role},
+        { role },
       );
       return {
         circleId,
@@ -175,7 +175,40 @@ export const updateMemberRole = createAsyncThunk(
     } catch (err) {
       const message = getErrorMessage(err);
       // Return previous members for rollback
-      return rejectWithValue({message, previousMembers, circleId});
+      return rejectWithValue({ message, previousMembers, circleId });
+    }
+  },
+);
+
+// ============================================
+// 8️⃣ UPDATE DEFAULT ROLE FOR INVITED MEMBERS
+// PUT /circles/default-role/{circleId}
+// Body: { defaultMemberRole: "editor" | "viewer" }
+// ============================================
+export const updateCircleDefaultMemberRole = createAsyncThunk(
+  "circles/updateCircleDefaultMemberRole",
+  async ({ circleId, defaultMemberRole }, { rejectWithValue }) => {
+    try {
+      const normalizedRole = String(defaultMemberRole || "").toLowerCase();
+      if (!circleId) {
+        return rejectWithValue("Circle not found");
+      }
+      if (normalizedRole !== "editor" && normalizedRole !== "viewer") {
+        return rejectWithValue("Invalid default role");
+      }
+
+      const response = await axios.put(`/circles/default-role/${circleId}`, {
+        defaultMemberRole: normalizedRole,
+      });
+
+      return {
+        circleId,
+        defaultMemberRole: normalizedRole,
+        response: response.data?.data || response.data,
+      };
+    } catch (err) {
+      const message = getErrorMessage(err);
+      return rejectWithValue(message);
     }
   },
 );

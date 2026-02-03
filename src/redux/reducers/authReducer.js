@@ -27,6 +27,10 @@ const initialState = {
   emailVerified: false,
   verifyEmailMessage: null,
 
+  // Pending login credentials for auto-login after email verification
+  pendingLoginEmail: null,
+  pendingLoginPassword: null,
+
   // Resend OTP states
   resendOTPLoading: false,
   resendOTPMessage: null,
@@ -46,6 +50,8 @@ const authSlice = createSlice({
       state.user = null;
       state.accessToken = null;
       state.error = null;
+      state.pendingLoginEmail = null;
+      state.pendingLoginPassword = null;
     },
     clearHasLoggedOut(state) {
       state.hasLoggedOut = false;
@@ -82,6 +88,10 @@ const authSlice = createSlice({
       state.resendResetOTPMessage = null;
       state.resendResetOTPError = null;
     },
+    clearPendingLoginCredentials(state) {
+      state.pendingLoginEmail = null;
+      state.pendingLoginPassword = null;
+    },
   },
   extraReducers: builder => {
     builder
@@ -95,10 +105,23 @@ const authSlice = createSlice({
         state.loading = false;
         state.user = action.payload.user;
         state.accessToken = action.payload.token ?? null;
+        // Clear pending credentials on successful login
+        state.pendingLoginEmail = null;
+        state.pendingLoginPassword = null;
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        // Check if error requires email verification
+        const errorPayload = action.payload;
+        if (errorPayload?.requiresEmailVerification) {
+          // Store credentials for auto-login after verification
+          state.pendingLoginEmail = errorPayload.email;
+          state.pendingLoginPassword = errorPayload.password;
+          // Keep the entire error object so Login screen can detect requiresEmailVerification
+          state.error = errorPayload;
+        } else {
+          state.error = errorPayload;
+        }
       })
 
       // signup - Do NOT store user data, only track success status
@@ -239,6 +262,7 @@ export const {
   clearVerifyEmailState,
   clearResendOTPState,
   clearResendResetOTPState,
+  clearPendingLoginCredentials,
 } = authSlice.actions;
 
 export default authSlice.reducer;

@@ -8,7 +8,7 @@ import Toast from "react-native-toast-message";
 import { Button, Text, TextInput } from "~components/Common";
 import { Images } from "~assets";
 import OnboardingLayout from "~containers/layouts/OnboardingLayout";
-import { loginUser } from "~redux/actions/authActions";
+import { loginUser, resendOTP } from "~redux/actions/authActions";
 import { clearError } from "~redux/reducers/authReducer";
 import { getProfile } from "~redux/actions/profileActions";
 import { validateEmail, validatePassword } from "~utils/validation";
@@ -30,15 +30,35 @@ const LoginScreen = ({ navigation }) => {
   // Handle API errors with toast
   useEffect(() => {
     if (error) {
-      Toast.show({
-        type: "error",
-        text1: "Login Failed",
-        text2: typeof error === "string" ? error : "Something went wrong",
-        props: { forceLight: true },
-      });
+      // Check if error requires email verification
+      const errorObj = typeof error === "object" ? error : null;
+      if (errorObj?.requiresEmailVerification) {
+        // Automatically resend OTP and navigate to verification screen
+        Toast.show({
+          type: "info",
+          text1: "Email Verification Required",
+          text2: errorObj.message || "Please verify your email first.",
+          props: { forceLight: true },
+        });
+
+        // Resend OTP automatically
+        dispatch(resendOTP({ email: email.trim() }));
+
+        // Navigate to OTP verification screen
+        navigation.navigate("OTPVerification", {
+          email: email.trim(),
+        });
+      } else {
+        Toast.show({
+          type: "error",
+          text1: "Login Failed",
+          text2: typeof error === "string" ? error : "Something went wrong",
+          props: { forceLight: true },
+        });
+      }
       dispatch(clearError());
     }
-  }, [error, dispatch]);
+  }, [error, dispatch, email, navigation]);
 
   // Clear field error when user starts typing
   const handleEmailChange = value => {

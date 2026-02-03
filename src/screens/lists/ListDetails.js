@@ -49,13 +49,15 @@ const ListDetailsScreen = ({ navigation, route }) => {
   const [newItemText, setNewItemText] = useState("");
   const [pendingActions, setPendingActions] = useState(new Set());
 
-  // Fetch list if not cached
+  // Always fetch list by ID when screen is focused to get latest data
+  // This ensures we have the most up-to-date list data from the API
   useFocusEffect(
     useCallback(() => {
-      if (listId && !list && !loading) {
+      if (listId) {
+        // Always fetch to get fresh data, regardless of cached state
         dispatch(fetchListById({ listId }));
       }
-    }, [listId, list, loading, dispatch]),
+    }, [listId, dispatch]),
   );
 
   // console.log("list", JSON.stringify(list, null, 2));
@@ -296,7 +298,11 @@ const ListDetailsScreen = ({ navigation, route }) => {
             </Text>
             <View style={styles.itemMetaRow}>
               <Text style={[styles.itemMetaText, { color: colors.textMuted }]}>
-                {item.status === "purchased" ? "Purchased" : "Pending"}
+                {item.status === "purchased"
+                  ? item.purchasedBy?.username
+                    ? `Purchased by ${item.purchasedBy.username}`
+                    : "Purchased"
+                  : "Pending"}
               </Text>
             </View>
           </View>
@@ -343,7 +349,8 @@ const ListDetailsScreen = ({ navigation, route }) => {
     ],
   );
 
-  // Loading state
+  // Loading state - only show spinner if we don't have cached data
+  // If we have cached data, show it while fetching fresh data in background
   if (loading && !list) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
@@ -352,7 +359,7 @@ const ListDetailsScreen = ({ navigation, route }) => {
     );
   }
 
-  // List not found
+  // List not found - only show if we're not loading and have no cached data
   if (!list && !loading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -367,6 +374,8 @@ const ListDetailsScreen = ({ navigation, route }) => {
       </View>
     );
   }
+
+  console.log("list", list);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
