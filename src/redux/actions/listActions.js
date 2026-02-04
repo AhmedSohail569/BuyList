@@ -131,7 +131,41 @@ export const markItemAsPurchased = createAsyncThunk(
 );
 
 // ============================================
-// 6️⃣ DELETE ITEM FROM LIST (Optimistic Update)
+// 6️⃣ MARK ITEM AS UNPURCHASED (Optimistic Update)
+// PUT /api/lists/unpurchase-item/{listId}/items/{itemId}
+// ============================================
+export const markItemAsUnpurchased = createAsyncThunk(
+  "lists/markItemAsUnpurchased",
+  async ({ listId, itemId }, { rejectWithValue, getState }) => {
+    // Store previous list state for rollback
+    const state = getState().lists;
+    const previousList = state.listById[listId] || null;
+    const previousLists = [...state.lists];
+
+    try {
+      const response = await axios.put(
+        `/lists/unpurchase-item/${listId}/items/${itemId}`,
+      );
+      return {
+        listId,
+        itemId,
+        response: response.data?.data || response.data,
+      };
+    } catch (err) {
+      const message = getErrorMessage(err);
+      return rejectWithValue({
+        message,
+        previousList,
+        previousLists,
+        listId,
+        itemId,
+      });
+    }
+  },
+);
+
+// ============================================
+// 7️⃣ DELETE ITEM FROM LIST (Optimistic Update)
 // DELETE /api/lists/delete-item/{listId}/items/{itemId}
 // ============================================
 export const deleteItemFromList = createAsyncThunk(
@@ -162,7 +196,7 @@ export const deleteItemFromList = createAsyncThunk(
 );
 
 // ============================================
-// 7️⃣ DELETE LIST (Optimistic Update)
+// 8️⃣ DELETE LIST (Optimistic Update)
 // DELETE /api/lists/delete-list/{listId}
 // ============================================
 export const deleteList = createAsyncThunk(
@@ -191,7 +225,7 @@ export const deleteList = createAsyncThunk(
 );
 
 // ============================================
-// 8️⃣ GET RECENT ACTIVITIES
+// 9️⃣ GET RECENT ACTIVITIES
 // GET /api/activities/recent
 // ============================================
 export const fetchRecentActivities = createAsyncThunk(

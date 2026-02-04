@@ -26,6 +26,7 @@ import {
   fetchListById,
   addItemsToList,
   markItemAsPurchased,
+  markItemAsUnpurchased,
   deleteItemFromList,
   deleteList,
 } from "~redux/actions/listActions";
@@ -219,10 +220,8 @@ const ListDetailsScreen = ({ navigation, route }) => {
             }),
           ).unwrap();
         } else {
-          // If unpurchasing, we'd need an API endpoint for that
-          // For now, just mark as purchased
           await dispatch(
-            markItemAsPurchased({
+            markItemAsUnpurchased({
               listId,
               itemId,
             }),
@@ -275,8 +274,8 @@ const ListDetailsScreen = ({ navigation, route }) => {
         <View style={styles.itemRow}>
           <TouchableOpacity
             style={styles.checkCircleContainer}
-            onPress={() => item.status === "pending" ? toggleItemStatus(itemId) : null}
-            activeOpacity={item.status === "pending" ? 0.8 : 1}
+            onPress={() => toggleItemStatus(itemId)}
+            activeOpacity={0.8}
             disabled={isPending}>
             {item.status === "purchased" ? (
               <View style={[styles.checkedCircle, { backgroundColor: colors.success }]}>
@@ -309,11 +308,10 @@ const ListDetailsScreen = ({ navigation, route }) => {
 
           <Menu
             visible={isMenuOpen}
-            onDismiss={() => item.status === "pending" ? setActiveItemMenuId(null) : null}
-            disabled={item.status !== "pending"}
+            onDismiss={() => setActiveItemMenuId(null)}
             anchor={
               <TouchableOpacity
-                onPress={() => item.status === "pending" ? setActiveItemMenuId(itemId) : null}
+                onPress={() => setActiveItemMenuId(itemId)}
                 hitSlop={10}
                 disabled={isPending}>
                 <MoreHorizontal size={20} color={colors.iconMuted} />
@@ -322,8 +320,8 @@ const ListDetailsScreen = ({ navigation, route }) => {
             contentStyle={[styles.menuContent, { backgroundColor: colors.card }]}>
             <Menu.Item
               onPress={() => {
-                item.status === "pending" && setActiveItemMenuId(null);
-                item.status === "pending" && toggleItemStatus(itemId);
+                setActiveItemMenuId(null);
+                toggleItemStatus(itemId);
               }}
               title={item.status === "purchased" ? "Pending" : "Purchased"}
               titleStyle={[styles.menuItemTitle, { color: colors.textPrimary }]}

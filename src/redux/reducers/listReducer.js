@@ -9,6 +9,7 @@ import {
   fetchListById,
   addItemsToList,
   markItemAsPurchased,
+  markItemAsUnpurchased,
   deleteItemFromList,
   deleteList,
   fetchRecentActivities,
@@ -370,6 +371,83 @@ const listsSlice = createSlice({
       })
       // ROLLBACK: Restore previous list state on failure
       .addCase(markItemAsPurchased.rejected, (state, action) => {
+        const { previousList, previousLists, listId, message } =
+          action.payload || {};
+
+        if (listId && previousList) {
+          state.listById[listId] = previousList;
+        }
+        if (previousLists) {
+          state.lists = previousLists;
+        }
+        state.error = message || action.payload;
+      })
+
+      // ============================================
+      // 6️⃣ MARK ITEM AS UNPURCHASED (Optimistic Update)
+      // ============================================
+      // OPTIMISTIC: Mark item as pending immediately on pending
+      .addCase(markItemAsUnpurchased.pending, (state, action) => {
+        const { listId, itemId } = action.meta.arg;
+        const list = state.listById[listId];
+
+        if (list && list.items) {
+          const updatedItems = list.items.map(item =>
+            (item.id || item._id) === itemId
+              ? {
+                ...item,
+                isPurchased: false,
+                status: "pending",
+                purchasedBy: null,
+              }
+              : item,
+          );
+
+          const progress = calculateProgress(updatedItems);
+          const updatedList = { ...list, items: updatedItems, progress };
+          state.listById[listId] = updatedList;
+
+          const listIndex = state.lists.findIndex(
+            l => (l.id || l._id) === listId,
+          );
+          if (listIndex !== -1) {
+            state.lists = [
+              ...state.lists.slice(0, listIndex),
+              { ...updatedList },
+              ...state.lists.slice(listIndex + 1),
+            ];
+          }
+        }
+      })
+      .addCase(markItemAsUnpurchased.fulfilled, (state, action) => {
+        // Item already updated optimistically
+        const { listId, response } = action.payload;
+        const list = state.listById[listId];
+        if (list) {
+          const mergedItems = response?.items || list.items;
+          const progress = calculateProgress(mergedItems);
+          const mergedList = {
+            ...list,
+            ...response,
+            items: mergedItems,
+            progress,
+          };
+          state.listById[listId] = mergedList;
+
+          const listIndex = state.lists.findIndex(
+            l => (l.id || l._id) === listId,
+          );
+          if (listIndex !== -1) {
+            state.lists = [
+              ...state.lists.slice(0, listIndex),
+              { ...mergedList },
+              ...state.lists.slice(listIndex + 1),
+            ];
+          }
+        }
+        state.error = null;
+      })
+      .addCase(markItemAsUnpurchased.rejected, (state, action) => {
         const { previousList, previousLists, listId, message } =
           action.payload || {};
 
