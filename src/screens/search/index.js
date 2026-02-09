@@ -1,4 +1,4 @@
-import {View, TouchableOpacity, Image, StyleSheet} from "react-native";
+import { View, TouchableOpacity, Image, StyleSheet } from "react-native";
 import {
   Plus,
   Clock,
@@ -16,9 +16,10 @@ import {
 } from "lucide-react-native";
 import Header from "~components/Header";
 import SearchBar from "~components/SearchBar";
-import {ScrollView, Text} from "~components/Common";
-import {FontFamily} from "~theme/fonts";
-import {useTheme} from "~context/ThemeContext";
+import { ScrollView, Text } from "~components/Common";
+import { FontFamily } from "~theme/fonts";
+import { useTheme } from "~context/ThemeContext";
+import { RFValue } from "react-native-responsive-fontsize";
 
 // Mock Data
 const RECENT_SEARCHES = ["Milk 1L", "Basmati Rice", "Detergent", "Avocados"];
@@ -123,11 +124,11 @@ const SUGGESTED = [
   },
 ];
 
-const SearchTab = ({onQuickAction, navigation}) => {
-  const {colors, isDark} = useTheme();
+const SearchTab = ({ onQuickAction, navigation }) => {
+  const { colors, isDark } = useTheme();
 
   return (
-    <View style={[styles.container, {backgroundColor: colors.background}]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header variant="screen" title={"Search"} />
 
       <SearchBar
@@ -143,11 +144,11 @@ const SearchTab = ({onQuickAction, navigation}) => {
         {/* Recent Searches */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitleSmall, {color: colors.textMuted}]}>
+            <Text style={[styles.sectionTitleSmall, { color: colors.textMuted }]}>
               RECENT
             </Text>
             <TouchableOpacity>
-              <Text style={[styles.clearAllText, {color: colors.error}]}>
+              <Text style={[styles.clearAllText, { color: colors.error }]}>
                 Clear All
               </Text>
             </TouchableOpacity>
@@ -168,7 +169,7 @@ const SearchTab = ({onQuickAction, navigation}) => {
                   color={colors.iconMuted}
                   style={styles.chipIcon}
                 />
-                <Text style={[styles.chipText, {color: colors.textSecondary}]}>
+                <Text style={[styles.chipText, { color: colors.textSecondary }]}>
                   {item}
                 </Text>
               </TouchableOpacity>
@@ -181,7 +182,7 @@ const SearchTab = ({onQuickAction, navigation}) => {
           <View style={styles.sectionHeader}>
             <View style={styles.headerWithIcon}>
               <TrendingUp size={20} color={colors.primary} />
-              <Text style={[styles.sectionTitle, {color: colors.textPrimary}]}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
                 Trending Now
               </Text>
             </View>
@@ -200,15 +201,15 @@ const SearchTab = ({onQuickAction, navigation}) => {
                 <View
                   style={[
                     styles.trendingIconContainer,
-                    {backgroundColor: isDark ? item.bgDark : item.bg},
+                    { backgroundColor: isDark ? item.bgDark : item.bg },
                   ]}>
                   <item.icon size={24} color={item.iconColor} />
                 </View>
                 <Text
-                  style={[styles.trendingName, {color: colors.textPrimary}]}>
+                  style={[styles.trendingName, { color: colors.textPrimary }]}>
                   {item.name}
                 </Text>
-                <Text style={[styles.trendingCategory, {color: colors.textMuted}]}>
+                <Text style={[styles.trendingCategory, { color: colors.textMuted }]}>
                   {item.category}
                 </Text>
               </TouchableOpacity>
@@ -218,7 +219,7 @@ const SearchTab = ({onQuickAction, navigation}) => {
 
         {/* Browse Categories */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, {color: colors.textPrimary}]}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
             Browse Categories
           </Text>
           <View style={styles.categoriesGrid}>
@@ -227,10 +228,10 @@ const SearchTab = ({onQuickAction, navigation}) => {
                 key={cat.id}
                 style={[
                   styles.categoryCard,
-                  {backgroundColor: isDark ? cat.bgDark : cat.bg},
+                  { backgroundColor: isDark ? cat.bgDark : cat.bg },
                 ]}>
                 <cat.icon size={28} color={cat.color} />
-                <Text style={[styles.categoryName, {color: cat.color}]}>
+                <Text style={[styles.categoryName, { color: cat.color }]}>
                   {cat.name}
                 </Text>
               </TouchableOpacity>
@@ -242,7 +243,7 @@ const SearchTab = ({onQuickAction, navigation}) => {
         <View style={styles.section}>
           <View style={styles.headerWithIcon}>
             <Sparkles size={20} color={colors.primary} fill={colors.primary} />
-            <Text style={[styles.sectionTitle, {color: colors.textPrimary}]}>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
               Suggested for You
             </Text>
           </View>
@@ -259,35 +260,35 @@ const SearchTab = ({onQuickAction, navigation}) => {
                   },
                 ]}>
                 <Image
-                  source={{uri: item.image}}
+                  source={{ uri: item.image }}
                   style={[
                     styles.suggestedImage,
-                    {backgroundColor: colors.surfaceSecondary},
+                    { backgroundColor: colors.surfaceSecondary },
                   ]}
                 />
                 <View style={styles.suggestedContent}>
                   <Text
-                    style={[styles.suggestedName, {color: colors.textPrimary}]}>
+                    style={[styles.suggestedName, { color: colors.textPrimary }]}>
                     {item.name}
                   </Text>
-                  <Text style={[styles.suggestedReason, {color: colors.primary}]}>
+                  <Text style={[styles.suggestedReason, { color: colors.primary }]}>
                     {item.reason}
                   </Text>
                 </View>
-                <View style={{gap: 10}}>
+                <View style={{ gap: 10 }}>
                   <View
                     style={[
                       styles.tagContainer,
-                      {backgroundColor: colors.surfaceSecondary},
+                      { backgroundColor: colors.surfaceSecondary },
                     ]}>
-                    <Text style={[styles.tagText, {color: colors.textMuted}]}>
+                    <Text style={[styles.tagText, { color: colors.textMuted }]}>
                       {item.tag}
                     </Text>
                   </View>
                   <TouchableOpacity
                     style={[
                       styles.addButton,
-                      {backgroundColor: isDark ? colors.primary : "#111827"},
+                      { backgroundColor: isDark ? colors.primary : "#111827" },
                     ]}>
                     <Plus size={16} color="#fff" />
                     <Text style={styles.addButtonText}>Add</Text>
@@ -299,7 +300,7 @@ const SearchTab = ({onQuickAction, navigation}) => {
         </View>
 
         {/* Bottom Padding for Tab Bar */}
-        <View style={{height: 80}} />
+        <View style={{ height: 80 }} />
       </ScrollView>
     </View>
   );
@@ -330,17 +331,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: RFValue(13),
+    fontFamily: FontFamily.bold,
   },
   sectionTitleSmall: {
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: RFValue(10),
+    fontFamily: FontFamily.bold,
     letterSpacing: 0.5,
   },
   clearAllText: {
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: RFValue(10),
+    fontFamily: FontFamily.medium,
   },
   chipsContainer: {
     flexDirection: "row",
@@ -359,7 +360,8 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   chipText: {
-    fontSize: 14,
+    fontSize: RFValue(10),
+    fontFamily: FontFamily.medium,
   },
   trendingRow: {
     flexDirection: "row",
@@ -381,13 +383,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   trendingName: {
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: RFValue(10),
+    fontFamily: FontFamily.bold,
     textAlign: "center",
     marginBottom: 2,
   },
   trendingCategory: {
-    fontSize: 11,
+    fontSize: RFValue(10),
+    fontFamily: FontFamily.medium,
   },
   categoriesGrid: {
     flexDirection: "row",
@@ -416,7 +419,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 16,
     padding: 12,
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,

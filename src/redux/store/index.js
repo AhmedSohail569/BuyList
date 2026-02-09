@@ -5,25 +5,29 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import authReducer from "../reducers/authReducer";
 import circleReducer from "../reducers/circleReducer";
 import listReducer from "../reducers/listReducer";
+import locationReducer from "../reducers/locationReducer";
 import profileReducer from "../reducers/profileReducer";
+import searchReducer from "../reducers/searchReducer";
 import themeReducer from "../reducers/themeReducer";
 
 const rootReducer = combineReducers({
   auth: authReducer,
   circles: circleReducer,
   lists: listReducer,
+  location: locationReducer,
   profile: profileReducer,
+  search: searchReducer,
   theme: themeReducer,
 });
 
 const persistConfig = {
   key: "root",
   storage: AsyncStorage,
-  whitelist: ["auth", "circles", "lists", "profile", "theme"],
+  whitelist: ["auth", "circles", "lists", "location", "profile", "theme"],
   // State reconciler to filter out unexpected keys during rehydration
   stateReconciler: (inboundState, originalState, reducedState) => {
     // Filter out any unexpected keys from inboundState
-    const expectedKeys = ["auth", "circles", "lists", "profile", "theme"];
+    const expectedKeys = ["auth", "circles", "lists", "location", "profile", "theme"];
     const filteredInbound = {};
 
     if (inboundState && typeof inboundState === "object") {

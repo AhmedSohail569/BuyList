@@ -1,11 +1,13 @@
-import {useState, useEffect} from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   TouchableOpacity,
   Image,
   StyleSheet,
   ActivityIndicator,
+  Linking,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   Plus,
   MapPin,
@@ -16,185 +18,239 @@ import {
   Share,
   Clock,
 } from "lucide-react-native";
+import { useDispatch, useSelector } from "react-redux";
 import Header from "~components/Header";
 import SearchBar from "~components/SearchBar";
-import {Modal, ScrollView, Text} from "~components/Common";
-import {RFValue} from "react-native-responsive-fontsize";
-import {FontFamily} from "~theme/fonts";
-import {useTheme} from "~context/ThemeContext";
+import { Modal, ScrollView, Text } from "~components/Common";
+import { RFValue } from "react-native-responsive-fontsize";
+import { FontFamily } from "~theme/fonts";
+import { useTheme } from "~context/ThemeContext";
+import {
+  searchLocalStores,
+  searchOnlineStores,
+} from "~redux/actions/searchActions";
+import { clearSearchResults } from "~redux/reducers/searchReducer";
+import { calculateDistance, formatDistance } from "~utils";
 
-// --- Mock Data ---
-const MOCK_ONLINE_RESULTS = [
-  {
-    id: 1,
-    title: "Organic Whole Milk (12 Pack)",
-    store: "Amazon",
-    rating: 4.8,
-    reviews: 1205,
-    price: 45.99,
-    tag: "Free by Tomorrow",
-    badge: "Bulk Save",
-    image:
-      "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&q=80&w=200",
-  },
-  {
-    id: 2,
-    title: "Almond Breeze (6 Pack)",
-    store: "Walmart",
-    rating: 4.6,
-    reviews: 850,
-    price: 18.5,
-    tag: "2-Day Shipping",
-    image:
-      "https://images.unsplash.com/photo-1627485937980-221c88ac04f9?auto=format&fit=crop&q=80&w=200",
-  },
-  {
-    id: 3,
-    title: "Silk Soy Milk Vanilla",
-    store: "Target",
-    rating: 4.5,
-    reviews: 320,
-    price: 3.99,
-    tag: "Pickup in 2h",
-    image:
-      "https://images.unsplash.com/photo-1600788886242-5c96aabe3757?auto=format&fit=crop&q=80&w=200",
-  },
-];
+const SearchResultsScreen = ({ navigation, route }) => {
+  const { colors } = useTheme();
+  const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
 
-const MOCK_LOCAL_RESULTS = [
-  {
-    id: 1,
-    title: "Organic Whole Milk",
-    store: "Whole Foods",
-    distance: "0.8 km",
-    price: 4.99,
-    tag: "In Stock",
-    badge: "Best Price",
-    isLowStock: false,
-    image:
-      "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&q=80&w=200",
-  },
-  {
-    id: 2,
-    title: "Almond Milk Unsweetened",
-    store: "Trader Joe's",
-    distance: "1.2 km",
-    price: 3.49,
-    tag: "Low Stock",
-    isLowStock: true,
-    image:
-      "https://images.unsplash.com/photo-1627485937980-221c88ac04f9?auto=format&fit=crop&q=80&w=200",
-  },
-  {
-    id: 3,
-    title: "Soy Milk Vanilla",
-    store: "Good Foods",
-    distance: "2.5 km",
-    price: 2.99,
-    tag: "In Stock",
-    isLowStock: false,
-    image:
-      "https://images.unsplash.com/photo-1600788886242-5c96aabe3757?auto=format&fit=crop&q=80&w=200",
-  },
-];
+  // Get initial query from route params (if navigated with a query)
+  const initialQuery = route?.params?.query || "";
 
-const SearchResultsScreen = ({onQuickAction, navigation}) => {
-  const {colors} = useTheme();
-  const [activeTab, setActiveTab] = useState("Online Stores");
-  const [searchQuery, setSearchQuery] = useState("Milk 1L");
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("Local Stores");
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [isFilterModalVisible, setFilterModalVisible] = useState(false);
 
-  useEffect(() => {
-    setLoading(true);
-    const timer = setTimeout(() => {
-      if (activeTab === "Online Stores") {
-        setResults(MOCK_ONLINE_RESULTS);
-      } else {
-        setResults(MOCK_LOCAL_RESULTS);
-      }
-      setLoading(false);
-    }, 500);
+  // Redux state
+  const {
+    onlineResults,
+    onlineCount,
+    onlineLoading,
+    onlineLoadingMore,
+    onlineError,
+    onlineHasMore,
+    localResults,
+    localCount,
+    localLoading,
+    localLoadingMore,
+    localError,
+    localHasMore,
+  } = useSelector((state) => state.search);
 
-    return () => clearTimeout(timer);
+  const { latitude, longitude } = useSelector((state) => state.location);
+
+  // Debounce timer ref
+  const debounceRef = useRef(null);
+
+  // Derived state
+  const isOnlineTab = activeTab === "Online Stores";
+  const results = isOnlineTab ? onlineResults : localResults;
+  const resultsCount = isOnlineTab ? onlineCount : localCount;
+  const loading = isOnlineTab ? onlineLoading : localLoading;
+  const loadingMore = isOnlineTab ? onlineLoadingMore : localLoadingMore;
+  const error = isOnlineTab ? onlineError : localError;
+  const hasMore = isOnlineTab ? onlineHasMore : localHasMore;
+
+  /**
+   * Perform search based on active tab
+   */
+  const performSearch = useCallback(
+    (query, page = 1) => {
+      if (!query?.trim()) return;
+
+      if (activeTab === "Online Stores") {
+        dispatch(searchOnlineStores({ query, page, limit: 10 }));
+      } else {
+        dispatch(
+          searchLocalStores({
+            query,
+            lat: latitude,
+            lng: longitude,
+            page,
+            limit: 10,
+          }),
+        );
+      }
+    },
+    [activeTab, dispatch, latitude, longitude],
+  );
+
+  // Get current page from Redux
+  const currentPage = useSelector((state) =>
+    isOnlineTab ? state.search.onlinePage : state.search.localPage,
+  );
+
+  /**
+   * Load more results (next page)
+   */
+  const handleLoadMore = useCallback(() => {
+    if (loadingMore || !hasMore || !searchQuery.trim()) return;
+    performSearch(searchQuery, currentPage + 1);
+  }, [loadingMore, hasMore, searchQuery, currentPage, performSearch]);
+  /**
+   * Trigger search when tab changes
+   */
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      performSearch(searchQuery);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
-  const renderResultCard = item => {
+  /**
+   * Debounced search on query change
+   */
+  useEffect(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    if (searchQuery.trim()) {
+      debounceRef.current = setTimeout(() => {
+        performSearch(searchQuery);
+      }, 600);
+    }
+
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
+
+  /**
+   * Clean up on unmount
+   */
+  useEffect(() => {
+    return () => dispatch(clearSearchResults());
+  }, [dispatch]);
+
+  /**
+   * Handle product link press (online stores)
+   */
+  const handleProductPress = useCallback((url) => {
+    if (url) {
+      Linking.openURL(url).catch(() => { });
+    }
+  }, []);
+
+  // ============================================
+  // RENDER: Online Store Card
+  // ============================================
+  const renderOnlineCard = (item, index) => {
+    const id = item.product_link || `online-${index}`;
+    const price = item.price || "";
+    const seller = item.seller || item.store || "";
+    const rating = item.rating ?? null;
+    const reviews = item.reviews ?? 0;
+
     return (
-      <View key={item.id} style={[styles.card, {backgroundColor: colors.card, shadowColor: colors.shadowColor}]}>
+      <View
+        key={id}
+        style={[
+          styles.card,
+          { backgroundColor: colors.card, shadowColor: colors.shadowColor },
+        ]}>
         <View style={styles.imageContainer}>
-          <Image source={{uri: item.image}} style={[styles.productImage, {backgroundColor: colors.backgroundSecondary}]} />
-          {(item.badge ||
-            (activeTab === "Local Stores" && item.tag === "Low Stock")) && (
+          {item.image ? (
+            <Image
+              source={{ uri: item.image }}
+              style={[
+                styles.productImage,
+                { backgroundColor: colors.backgroundSecondary },
+              ]}
+            />
+          ) : (
             <View
               style={[
-                styles.badge,
-                (item.badge === "Bulk Save" || item.badge === "Best Price") &&
-                  styles.purpleBadge,
+                styles.productImage,
+                {
+                  backgroundColor: colors.backgroundSecondary,
+                  justifyContent: "center",
+                  alignItems: "center",
+                },
               ]}>
-              <Text style={styles.badgeText}>{item.badge}</Text>
+              <Truck size={24} color={colors.iconSecondary} />
             </View>
           )}
         </View>
 
         <View style={styles.cardContent}>
-          <Text style={[styles.productTitle, {color: colors.textPrimary}]} numberOfLines={2}>
+          <Text
+            style={[styles.productTitle, { color: colors.textPrimary }]}
+            numberOfLines={2}>
             {item.title}
           </Text>
           <View style={styles.contentFooter}>
-            <View>
+            <View style={styles.cardTextContainer}>
               <View style={styles.storeRow}>
-                {activeTab === "Local Stores" ? (
-                  <MapPin size={12} color={colors.iconSecondary} style={{marginRight: 4}} />
-                ) : (
-                  <Truck size={12} color={colors.iconSecondary} style={{marginRight: 4}} />
-                )}
-                <Text style={[styles.storeName, {color: colors.textSecondary}]}>{item.store}</Text>
-                {item.rating && (
+                <Truck
+                  size={12}
+                  color={colors.iconSecondary}
+                  style={{ marginRight: 4 }}
+                />
+                <Text
+                  style={[styles.storeName, { color: colors.textSecondary }]}
+                  numberOfLines={1}>
+                  {seller}
+                </Text>
+                {rating != null && (
                   <View style={styles.ratingContainer}>
                     <Star size={12} color="#fbbf24" fill="#fbbf24" />
-                    <Text style={[styles.ratingText, {color: colors.textMuted}]}> ({item.reviews})</Text>
+                    <Text
+                      style={[styles.ratingText, { color: colors.textMuted }]}>
+                      {" "}
+                      {rating} ({reviews.toLocaleString()})
+                    </Text>
                   </View>
                 )}
               </View>
 
-              <Text style={[styles.price, {color: colors.primary}]}>
-                ${item.price.toFixed(2)}
-                {activeTab === "Local Stores" && item.distance && (
-                  <Text style={[styles.distance, {color: colors.textSecondary}]}> · {item.distance}</Text>
-                )}
+              <Text
+                style={[styles.price, { color: colors.primary }]}
+                numberOfLines={1}>
+                {price}
               </Text>
-
-              {item.tag && (
-                <View
-                  style={[
-                    styles.shippingTag,
-                    {backgroundColor: colors.badgeBackground},
-                    item.isLowStock && {backgroundColor: colors.errorLight},
-                  ]}>
-                  {activeTab === "Local Stores" && item.tag === "In Stock" && (
-                    <Clock size={10} color={colors.success} style={{marginRight: 2}} />
-                  )}
-                  <Text
-                    style={[
-                      styles.shippingText,
-                      {color: colors.badgeText},
-                      item.isLowStock && {color: colors.error},
-                    ]}>
-                    {item.tag}
-                  </Text>
-                </View>
-              )}
             </View>
 
             <View style={styles.actionsColumn}>
-              {activeTab === "Online Stores" && (
-                <TouchableOpacity style={[styles.shareButton, {backgroundColor: colors.backgroundSecondary}]}>
-                  <Share size={18} color={colors.iconSecondary} />
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity style={[styles.addButton, {backgroundColor: colors.textPrimary}]}>
+              <TouchableOpacity
+                onPress={() => handleProductPress(item.product_link)}
+                style={[
+                  styles.shareButton,
+                  { backgroundColor: colors.backgroundSecondary },
+                ]}>
+                <Share size={18} color={colors.iconSecondary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.addButton,
+                  { backgroundColor: colors.textPrimary },
+                ]}>
                 <Plus size={20} color={colors.textInverse} />
               </TouchableOpacity>
             </View>
@@ -204,11 +260,156 @@ const SearchResultsScreen = ({onQuickAction, navigation}) => {
     );
   };
 
+  // ============================================
+  // RENDER: Local Store Card
+  // ============================================
+  const renderLocalCard = (item, index) => {
+    const id = item.placeId || `local-${index}`;
+    const rating = item.rating ?? null;
+    const totalRatings = item.totalRatings ?? 0;
+    const isOpen = item.isOpen;
+
+    // Calculate distance if location data is available
+    const storeLat = item.location?.lat;
+    const storeLng = item.location?.lng;
+    const distanceKm =
+      latitude != null &&
+        longitude != null &&
+        storeLat != null &&
+        storeLng != null
+        ? calculateDistance(latitude, longitude, storeLat, storeLng)
+        : null;
+    const distanceText = distanceKm != null ? formatDistance(distanceKm) : "";
+
+    return (
+      <View
+        key={id}
+        style={[
+          styles.card,
+          { backgroundColor: colors.card, shadowColor: colors.shadowColor },
+        ]}>
+        <View style={styles.imageContainer}>
+          {item.photo ? (
+            <Image
+              source={{ uri: item.photo }}
+              style={[
+                styles.productImage,
+                { backgroundColor: colors.backgroundSecondary },
+              ]}
+            />
+          ) : (
+            <View
+              style={[
+                styles.productImage,
+                {
+                  backgroundColor: colors.backgroundSecondary,
+                  justifyContent: "center",
+                  alignItems: "center",
+                },
+              ]}>
+              <MapPin size={24} color={colors.iconSecondary} />
+            </View>
+          )}
+        </View>
+
+        <View style={styles.cardContent}>
+          <Text
+            style={[styles.productTitle, { color: colors.textPrimary }]}
+            numberOfLines={2}>
+            {item.name}
+          </Text>
+          <View style={styles.contentFooter}>
+            <View style={styles.cardTextContainer}>
+              <View style={styles.storeRow}>
+                <MapPin
+                  size={12}
+                  color={colors.iconSecondary}
+                  style={{ marginRight: 4 }}
+                />
+                <Text
+                  style={[styles.storeName, { color: colors.textSecondary }]}
+                  numberOfLines={1}>
+                  {item.address}
+                </Text>
+                {distanceText && (
+                  <Text
+                    style={[styles.distance, { color: colors.textSecondary }]}>
+                    {" "}
+                    · {distanceText}
+                  </Text>
+                )}
+              </View>
+
+              {rating != null && (
+                <View style={[styles.storeRow, { marginTop: 2 }]}>
+                  <Star size={12} color="#fbbf24" fill="#fbbf24" />
+                  <Text
+                    style={[
+                      styles.ratingText,
+                      { color: colors.textMuted, marginLeft: 4 },
+                    ]}>
+                    {rating} ({totalRatings.toLocaleString()})
+                  </Text>
+                </View>
+              )}
+
+              {isOpen != null && (
+                <View
+                  style={[
+                    styles.shippingTag,
+                    {
+                      backgroundColor: isOpen
+                        ? colors.badgeBackground
+                        : colors.errorLight,
+                    },
+                  ]}>
+                  <Clock
+                    size={10}
+                    color={isOpen ? colors.success : colors.error}
+                    style={{ marginRight: 2 }}
+                  />
+                  <Text
+                    style={[
+                      styles.shippingText,
+                      {
+                        color: isOpen ? colors.badgeText : colors.error,
+                      },
+                    ]}>
+                    {isOpen ? "Open" : "Closed"}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.actionsColumn}>
+              <TouchableOpacity
+                style={[
+                  styles.addButton,
+                  { backgroundColor: colors.textPrimary },
+                ]}>
+                <Plus size={20} color={colors.textInverse} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  // ============================================
+  // RENDER: Result card dispatcher
+  // ============================================
+  const renderResultCard = (item, index) => {
+    return isOnlineTab
+      ? renderOnlineCard(item, index)
+      : renderLocalCard(item, index);
+  };
+
   return (
-    <View style={[styles.container, {backgroundColor: colors.background}]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header
         variant="screen"
-        title={"Search Results"}
+        title="Search Results"
         onBack={() => navigation.goBack()}
       />
 
@@ -217,27 +418,46 @@ const SearchResultsScreen = ({onQuickAction, navigation}) => {
         placeholder="Search products, categories..."
         value={searchQuery}
         onChangeText={setSearchQuery}
+        onSubmitEditing={() => performSearch(searchQuery)}
       />
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(40, insets.bottom + 40) },
+        ]}
         showsVerticalScrollIndicator={false}>
-        <View style={[styles.tabContainer, {backgroundColor: colors.backgroundSecondary}]}>
+        {/* Tab Switcher */}
+        <View
+          style={[
+            styles.tabContainer,
+            { backgroundColor: colors.backgroundSecondary },
+          ]}>
           <TouchableOpacity
             style={[
               styles.tabButton,
-              activeTab === "Local Stores" && [styles.activeTabButton, {backgroundColor: colors.card, shadowColor: colors.shadowColor}],
+              activeTab === "Local Stores" && [
+                styles.activeTabButton,
+                {
+                  backgroundColor: colors.card,
+                  shadowColor: colors.shadowColor,
+                },
+              ],
             ]}
             onPress={() => setActiveTab("Local Stores")}>
             <MapPin
               size={16}
-              color={activeTab === "Local Stores" ? colors.textPrimary : colors.textMuted}
+              color={
+                activeTab === "Local Stores"
+                  ? colors.textPrimary
+                  : colors.textMuted
+              }
             />
             <Text
               style={[
                 styles.tabText,
-                {color: colors.textMuted},
-                activeTab === "Local Stores" && {color: colors.textPrimary},
+                { color: colors.textMuted },
+                activeTab === "Local Stores" && { color: colors.textPrimary },
               ]}>
               Local Stores
             </Text>
@@ -245,71 +465,148 @@ const SearchResultsScreen = ({onQuickAction, navigation}) => {
           <TouchableOpacity
             style={[
               styles.tabButton,
-              activeTab === "Online Stores" && [styles.activeTabButton, {backgroundColor: colors.card, shadowColor: colors.shadowColor}],
+              activeTab === "Online Stores" && [
+                styles.activeTabButton,
+                {
+                  backgroundColor: colors.card,
+                  shadowColor: colors.shadowColor,
+                },
+              ],
             ]}
             onPress={() => setActiveTab("Online Stores")}>
             <Truck
               size={16}
-              color={activeTab === "Online Stores" ? colors.textPrimary : colors.textMuted}
+              color={
+                activeTab === "Online Stores"
+                  ? colors.textPrimary
+                  : colors.textMuted
+              }
             />
             <Text
               style={[
                 styles.tabText,
-                {color: colors.textMuted},
-                activeTab === "Online Stores" && {color: colors.textPrimary},
+                { color: colors.textMuted },
+                activeTab === "Online Stores" && { color: colors.textPrimary },
               ]}>
               Online Stores
             </Text>
           </TouchableOpacity>
         </View>
 
+        {/* Filter Row */}
         <View style={styles.filterRow}>
-          <Text style={[styles.resultsCount, {color: colors.textSecondary}]}>
-            {results.length} results found
+          <Text style={[styles.resultsCount, { color: colors.textSecondary }]}>
+            {resultsCount} results found
           </Text>
           <View style={styles.filterButtons}>
             <TouchableOpacity
-              style={[styles.filterButton, {backgroundColor: colors.card, borderColor: colors.border}]}
+              style={[
+                styles.filterButton,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
               onPress={() => setFilterModalVisible(true)}>
               <Filter size={14} color={colors.textSecondary} />
-              <Text style={[styles.filterButtonText, {color: colors.textSecondary}]}>Filters</Text>
+              <Text
+                style={[
+                  styles.filterButtonText,
+                  { color: colors.textSecondary },
+                ]}>
+                Filters
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.filterButton, {backgroundColor: colors.card, borderColor: colors.border}]}
+              style={[
+                styles.filterButton,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
               onPress={() => setFilterModalVisible(true)}>
-              <Text style={[styles.filterButtonText, {color: colors.textSecondary}]}>Sort</Text>
+              <Text
+                style={[
+                  styles.filterButtonText,
+                  { color: colors.textSecondary },
+                ]}>
+                Sort
+              </Text>
               <ChevronDown size={14} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
         </View>
 
+        {/* Results */}
         {loading ? (
           <ActivityIndicator
             size="large"
             color={colors.primary}
             style={styles.loader}
           />
-        ) : results.length === 0 ? (
+        ) : error ? (
           <View style={styles.noResultsContainer}>
-            <Text style={[styles.noResultsText, {color: colors.textPrimary}]}>
-              No results found for "{searchQuery}"
+            <Text
+              style={[styles.noResultsText, { color: colors.textPrimary }]}>
+              Something went wrong
             </Text>
-            <Text style={[styles.noResultsSubText, {color: colors.textSecondary}]}>
+            <Text
+              style={[styles.noResultsSubText, { color: colors.textSecondary }]}>
+              {typeof error === "string" ? error : "Please try again."}
+            </Text>
+          </View>
+        ) : results.length === 0 && searchQuery.trim() ? (
+          <View style={styles.noResultsContainer}>
+            <Text
+              style={[styles.noResultsText, { color: colors.textPrimary }]}>
+              No results found for &quot;{searchQuery}&quot;
+            </Text>
+            <Text
+              style={[styles.noResultsSubText, { color: colors.textSecondary }]}>
               Try adjusting your search terms.
             </Text>
           </View>
-        ) : (
-          <View style={styles.listContainer}>
-            {results.map(renderResultCard)}
+        ) : !searchQuery.trim() ? (
+          <View style={styles.noResultsContainer}>
+            <Text
+              style={[styles.noResultsSubText, { color: colors.textSecondary }]}>
+              Search for products to see results
+            </Text>
           </View>
+        ) : (
+          <>
+            <View style={styles.listContainer}>
+              {results.map(renderResultCard)}
+            </View>
+            {hasMore && (
+              <TouchableOpacity
+                style={[
+                  styles.loadMoreButton,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                  },
+                  loadingMore && styles.loadMoreButtonDisabled,
+                ]}
+                onPress={handleLoadMore}
+                disabled={loadingMore}>
+                {loadingMore ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Text
+                    style={[
+                      styles.loadMoreText,
+                      { color: colors.textPrimary },
+                    ]}>
+                    Load More
+                  </Text>
+                )}
+              </TouchableOpacity>
+            )}
+          </>
         )}
       </ScrollView>
 
-      {/* Include Modal */}
+      {/* Filter Modal */}
       <Modal
         isVisible={isFilterModalVisible}
         onClose={() => setFilterModalVisible(false)}
-        onApply={data => console.log("Filters Applied:", data)}
+        onApply={(data) => console.log("Filters Applied:", data)}
       />
     </View>
   );
@@ -339,7 +636,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   activeTabButton: {
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
@@ -382,10 +679,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderRadius: 16,
     padding: 12,
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+    overflow: "hidden",
   },
   imageContainer: {
     position: "relative",
@@ -429,6 +727,7 @@ const styles = StyleSheet.create({
   storeName: {
     fontSize: RFValue(9),
     marginRight: 6,
+    flexShrink: 1,
   },
   ratingContainer: {
     flexDirection: "row",
@@ -451,6 +750,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
+    marginTop: 4,
   },
   shippingText: {
     fontSize: RFValue(7),
@@ -461,6 +761,7 @@ const styles = StyleSheet.create({
     gap: 5,
     justifyContent: "flex-end",
     alignItems: "flex-end",
+    flexShrink: 0,
   },
   shareButton: {
     width: 36,
@@ -475,6 +776,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
+  },
+  cardTextContainer: {
+    flex: 1,
+    flexShrink: 1,
+    marginRight: 8,
   },
   contentFooter: {
     flexDirection: "row",
@@ -497,6 +803,24 @@ const styles = StyleSheet.create({
   },
   noResultsSubText: {
     fontSize: 14,
+  },
+  loadMoreButton: {
+    marginTop: 20,
+    marginBottom: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 48,
+  },
+  loadMoreButtonDisabled: {
+    opacity: 0.6,
+  },
+  loadMoreText: {
+    fontSize: RFValue(14),
+    fontFamily: FontFamily.bold,
   },
 });
 

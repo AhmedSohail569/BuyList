@@ -239,7 +239,7 @@ const Header = ({
               </Text>
             </View>
           </View>
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={[
               styles.editButton,
               {
@@ -250,7 +250,7 @@ const Header = ({
             activeOpacity={0.8}
             onPress={() => navigation.navigate("EditProfile")}>
             <Pencil size={20} color={colors.iconMuted} />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       )}
 

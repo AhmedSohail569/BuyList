@@ -7,6 +7,7 @@ import { Images } from "~assets";
 import OnboardingLayout from "~containers/layouts/OnboardingLayout";
 import Icon from "react-native-vector-icons/FontAwesome";
 import { useState } from "react";
+import { FontFamily } from "~theme/fonts";
 
 const GetStartedScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -61,14 +62,14 @@ const GetStartedScreen = ({ navigation }) => {
           </Text>
         </View>
 
-        <View style={{ flexDirection: "row" }}>
+        <View style={{ flexDirection: "row", }}>
           <Text variant="bodySmall" style={[styles.textStyle, { color: "#9CA3AF" }]}>
             Already have an Account?{" "}
           </Text>
           <Text
             variant="link"
             onPress={() => navigation.replace("Login")}
-            style={[styles.textStyle, { color: "#1E9DF1" }]}>
+            style={[styles.textStyle, { color: "#1E9DF1", fontFamily: FontFamily.regular }]}>
             Login
           </Text>
         </View>

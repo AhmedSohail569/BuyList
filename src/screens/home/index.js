@@ -27,6 +27,8 @@ import { useSelector, useDispatch } from "react-redux";
 import { fetchRecentActivities } from "~redux/actions/listActions";
 import { getProfile } from "~redux/actions/profileActions";
 import { useTheme } from "~context/ThemeContext";
+import { AD_OFFERS_DATA } from "~constants";
+import AdsOffersCarousel from "~components/AdsOffersCarousel";
 
 const { width } = Dimensions.get("window");
 
@@ -201,6 +203,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
   const { profile } = useSelector(state => state.profile);
   const { recentActivities } = useSelector(state => state.lists);
 
+
   // Fetch recent activities on mount
   useEffect(() => {
     dispatch(getProfile());
@@ -308,6 +311,8 @@ const HomeTab = ({ onQuickAction, navigation }) => {
         </View>
 
         <NearbyStores navigation={navigation} />
+
+        <AdsOffersCarousel data={AD_OFFERS_DATA} title="Ads & Offers" onAdPress={() => console.log("Ad pressed")} autoPlay={true} />
 
         <YourLists navigation={navigation} />
 
@@ -530,7 +535,7 @@ const styles = StyleSheet.create({
 
   // Section Headers
   sectionTitle: {
-    fontSize: RFValue(14),
+    fontSize: RFValue(13),
     fontFamily: FontFamily.bold,
     marginBottom: 12,
   },

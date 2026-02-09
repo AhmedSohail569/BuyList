@@ -17,12 +17,12 @@ import {
   ChevronDown,
 } from "lucide-react-native";
 import Header from "~components/Header"; // Assuming generic header available
-import {Text} from "~components/Common";
-import {RFValue} from "react-native-responsive-fontsize";
-import {FontFamily} from "~theme/fonts";
-import {useTheme} from "~context/ThemeContext";
+import { Text } from "~components/Common";
+import { RFValue } from "react-native-responsive-fontsize";
+import { FontFamily } from "~theme/fonts";
+import { useTheme } from "~context/ThemeContext";
 
-const {width} = Dimensions.get("window");
+const { width } = Dimensions.get("window");
 
 // --- MOCK DATA ---
 const PRODUCT = {
@@ -66,15 +66,15 @@ const OFFERS = [
 ];
 
 const SPECS = [
-  {label: "Noise Cancelling", value: "Industry Leading Active NC"},
-  {label: "Battery Life", value: "30 Hours (NC On)"},
-  {label: "Weight", value: "250g"},
-  {label: "Bluetooth", value: "5.2 with LDAC"},
+  { label: "Noise Cancelling", value: "Industry Leading Active NC" },
+  { label: "Battery Life", value: "30 Hours (NC On)" },
+  { label: "Weight", value: "250g" },
+  { label: "Bluetooth", value: "5.2 with LDAC" },
 ];
 
-const PriceCheckScreen = ({navigation}) => {
-  const {colors} = useTheme();
-  
+const PriceCheckScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+
   // --- Render Store Card ---
   const renderStoreCard = item => {
     const isBest = item.isBestPrice;
@@ -83,59 +83,59 @@ const PriceCheckScreen = ({navigation}) => {
       <View
         key={item.id}
         style={[
-          styles.offerCard, 
-          {backgroundColor: colors.card, borderColor: colors.border},
-          isBest && [styles.offerCardBest, {borderColor: colors.success}]
+          styles.offerCard,
+          { backgroundColor: colors.card, borderColor: colors.border },
+          isBest && [styles.offerCardBest, { borderColor: colors.success }]
         ]}>
         {/* Best Price Badge */}
         {isBest && (
-          <View style={[styles.bestPriceBadge, {backgroundColor: colors.success}]}>
-            <CheckCircle size={10} color="#fff" style={{marginRight: 4}} />
+          <View style={[styles.bestPriceBadge, { backgroundColor: colors.success }]}>
+            <CheckCircle size={10} color="#fff" style={{ marginRight: 4 }} />
             <Text style={styles.bestPriceText}>Best Price</Text>
           </View>
         )}
 
         {/* Header: Logo & Name */}
         <View style={styles.offerHeader}>
-          <View style={[styles.storeLogo, {backgroundColor: item.storeLogoBg}]}>
+          <View style={[styles.storeLogo, { backgroundColor: item.storeLogoBg }]}>
             <Text style={styles.storeLogoText}>{item.storeLogoText}</Text>
           </View>
           <View>
-            <Text style={[styles.storeName, {color: colors.textPrimary}]}>{item.store}</Text>
-            <Text style={[styles.storeType, {color: colors.textSecondary}]}>{item.type}</Text>
+            <Text style={[styles.storeName, { color: colors.textPrimary }]}>{item.store}</Text>
+            <Text style={[styles.storeType, { color: colors.textSecondary }]}>{item.type}</Text>
           </View>
         </View>
 
         {/* Price Section */}
         <View style={styles.priceRow}>
-          <Text style={[styles.currentPrice, {color: colors.textPrimary}, isBest && {color: colors.success}]}>
+          <Text style={[styles.currentPrice, { color: colors.textPrimary }, isBest && { color: colors.success }]}>
             ${item.price.toFixed(2)}
           </Text>
           {item.oldPrice && (
-            <Text style={[styles.oldPrice, {color: colors.textMuted}]}>${item.oldPrice.toFixed(2)}</Text>
+            <Text style={[styles.oldPrice, { color: colors.textMuted }]}>${item.oldPrice.toFixed(2)}</Text>
           )}
         </View>
-        <Text style={[styles.taxNote, {color: colors.textMuted}]}>Taxes calculated at checkout</Text>
+        <Text style={[styles.taxNote, { color: colors.textMuted }]}>Taxes calculated at checkout</Text>
 
         {/* Details Grid */}
         <View style={styles.detailsGrid}>
           {/* Row 1: Stock */}
           <View style={styles.detailRow}>
             <CheckCircle size={14} color={colors.iconSecondary} />
-            <Text style={[styles.detailLabel, {color: colors.textSecondary}]}>Stock</Text>
+            <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Stock</Text>
             <View
               style={[
                 styles.stockBadge,
                 item.stockStatus === "In Stock"
-                  ? {backgroundColor: colors.successLight}
-                  : {backgroundColor: colors.warningLight},
+                  ? { backgroundColor: colors.successLight }
+                  : { backgroundColor: colors.warningLight },
               ]}>
               <Text
                 style={[
                   styles.stockText,
                   item.stockStatus === "In Stock"
-                    ? {color: colors.successDark}
-                    : {color: colors.warningDark},
+                    ? { color: colors.successDark }
+                    : { color: colors.warningDark },
                 ]}>
                 {item.stockStatus}
               </Text>
@@ -145,26 +145,26 @@ const PriceCheckScreen = ({navigation}) => {
           {/* Row 2: Shipping */}
           <View style={styles.detailRow}>
             <Truck size={14} color={colors.iconSecondary} />
-            <Text style={[styles.detailLabel, {color: colors.textSecondary}]}>Get it by</Text>
-            <Text style={[styles.detailValue, {color: colors.textPrimary}]}>{item.shipping}</Text>
+            <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Get it by</Text>
+            <Text style={[styles.detailValue, { color: colors.textPrimary }]}>{item.shipping}</Text>
           </View>
 
           {/* Row 3: Returns */}
           <View style={styles.detailRow}>
             <RotateCcw size={14} color={colors.iconSecondary} />
-            <Text style={[styles.detailLabel, {color: colors.textSecondary}]}>Returns</Text>
-            <Text style={[styles.detailValueSingle, {color: colors.textPrimary}]}>{item.returns}</Text>
+            <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Returns</Text>
+            <Text style={[styles.detailValueSingle, { color: colors.textPrimary }]}>{item.returns}</Text>
           </View>
         </View>
 
         {/* Action Button */}
         {isBest ? (
-          <TouchableOpacity style={[styles.primaryButton, {backgroundColor: colors.primary}]}>
-            <ShoppingCart size={16} color="#fff" style={{marginRight: 8}} />
+          <TouchableOpacity style={[styles.primaryButton, { backgroundColor: colors.primary }]}>
+            <ShoppingCart size={16} color="#fff" style={{ marginRight: 8 }} />
             <Text style={styles.primaryButtonText}>Go to Store</Text>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity style={[styles.secondaryButton, {backgroundColor: colors.backgroundSecondary}]}>
+          <TouchableOpacity style={[styles.secondaryButton, { backgroundColor: colors.backgroundSecondary }]}>
             <ShoppingCart size={18} color={colors.textPrimary} />
           </TouchableOpacity>
         )}
@@ -173,7 +173,7 @@ const PriceCheckScreen = ({navigation}) => {
   };
 
   return (
-    <View style={[styles.container, {backgroundColor: colors.background}]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header
         variant="screen"
         title={"Price Check"}
@@ -181,57 +181,57 @@ const PriceCheckScreen = ({navigation}) => {
       />
 
       {/* Read-Only Search Bar */}
-      <View style={[styles.searchContainer, {backgroundColor: colors.inputBackground, borderColor: colors.border}]}>
+      <View style={[styles.searchContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
         <Search size={18} color={colors.inputPlaceholder} />
-        <Text style={[styles.searchText, {color: colors.textPrimary}]}>Sony WH-1000XM5</Text>
+        <Text style={[styles.searchText, { color: colors.textPrimary }]}>Sony WH-1000XM5</Text>
       </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
         {/* Product Info Card */}
-        <View style={[styles.productCard, {backgroundColor: colors.card, borderColor: colors.border}]}>
-          <Image source={{uri: PRODUCT.image}} style={[styles.productImage, {backgroundColor: colors.backgroundSecondary}]} />
+        <View style={[styles.productCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Image source={{ uri: PRODUCT.image }} style={[styles.productImage, { backgroundColor: colors.backgroundSecondary }]} />
           <View style={styles.productInfo}>
             <View style={styles.tagRow}>
-              <Text style={[styles.tagText, {backgroundColor: colors.badgeBackground, color: colors.primary}]}>{PRODUCT.category}</Text>
+              <Text style={[styles.tagText, { backgroundColor: colors.badgeBackground, color: colors.primary }]}>{PRODUCT.category}</Text>
               <View style={styles.ratingBox}>
                 <Star
                   size={10}
                   color="#FBBF24"
                   fill="#FBBF24"
-                  style={{marginRight: 2}}
+                  style={{ marginRight: 2 }}
                 />
-                <Text style={[styles.ratingText, {color: colors.warning}]}>{PRODUCT.rating}</Text>
+                <Text style={[styles.ratingText, { color: colors.warning }]}>{PRODUCT.rating}</Text>
               </View>
             </View>
-            <Text style={[styles.productTitle, {color: colors.textPrimary}]}>{PRODUCT.title}</Text>
+            <Text style={[styles.productTitle, { color: colors.textPrimary }]}>{PRODUCT.title}</Text>
             <View style={styles.msrpRow}>
-              <Text style={[styles.msrpLabel, {color: colors.textSecondary}]}>MSRP</Text>
-              <Text style={[styles.msrpValue, {color: colors.textMuted}]}>{PRODUCT.msrp}</Text>
+              <Text style={[styles.msrpLabel, { color: colors.textSecondary }]}>MSRP</Text>
+              <Text style={[styles.msrpValue, { color: colors.textMuted }]}>{PRODUCT.msrp}</Text>
             </View>
           </View>
         </View>
 
         {/* AI Analysis Banner */}
-        <View style={[styles.aiCard, {backgroundColor: colors.textPrimary}]}>
+        <View style={[styles.aiCard, { backgroundColor: colors.textPrimary }]}>
           <View style={styles.aiHeader}>
-            <View style={[styles.aiIconBox, {backgroundColor: colors.backgroundSecondary}]}>
+            <View style={[styles.aiIconBox, { backgroundColor: colors.backgroundSecondary }]}>
               <BarChart2 size={16} color={colors.textMuted} />
             </View>
-            <Text style={[styles.aiTitle, {color: colors.textMuted}]}>AI ANALYSIS</Text>
+            <Text style={[styles.aiTitle, { color: colors.textMuted }]}>AI ANALYSIS</Text>
           </View>
-          <Text style={[styles.aiText, {color: colors.textMuted}]}>
-            <Text style={[styles.boldWhite, {color: colors.textInverse}]}>Amazon</Text> is your cheapest option
-            today. However, <Text style={[styles.boldWhite, {color: colors.textInverse}]}>Best Buy</Text> has
+          <Text style={[styles.aiText, { color: colors.textMuted }]}>
+            <Text style={[styles.boldWhite, { color: colors.textInverse }]}>Amazon</Text> is your cheapest option
+            today. However, <Text style={[styles.boldWhite, { color: colors.textInverse }]}>Best Buy</Text> has
             limited stock near you for immediate pickup.
           </Text>
         </View>
 
         {/* Store Offers */}
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, {color: colors.textPrimary}]}>Store Offers</Text>
-          <Text style={[styles.sectionSubtitle, {color: colors.textSecondary}]}>4 stores found</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Store Offers</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>4 stores found</Text>
         </View>
 
         <ScrollView
@@ -239,32 +239,32 @@ const PriceCheckScreen = ({navigation}) => {
           showsHorizontalScrollIndicator={false}
           style={styles.offersScroll}>
           {OFFERS.map(renderStoreCard)}
-          <View style={{width: 16}} />
+          <View style={{ width: 16 }} />
         </ScrollView>
 
         {/* Technical Details */}
-        <Text style={[styles.sectionTitle, {color: colors.textPrimary}]}>Technical Details</Text>
-        <View style={[styles.specsCard, {backgroundColor: colors.card, borderColor: colors.border}]}>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Technical Details</Text>
+        <View style={[styles.specsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {SPECS.map((spec, index) => (
             <View
               key={index}
               style={[
                 styles.specRow,
-                {borderBottomColor: colors.border},
-                index === SPECS.length - 1 && {borderBottomWidth: 0},
+                { borderBottomColor: colors.border },
+                index === SPECS.length - 1 && { borderBottomWidth: 0 },
               ]}>
-              <Text style={[styles.specLabel, {color: colors.textSecondary}]}>{spec.label}</Text>
-              <Text style={[styles.specValue, {color: colors.textPrimary}]}>{spec.value}</Text>
+              <Text style={[styles.specLabel, { color: colors.textSecondary }]}>{spec.label}</Text>
+              <Text style={[styles.specValue, { color: colors.textPrimary }]}>{spec.value}</Text>
             </View>
           ))}
 
-          <TouchableOpacity style={[styles.showSpecsBtn, {backgroundColor: colors.backgroundSecondary}]}>
-            <Text style={[styles.showSpecsText, {color: colors.primary}]}>Show Full Specs</Text>
+          <TouchableOpacity style={[styles.showSpecsBtn, { backgroundColor: colors.backgroundSecondary }]}>
+            <Text style={[styles.showSpecsText, { color: colors.primary }]}>Show Full Specs</Text>
             <ChevronDown size={14} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
-        <View style={{height: 40}} />
+        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: RFValue(14),
+    fontSize: RFValue(13),
     fontFamily: FontFamily.bold,
   },
   sectionSubtitle: {

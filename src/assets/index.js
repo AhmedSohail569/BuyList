@@ -10,5 +10,5 @@ export const Images = {
   //home
   storesPlaceholder: require("./images/home/storesPlaceholder.png"),
 
- 
+  ad: require("./images/ads/ad.jpg"),
 };

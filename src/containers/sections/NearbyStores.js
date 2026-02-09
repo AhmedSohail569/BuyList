@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, { useState } from "react";
 import {
   View,
   TouchableOpacity,
@@ -6,28 +6,30 @@ import {
   StyleSheet,
   FlatList,
 } from "react-native";
-import {MapPin, ArrowRight} from "lucide-react-native";
-import {Text} from "~components/Common";
-import {Images} from "~assets";
-import {useTheme} from "~context/ThemeContext";
+import { MapPin, ArrowRight } from "lucide-react-native";
+import { Text } from "~components/Common";
+import { Images } from "~assets";
+import { useTheme } from "~context/ThemeContext";
+import { RFValue } from "react-native-responsive-fontsize";
+import { FontFamily } from "~theme/fonts";
 
-const StoreCard = ({item, onPress, colors}) => (
+const StoreCard = ({ item, onPress, colors }) => (
   <TouchableOpacity
-    style={[styles.storeCard, {backgroundColor: colors.card, shadowColor: colors.shadowColor}]}
+    style={[styles.storeCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}
     onPress={() => onPress(item.id)}
     activeOpacity={0.7}>
-    <View style={[styles.storeImageContainer, {backgroundColor: colors.surfaceSecondary}]}>
+    <View style={[styles.storeImageContainer, { backgroundColor: colors.surfaceSecondary }]}>
       <Image source={item.image} style={styles.storeImage} />
-      <View style={[styles.badge, {backgroundColor: item.badgeColor}]}>
+      <View style={[styles.badge, { backgroundColor: item.badgeColor }]}>
         <Text style={styles.badgeText}>{item.badge}</Text>
       </View>
     </View>
     <View style={styles.storeInfo}>
-      <Text style={[styles.storeName, {color: colors.textPrimary}]}>{item.name}</Text>
+      <Text style={[styles.storeName, { color: colors.textPrimary }]}>{item.name}</Text>
       <View style={styles.storeDetails}>
         <MapPin size={14} color={colors.iconMuted} />
-        <Text style={[styles.storeDistance, {color: colors.textMuted}]}>{item.distance}</Text>
-        <View style={[styles.statusBadge, {backgroundColor: item.statusColor}]}>
+        <Text style={[styles.storeDistance, { color: colors.textMuted }]}>{item.distance}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: item.statusColor }]}>
           <Text style={styles.statusText}>{item.status}</Text>
         </View>
       </View>
@@ -35,8 +37,8 @@ const StoreCard = ({item, onPress, colors}) => (
   </TouchableOpacity>
 );
 
-const NearbyStores = ({navigation}) => {
-  const {colors} = useTheme();
+const NearbyStores = ({ navigation }) => {
+  const { colors } = useTheme();
   const [stores] = useState([
     {
       id: 1,
@@ -81,10 +83,10 @@ const NearbyStores = ({navigation}) => {
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, {color: colors.textPrimary}]}>Nearby Stores</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Nearby Stores</Text>
         <TouchableOpacity onPress={handleMapPress} activeOpacity={0.6}>
           <View style={styles.mapLink}>
-            <Text style={[styles.mapText, {color: colors.primary}]}>Map </Text>
+            <Text style={[styles.mapText, { color: colors.primary }]}>Map </Text>
             <ArrowRight size={14} color={colors.primary} />
           </View>
         </TouchableOpacity>
@@ -92,7 +94,7 @@ const NearbyStores = ({navigation}) => {
 
       <FlatList
         data={stores}
-        renderItem={({item}) => (
+        renderItem={({ item }) => (
           <StoreCard item={item} onPress={handleStorePress} colors={colors} />
         )}
         keyExtractor={item => item.id.toString()}
@@ -116,12 +118,12 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   sectionTitle: {
-    fontSize: 17,
-    fontWeight: "700",
+    fontSize: RFValue(13),
+    fontFamily: FontFamily.bold,
   },
   mapText: {
-    fontSize: 12,
-    fontWeight: "600",
+    fontSize: RFValue(10),
+    fontFamily: FontFamily.medium,
   },
   mapLink: {
     flexDirection: "row",
@@ -137,7 +139,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
     borderRadius: 16,
     overflow: "hidden",
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
@@ -161,7 +163,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 10,
-    fontWeight: "700",
+    fontFamily: FontFamily.bold,
     color: "#ffffff",
   },
   storeInfo: {
@@ -169,7 +171,7 @@ const styles = StyleSheet.create({
   },
   storeName: {
     fontSize: 13,
-    fontWeight: "700",
+    fontFamily: FontFamily.bold,
     marginBottom: 8,
   },
   storeDetails: {

@@ -1,20 +1,20 @@
-import {useEffect, useState} from "react";
-import {View, StyleSheet, Image} from "react-native";
-import {useDispatch, useSelector} from "react-redux";
-import {useSafeAreaInsets} from "react-native-safe-area-context";
+import { useEffect, useState } from "react";
+import { View, StyleSheet, Image } from "react-native";
+import { useDispatch, useSelector } from "react-redux";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 
 import OnboardingLayout from "~containers/layouts/OnboardingLayout";
-import {RFPercentage, RFValue} from "react-native-responsive-fontsize";
-import {Button, Text, TextInput} from "~components/Common";
-import {Images} from "~assets";
-import {signupUser} from "~redux/actions/authActions";
-import {clearSignupState, clearError} from "~redux/reducers/authReducer";
-import {validateEmail, validatePassword, validateUsername} from "~utils/validation";
+import { RFPercentage, RFValue } from "react-native-responsive-fontsize";
+import { Button, Text, TextInput } from "~components/Common";
+import { Images } from "~assets";
+import { signupUser } from "~redux/actions/authActions";
+import { clearSignupState, clearError } from "~redux/reducers/authReducer";
+import { validateEmail, validatePassword, validateUsername } from "~utils/validation";
 
-const SignupScreen = ({navigation, route}) => {
-  const {phone, zone, area} = route?.params || {};
-  const {loading, signupSuccess, error} = useSelector(state => state.auth);
+const SignupScreen = ({ navigation, route }) => {
+  const { phone, zone, area } = route?.params || {};
+  const { loading, signupSuccess, error } = useSelector(state => state.auth);
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
 
@@ -62,21 +62,21 @@ const SignupScreen = ({navigation, route}) => {
   const handleUsernameChange = value => {
     setUsername(value);
     if (errors.username) {
-      setErrors(prev => ({...prev, username: null}));
+      setErrors(prev => ({ ...prev, username: null }));
     }
   };
 
   const handleEmailChange = value => {
     setEmail(value);
     if (errors.email) {
-      setErrors(prev => ({...prev, email: null}));
+      setErrors(prev => ({ ...prev, email: null }));
     }
   };
 
   const handlePasswordChange = value => {
     setPassword(value);
     if (errors.password) {
-      setErrors(prev => ({...prev, password: null}));
+      setErrors(prev => ({ ...prev, password: null }));
     }
   };
 
@@ -122,8 +122,8 @@ const SignupScreen = ({navigation, route}) => {
       <Image
         source={Images.buyListIconBlue}
         style={{
-          width: RFValue(50),
-          height: RFValue(50),
+          width: RFValue(60),
+          height: RFValue(60),
           alignSelf: "center",
           marginTop: RFPercentage(15),
           position: "absolute",
@@ -131,20 +131,20 @@ const SignupScreen = ({navigation, route}) => {
         resizeMode="contain"
       />
       <View
-        style={[styles.content, {paddingBottom: insets.bottom + RFValue(24)}]}>
+        style={[styles.content, { paddingBottom: insets.bottom + RFValue(24) }]}>
         {/* Title */}
-        <Text variant="sectionTitle" style={[styles.title, {color: "#1B1A1F"}]}>
+        <Text variant="sectionTitle" style={[styles.title, { color: "#1B1A1F" }]}>
           Sign Up
         </Text>
 
         {/* Subtitle */}
-        <Text variant="bodySmall" style={[styles.subtitle, {color: "#9CA3AF"}]}>
+        <Text variant="bodySmall" style={[styles.subtitle, { color: "#9CA3AF" }]}>
           Enter your credentials to continue
         </Text>
 
         <TextInput
           label="Username"
-          placeholder="Samrana Shoukat"
+          placeholder="BuyList User"
           value={username}
           onChangeText={handleUsernameChange}
           type={2}
@@ -155,7 +155,7 @@ const SignupScreen = ({navigation, route}) => {
 
         <TextInput
           label="Email"
-          placeholder="samrana@example.com"
+          placeholder="buylist@example.com"
           value={email}
           onChangeText={handleEmailChange}
           type={2}
@@ -178,15 +178,15 @@ const SignupScreen = ({navigation, route}) => {
 
         <Text
           variant="bodySmall"
-          style={{marginBottom: RFValue(15), fontSize: RFValue(10), color: "#9CA3AF"}}>
+          style={{ marginBottom: RFValue(15), fontSize: RFValue(10), color: "#9CA3AF" }}>
           By continuing you agree to our{" "}
           <Text
-            style={{marginBottom: RFValue(10), fontSize: RFValue(10), color: "#1E9DF1"}}>
+            style={{ marginBottom: RFValue(10), fontSize: RFValue(10), color: "#1E9DF1" }}>
             Terms of Service
           </Text>{" "}
           and{" "}
           <Text
-            style={{marginBottom: RFValue(10), fontSize: RFValue(10), color: "#1E9DF1"}}>
+            style={{ marginBottom: RFValue(10), fontSize: RFValue(10), color: "#1E9DF1" }}>
             Privacy Policy.
           </Text>
         </Text>
@@ -199,8 +199,8 @@ const SignupScreen = ({navigation, route}) => {
           forceLight
         />
 
-        <View style={{flexDirection: "row", alignSelf: "center"}}>
-          <Text variant="bodySmall" style={[styles.textStyle, {color: "#9CA3AF"}]}>
+        <View style={{ flexDirection: "row", alignSelf: "center" }}>
+          <Text variant="bodySmall" style={[styles.textStyle, { color: "#9CA3AF" }]}>
             Already have an account?{" "}
           </Text>
           <Text

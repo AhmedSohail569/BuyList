@@ -3203,6 +3203,8 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
+  - react-native-geolocation-service (5.3.1):
+    - React
   - react-native-safe-area-context (5.6.2):
     - boost
     - DoubleConversion
@@ -4418,6 +4420,7 @@ DEPENDENCIES:
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
   - react-native-config (from `../node_modules/react-native-config`)
   - react-native-date-picker (from `../node_modules/react-native-date-picker`)
+  - react-native-geolocation-service (from `../node_modules/react-native-geolocation-service`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
   - React-oscompat (from `../node_modules/react-native/ReactCommon/oscompat`)
@@ -4578,6 +4581,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-config"
   react-native-date-picker:
     :path: "../node_modules/react-native-date-picker"
+  react-native-geolocation-service:
+    :path: "../node_modules/react-native-geolocation-service"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
   React-NativeModulesApple:
@@ -4736,6 +4741,7 @@ SPEC CHECKSUMS:
   React-microtasksnativemodule: a84b9331106616ab1fa36de9ae555718d4bbdcf5
   react-native-config: 916e53e7333d5b2bcb7ee9882f5605143b4fc4c5
   react-native-date-picker: a06d7eb5d84c27b6f02a2e3f3a01ce50b2f4a3a0
+  react-native-geolocation-service: 32b2c2a3b91e70ce2a8d0c684801aaeb0a07e0ec
   react-native-safe-area-context: 0a3b034bb63a5b684dd2f5fffd3c90ef6ed41ee8
   React-NativeModulesApple: efd0906463c79d9b86197dbcf0d58358dff8c5ed
   React-oscompat: 95875e81f5d4b3c7b2c888d5bd2c9d83450d8bdb

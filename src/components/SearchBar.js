@@ -1,4 +1,3 @@
-import React from "react";
 import {
   View,
   TextInput,
@@ -7,10 +6,10 @@ import {
   Keyboard,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
-import {Text} from "~components/Common";
-import {RFValue} from "react-native-responsive-fontsize";
-import {Mic, ScanLine, Search} from "lucide-react-native";
-import {useTheme} from "~context/ThemeContext";
+import { Text } from "~components/Common";
+import { RFValue } from "react-native-responsive-fontsize";
+import { Mic, ScanLine, Search } from "lucide-react-native";
+import { useTheme } from "~context/ThemeContext";
 
 const SearchBar = ({
   type = 1,
@@ -19,12 +18,13 @@ const SearchBar = ({
   editable = true,
   value,
   onChangeText,
+  onSubmitEditing,
   onPress,
   filterIcon = false,
   style,
   iconColor,
 }) => {
-  const {colors, isDark} = useTheme();
+  const { colors, isDark } = useTheme();
   const defaultIconColor = iconColor || colors.iconMuted;
 
   const handlePress = () => {
@@ -40,11 +40,11 @@ const SearchBar = ({
     <View
       style={[
         styles.wrapper,
-        {backgroundColor: colors.headerBackground},
+        { backgroundColor: colors.headerBackground },
         style,
       ]}>
       {title && (
-        <Text style={[styles.title, {color: colors.textSecondary}]}>
+        <Text style={[styles.title, { color: colors.textSecondary }]}>
           {title}
         </Text>
       )}
@@ -55,16 +55,16 @@ const SearchBar = ({
           onPress={handlePress}
           style={[
             styles.searchContainer,
-            {backgroundColor: isDark ? colors.surface : "#F3F4F6"},
+            { backgroundColor: isDark ? colors.surface : "#F3F4F6" },
           ]}>
           <Icon
             name="search"
             size={20}
             color={defaultIconColor}
-            style={{marginLeft: 10}}
+            style={{ marginLeft: 10 }}
           />
           <TextInput
-            style={[styles.searchInput, {color: colors.textPrimary}]}
+            style={[styles.searchInput, { color: colors.textPrimary }]}
             placeholder={placeholder}
             placeholderTextColor={colors.inputPlaceholder}
             editable={editable}
@@ -77,11 +77,11 @@ const SearchBar = ({
               name="funnel"
               size={20}
               color={colors.primary}
-              style={{position: "absolute", right: 15}}
+              style={{ position: "absolute", right: 15 }}
             />
           )}
           <View style={styles.searchActions}>
-            <View style={[styles.divider, {backgroundColor: colors.border}]} />
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <TouchableOpacity>
               <Mic size={20} color={colors.primary} />
             </TouchableOpacity>
@@ -100,21 +100,25 @@ const SearchBar = ({
           <View
             style={[
               styles.searchInputContainer,
-              {backgroundColor: isDark ? colors.surface : "#f3f4f6"},
+              { backgroundColor: isDark ? colors.surface : "#f3f4f6" },
             ]}>
             <Search size={20} color={colors.iconMuted} />
             <TextInput
-              style={[styles.searchInput, {color: colors.textPrimary}]}
-              placeholder="Search items, brands..."
+              style={[styles.searchInput, { color: colors.textPrimary }]}
+              placeholder={placeholder}
               placeholderTextColor={colors.inputPlaceholder}
               editable={editable}
+              value={value}
+              onChangeText={onChangeText}
+              onSubmitEditing={onSubmitEditing}
               pointerEvents={editable ? "auto" : "none"}
+              returnKeyType="search"
             />
           </View>
           <TouchableOpacity
             style={[
               styles.iconButton,
-              {backgroundColor: isDark ? colors.surface : "#e0f2fe"},
+              { backgroundColor: isDark ? colors.surface : "#e0f2fe" },
             ]}>
             <Mic size={22} color={colors.primary} />
           </TouchableOpacity>
@@ -122,7 +126,7 @@ const SearchBar = ({
             style={[
               styles.iconButton,
               styles.scanButton,
-              {backgroundColor: isDark ? colors.surface : "#f3f4f6"},
+              { backgroundColor: isDark ? colors.surface : "#f3f4f6" },
             ]}>
             <ScanLine size={22} color={colors.icon} />
           </TouchableOpacity>

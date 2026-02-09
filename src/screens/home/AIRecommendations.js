@@ -1,10 +1,10 @@
-import {View, StyleSheet, TouchableOpacity, Image} from "react-native";
-import {Sparkles} from "lucide-react-native";
+import { View, StyleSheet, TouchableOpacity, Image } from "react-native";
+import { Sparkles } from "lucide-react-native";
 import Header from "~components/Header"; // Assuming generic header available
-import {ScrollView, Text} from "~components/Common";
-import {RFValue} from "react-native-responsive-fontsize";
-import {FontFamily} from "~theme/fonts";
-import {useTheme} from "~context/ThemeContext";
+import { ScrollView, Text } from "~components/Common";
+import { RFValue } from "react-native-responsive-fontsize";
+import { FontFamily } from "~theme/fonts";
+import { useTheme } from "~context/ThemeContext";
 
 // --- MOCK DATA ---
 const FOR_YOU = [
@@ -106,21 +106,21 @@ const FOR_YOU = [
   },
 ];
 
-const AIRecommendationsScreen = ({navigation}) => {
-  const {colors} = useTheme();
-  
+const AIRecommendationsScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+
   return (
-    <View style={[styles.container, {backgroundColor: colors.background}]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header
         variant="screen"
         title={
-          <View style={{flexDirection: "row", alignItems: "center", gap: 5}}>
-            <Text style={[styles.sectionTitle, {color: colors.textPrimary}]}>AI Recommendations</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>AI Recommendations</Text>
             <Sparkles
               size={16}
               color={colors.primary}
               fill={colors.primary}
-              style={{marginLeft: 6}}
+              style={{ marginLeft: 6 }}
             />
           </View>
         }
@@ -130,36 +130,36 @@ const AIRecommendationsScreen = ({navigation}) => {
       <ScrollView>
         {/* --- SECTION: For You --- */}
         <View style={styles.sectionTitleRow}>
-          <Text style={[styles.sectionTitle, {color: colors.textPrimary}]}>For You</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>For You</Text>
         </View>
 
         <View style={styles.forYouContainer}>
           {FOR_YOU.map((item, index) => (
-            <View key={index} style={[styles.forYouCard, {backgroundColor: colors.card, shadowColor: colors.shadowColor}]}>
-              <Image source={{uri: item.image}} style={[styles.forYouImage, {backgroundColor: colors.backgroundSecondary}]} />
+            <View key={index} style={[styles.forYouCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
+              <Image source={{ uri: item.image }} style={[styles.forYouImage, { backgroundColor: colors.backgroundSecondary }]} />
               <View style={styles.forYouContent}>
                 <View
                   style={{
                     flexDirection: "row",
                     justifyContent: "space-between",
                   }}>
-                  <Text style={[styles.forYouTitle, {color: colors.textPrimary}]}>{item.name}</Text>
-                  <View style={[styles.tagBadge, {backgroundColor: colors.backgroundSecondary}]}>
-                    <Text style={[styles.tagText, {color: colors.textSecondary}]}>{item.tag}</Text>
+                  <Text style={[styles.forYouTitle, { color: colors.textPrimary }]}>{item.name}</Text>
+                  <View style={[styles.tagBadge, { backgroundColor: colors.backgroundSecondary }]}>
+                    <Text style={[styles.tagText, { color: colors.textSecondary }]}>{item.tag}</Text>
                   </View>
                 </View>
-                <Text style={[styles.forYouDesc, {color: colors.primary}]} numberOfLines={2}>
+                <Text style={[styles.forYouDesc, { color: colors.primary }]} numberOfLines={2}>
                   {item.desc}
                 </Text>
-                <TouchableOpacity style={[styles.addListBtn, {backgroundColor: colors.textPrimary}]}>
-                  <Text style={[styles.addListText, {color: colors.textInverse}]}>+ Add to List</Text>
+                <TouchableOpacity style={[styles.addListBtn, { backgroundColor: colors.textPrimary }]}>
+                  <Text style={[styles.addListText, { color: colors.textInverse }]}>+ Add to List</Text>
                 </TouchableOpacity>
               </View>
             </View>
           ))}
         </View>
 
-        <View style={{height: 40}} />
+        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
 
   // Section Headers
   sectionTitle: {
-    fontSize: RFValue(14),
+    fontSize: RFValue(13),
     fontFamily: FontFamily.bold,
   },
   sectionTitleRow: {
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 12,
     flexDirection: "row",
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
     shadowRadius: 2,
     elevation: 2,

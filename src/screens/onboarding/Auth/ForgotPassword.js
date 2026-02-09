@@ -356,7 +356,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
               </Text>
               <TextInput
                 label="Email"
-                placeholder="samrana@example.com"
+                placeholder="buylist@example.com"
                 value={email}
                 onChangeText={handleEmailChange}
                 leftIcon="mail"

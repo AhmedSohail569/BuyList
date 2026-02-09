@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, { useState } from "react";
 import {
   View,
   TouchableOpacity,
@@ -6,18 +6,20 @@ import {
   StyleSheet,
   FlatList,
 } from "react-native";
-import {ProgressBar} from "react-native-paper";
-import {Text} from "~components/Common";
-import {useTheme} from "~context/ThemeContext";
+import { ProgressBar } from "react-native-paper";
+import { RFValue } from "react-native-responsive-fontsize";
+import { Text } from "~components/Common";
+import { useTheme } from "~context/ThemeContext";
+import { FontFamily } from "~theme/fonts";
 
-const ListCard = ({item, onPress, colors, isDark}) => (
+const ListCard = ({ item, onPress, colors, isDark }) => (
   <TouchableOpacity
-    style={[styles.listCard, {backgroundColor: colors.card, shadowColor: colors.shadowColor}]}
+    style={[styles.listCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}
     onPress={() => onPress(item.id)}
     activeOpacity={0.7}>
     <View style={styles.listHeader}>
       <View style={styles.listTitleContainer}>
-        <Text variant="body" style={[styles.listTitle, {color: colors.textPrimary}]}>
+        <Text variant="body" style={[styles.listTitle, { color: colors.textPrimary }]}>
           {item.name}
         </Text>
         <Text variant="caption" color="muted" style={styles.listSubtitle}>
@@ -31,8 +33,8 @@ const ListCard = ({item, onPress, colors, isDark}) => (
             {item.members.map((member, index) => (
               <Image
                 key={member.id}
-                source={{uri: member.avatar}}
-                style={[styles.avatar, {marginLeft: index > 0 ? -12 : 0, borderColor: colors.card}]}
+                source={{ uri: member.avatar }}
+                style={[styles.avatar, { marginLeft: index > 0 ? -12 : 0, borderColor: colors.card }]}
               />
             ))}
           </View>
@@ -45,7 +47,7 @@ const ListCard = ({item, onPress, colors, isDark}) => (
       <ProgressBar
         progress={item.progress / 100}
         color={colors.primary}
-        style={[styles.progressBar, {backgroundColor: colors.progressTrack}]}
+        style={[styles.progressBar, { backgroundColor: colors.progressTrack }]}
       />
     </View>
 
@@ -54,15 +56,15 @@ const ListCard = ({item, onPress, colors, isDark}) => (
       <Text variant="caption" color="muted" style={styles.statsText}>
         {item.completedItems}/{item.totalItems} items
       </Text>
-      <Text variant="caption" style={[styles.statsText, {color: colors.primary}]}>
+      <Text variant="caption" style={[styles.statsText, { color: colors.primary }]}>
         {item.progress}% Done
       </Text>
     </View>
   </TouchableOpacity>
 );
 
-const YourLists = ({navigation}) => {
-  const {colors, isDark} = useTheme();
+const YourLists = ({ navigation }) => {
+  const { colors, isDark } = useTheme();
   const [lists] = useState([
     {
       id: 1,
@@ -72,8 +74,8 @@ const YourLists = ({navigation}) => {
       completedItems: 12,
       progress: 65,
       members: [
-        {id: 1, avatar: "https://i.pravatar.cc/150?u=user1"},
-        {id: 2, avatar: "https://i.pravatar.cc/150?u=user2"},
+        { id: 1, avatar: "https://i.pravatar.cc/150?u=user1" },
+        { id: 2, avatar: "https://i.pravatar.cc/150?u=user2" },
       ],
     },
     {
@@ -84,8 +86,8 @@ const YourLists = ({navigation}) => {
       completedItems: 16,
       progress: 67,
       members: [
-        {id: 1, avatar: "https://i.pravatar.cc/150?u=user1"},
-        {id: 3, avatar: "https://i.pravatar.cc/150?u=user3"},
+        { id: 1, avatar: "https://i.pravatar.cc/150?u=user1" },
+        { id: 3, avatar: "https://i.pravatar.cc/150?u=user3" },
       ],
     },
     {
@@ -96,8 +98,8 @@ const YourLists = ({navigation}) => {
       completedItems: 10,
       progress: 67,
       members: [
-        {id: 1, avatar: "https://i.pravatar.cc/150?u=user1"},
-        {id: 2, avatar: "https://i.pravatar.cc/150?u=user2"},
+        { id: 1, avatar: "https://i.pravatar.cc/150?u=user1" },
+        { id: 2, avatar: "https://i.pravatar.cc/150?u=user2" },
       ],
     },
   ]);
@@ -113,14 +115,14 @@ const YourLists = ({navigation}) => {
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text variant="sectionTitle" style={[styles.sectionTitle, {color: colors.textPrimary}]}>
+        <Text variant="sectionTitle" style={[styles.sectionTitle, { color: colors.textPrimary }]}>
           Your Lists
         </Text>
       </View>
 
       <FlatList
         data={lists}
-        renderItem={({item}) => (
+        renderItem={({ item }) => (
           <ListCard item={item} onPress={handleListPress} colors={colors} isDark={isDark} />
         )}
         keyExtractor={item => item.id.toString()}
@@ -152,7 +154,8 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   sectionTitle: {
-    fontWeight: "700",
+    fontSize: RFValue(13),
+    fontFamily: FontFamily.bold,
   },
   listsList: {
     paddingBottom: 0,
@@ -162,7 +165,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
@@ -178,7 +181,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   listTitle: {
-    fontWeight: "700",
+    fontFamily: FontFamily.bold,
     marginBottom: 4,
   },
   listSubtitle: {
@@ -219,7 +222,7 @@ const styles = StyleSheet.create({
   },
   viewAllText: {
     textAlign: "center",
-    fontWeight: "500",
+    fontFamily: FontFamily.medium,
   },
 });
 

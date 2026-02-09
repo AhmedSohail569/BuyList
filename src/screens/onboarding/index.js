@@ -6,15 +6,15 @@ import {
   Dimensions,
   Image,
 } from "react-native";
-import {useSafeAreaInsets} from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import {RFValue} from "react-native-responsive-fontsize";
-import {Button, Text} from "~components/Common";
-import {Images} from "~assets";
+import { RFPercentage, RFValue } from "react-native-responsive-fontsize";
+import { Button, Text } from "~components/Common";
+import { Images } from "~assets";
 
-const {height} = Dimensions.get("window");
+const { height } = Dimensions.get("window");
 
-const OnboardingScreen = ({navigation}) => {
+const OnboardingScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
 
   return (
@@ -27,24 +27,24 @@ const OnboardingScreen = ({navigation}) => {
         <View
           style={[
             styles.content,
-            {paddingBottom: insets.bottom + RFValue(24)},
+            { paddingBottom: insets.bottom + RFValue(24) },
           ]}>
           {/* Icon */}
           <View style={styles.iconWrapper}>
             <Image
               source={Images.buyListIcon}
-              style={{width: 80, height: 80}}
+              style={{ width: 80, height: 80 }}
               resizeMode="contain"
             />
           </View>
 
           {/* Title */}
-          <Text variant="screenTitle" style={[styles.title, {color: "#FFFFFF"}]}>
+          <Text variant="screenTitle" style={[styles.title, { color: "#FFFFFF" }]}>
             Welcome to your{"\n"}shopping hub
           </Text>
 
           {/* Subtitle */}
-          <Text variant="bodySmall" style={[styles.subtitle, {color: "#9CA3AF"}]}>
+          <Text variant="bodySmall" style={[styles.subtitle, { color: "#9CA3AF" }]}>
             Shop smarter together with BuyList
           </Text>
 
@@ -69,6 +69,7 @@ const styles = StyleSheet.create({
   image: {
     flex: 1,
     justifyContent: "flex-end",
+    marginBottom: RFPercentage(4),
   },
 
   imageStyle: {

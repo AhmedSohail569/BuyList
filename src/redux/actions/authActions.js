@@ -43,21 +43,13 @@ export const signupUser = createAsyncThunk(
   "auth/registerUser",
   async ({ username, email, password, phone, zone, area }, { rejectWithValue }) => {
     try {
-      console.log(
-        "name, email, password, phone",
-        username,
-        email,
-        password,
-        phone,
-      );
-
       const response = await axios.post("/auth/signup", {
         username,
         email,
         password,
         phone,
-        zone: zone || "Karachi",
-        area: area || "Gulshan",
+        zone: zone || "",
+        area: area || "",
       });
       console.log("response", response);
       const data = response.data;
