@@ -289,6 +289,7 @@ const CircleTab = ({ navigation }) => {
 
   // Get circle name or default
   const circleName = ownedCircle?.name || "Family Home";
+  const homeLocation = ownedCircle?.owner?.zone || "Set your home location";
   const activityItems = useMemo(() => {
     const source = Array.isArray(recentActivities) ? recentActivities : [];
     return source.slice(0, 5).map(normalizeActivity);
@@ -362,8 +363,8 @@ const CircleTab = ({ navigation }) => {
 
           <View style={[styles.addressRow, { backgroundColor: colors.surfaceSecondary }]}>
             <MapPin size={16} color={colors.primary} style={{ marginRight: 6 }} />
-            <Text style={[styles.addressText, { color: colors.textSecondary }]}>
-              123 Maple Street, Springfield
+            <Text style={[styles.addressText, { color: colors.textSecondary, maxWidth: "80%" }]} numberOfLines={1} ellipsizeMode="tail">
+              {homeLocation}
             </Text>
             <TouchableOpacity style={{ marginLeft: "auto" }}>
               <Pencil size={14} color={colors.iconMuted} />

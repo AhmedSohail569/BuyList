@@ -165,6 +165,32 @@ export const resendOTP = createAsyncThunk(
   },
 );
 
+// Update user zone (home location)
+export const updateZone = createAsyncThunk(
+  "auth/updateZone",
+  async ({ zone }, { rejectWithValue }) => {
+    try {
+      if (!zone?.trim()) {
+        return rejectWithValue("Location is required");
+      }
+
+      const response = await axios.put("/auth/update-zone", {
+        zone: zone.trim(),
+      });
+
+      console.log("response", response);
+
+      return {
+        zone: zone.trim(),
+        data: response.data?.data || response.data,
+      };
+    } catch (err) {
+      const message = getErrorMessage(err);
+      return rejectWithValue(message);
+    }
+  },
+);
+
 // Resend OTP for reset password
 export const resendResetOTP = createAsyncThunk(
   "auth/resendResetOTP",

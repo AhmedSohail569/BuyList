@@ -92,6 +92,7 @@ const LocationPermissionGate = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [permissionGranted, promptDismissed]);
 
+
     /**
      * Animate modal in
      */

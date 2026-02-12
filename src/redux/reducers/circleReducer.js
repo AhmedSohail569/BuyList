@@ -13,6 +13,7 @@ import {
   updateMemberRole,
   updateCircleDefaultMemberRole,
 } from "../actions/circleActions";
+import { updateZone } from "../actions/authActions";
 import { logout } from "./authReducer";
 
 // ============================================
@@ -348,6 +349,22 @@ const circleSlice = createSlice({
       .addCase(updateCircleDefaultMemberRole.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+
+      // ============================================
+      // 9️⃣ UPDATE ZONE (Home Location)
+      // ============================================
+      .addCase(updateZone.fulfilled, (state, action) => {
+        // Update ownedCircle.owner.zone to reflect changes immediately
+        if (state.ownedCircle && state.ownedCircle.owner) {
+          state.ownedCircle = {
+            ...state.ownedCircle,
+            owner: {
+              ...state.ownedCircle.owner,
+              zone: action.payload.zone,
+            },
+          };
+        }
       })
 
       // Clear circle state on logout

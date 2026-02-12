@@ -92,12 +92,23 @@ const CircleSettingsScreen = ({ onQuickAction, navigation }) => {
     ownedCircle?.name || "Family Home",
   );
 
+  const [homeLocation, setHomeLocation] = useState(
+    ownedCircle?.owner?.zone || "Family Home",
+  );
+
   // Update circle name when ownedCircle changes
   useEffect(() => {
     if (ownedCircle?.name) {
       setCircleName(ownedCircle.name);
     }
   }, [ownedCircle?.name]);
+
+  // Update home location when ownedCircle changes
+  useEffect(() => {
+    if (ownedCircle?.owner?.zone) {
+      setHomeLocation(ownedCircle.owner.zone);
+    }
+  }, [ownedCircle?.owner?.zone]);
 
   // Initialize/update default role from Redux state (if backend provides it)
   useEffect(() => {
@@ -280,9 +291,10 @@ const CircleSettingsScreen = ({ onQuickAction, navigation }) => {
             iconBgColor={isDark ? "rgba(249, 115, 22, 0.2)" : "#ffedd5"}
             iconColor="#f97316"
             title="Home Location"
-            subtitle="123 Maple Street, Springfield"
+            subtitle={homeLocation || "Set your home location"}
             isLast
             colors={colors}
+            onPress={() => navigation.navigate("ChangeHomeLocation")}
           />
         </View>
 

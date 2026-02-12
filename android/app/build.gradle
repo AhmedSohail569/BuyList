@@ -118,7 +118,10 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 
-      implementation(platform("com.google.firebase:firebase-bom:34.7.0"))
+    // implementation "com.google.android.gms:play-services-maps:19.1.0"
+    // implementation "com.google.android.gms:play-services-location:21.0.1"
+
+    implementation(platform("com.google.firebase:firebase-bom:34.7.0"))
 
     implementation project(':react-native-vector-icons')
 

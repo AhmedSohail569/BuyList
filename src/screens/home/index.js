@@ -198,10 +198,17 @@ const FOR_YOU = [
 
 const HomeTab = ({ onQuickAction, navigation }) => {
   const dispatch = useDispatch();
+
   const { colors, isDark } = useTheme();
   const { user } = useSelector(state => state.auth);
   const { profile } = useSelector(state => state.profile);
   const { recentActivities } = useSelector(state => state.lists);
+
+  const { latitude, longitude } = useSelector((state) => state.location);
+
+  console.log("latitude=>", latitude);
+  console.log("longitude=>", longitude);
+
 
 
   // Fetch recent activities on mount

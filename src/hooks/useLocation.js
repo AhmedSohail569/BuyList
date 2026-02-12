@@ -1,7 +1,7 @@
 /**
  * useLocation Hook
  * Handles location permissions, geolocation, and reverse geocoding
- * Supports both iOS and Android platforms
+ * Uses Google Geocoding API for reliable address resolution
  */
 import { useState, useCallback, useRef } from "react";
 import { Platform, Alert, Linking } from "react-native";
@@ -13,6 +13,11 @@ import {
     RESULTS,
     openSettings,
 } from "react-native-permissions";
+import {
+    reverseGeocode,
+    getCityFromComponents,
+    getAreaFromComponents,
+} from "~utils/geocoding";
 
 // Geolocation config
 const GEOLOCATION_OPTIONS = {
@@ -20,9 +25,6 @@ const GEOLOCATION_OPTIONS = {
     timeout: 20000,
     maximumAge: 10000,
 };
-
-// Nominatim reverse geocoding (free, no API key)
-const NOMINATIM_URL = "https://nominatim.openstreetmap.org/reverse";
 
 /**
  * Get the appropriate location permission based on platform
@@ -49,53 +51,6 @@ const showSettingsAlert = () => {
             },
         ],
     );
-};
-
-/**
- * Reverse geocode coordinates to city and area using Nominatim
- */
-const reverseGeocode = async (latitude, longitude) => {
-    try {
-        const response = await fetch(
-            `${NOMINATIM_URL}?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1&zoom=16`,
-            {
-                headers: {
-                    "Accept-Language": "en",
-                    "User-Agent": "BuyList/1.0",
-                },
-            },
-        );
-
-        if (!response.ok) {
-            throw new Error("Geocoding request failed");
-        }
-
-        const data = await response.json();
-        const address = data?.address || {};
-
-        // Extract city (try multiple fields for reliability)
-        const city =
-            address.city ||
-            address.town ||
-            address.village ||
-            address.municipality ||
-            address.county ||
-            "";
-
-        // Extract area/locality
-        const area =
-            address.suburb ||
-            address.neighbourhood ||
-            address.quarter ||
-            address.hamlet ||
-            address.district ||
-            "";
-
-        return { city, area };
-    } catch (err) {
-        console.error("Reverse geocoding error:", err);
-        return { city: "", area: "" };
-    }
 };
 
 /**
@@ -217,23 +172,43 @@ const useLocation = () => {
 
             setCoordinates(position);
 
-            // Step 3: Reverse geocode
-            const { city, area } = await reverseGeocode(
-                position.latitude,
-                position.longitude,
-            );
+            // Step 3: Reverse geocode using Google API
+            try {
+                const geoResult = await reverseGeocode(
+                    position.latitude,
+                    position.longitude,
+                );
 
-            const result = {
-                latitude: position.latitude,
-                longitude: position.longitude,
-                city,
-                area,
-            };
+                const city = getCityFromComponents(geoResult.address_components);
+                const area = getAreaFromComponents(geoResult.address_components);
 
-            setLocationData(result);
-            setLoading(false);
-            isFetchingRef.current = false;
-            return result;
+                const result = {
+                    latitude: position.latitude,
+                    longitude: position.longitude,
+                    city,
+                    area,
+                };
+
+                setLocationData(result);
+                setLoading(false);
+                isFetchingRef.current = false;
+                return result;
+            } catch (geoErr) {
+                // If geocoding fails, still return coordinates without city/area
+                console.error("Reverse geocoding error:", geoErr);
+                
+                const result = {
+                    latitude: position.latitude,
+                    longitude: position.longitude,
+                    city: "",
+                    area: "",
+                };
+
+                setLocationData(result);
+                setLoading(false);
+                isFetchingRef.current = false;
+                return result;
+            }
         } catch (err) {
             console.error("Location detection error:", err);
             setError("Something went wrong while detecting your location");

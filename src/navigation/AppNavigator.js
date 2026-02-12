@@ -9,6 +9,7 @@ import EditProfileScreen from "~screens/settings/EditProfile";
 import NotificationsScreen from "~screens/settings/Notifications";
 import SecurityScreen from "~screens/settings/AccountSecurity";
 import CircleSettingsScreen from "~screens/settings/CircleSettings";
+import ChangeHomeLocationScreen from "~screens/settings/ChangeHomeLocation";
 
 import LegalScreen from "~screens/settings/Legal";
 import ListDetailsScreen from "~screens/lists/ListDetails";
@@ -70,6 +71,11 @@ export default () => {
         <Stack.Screen
           name="CircleSettings"
           component={CircleSettingsScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="ChangeHomeLocation"
+          component={ChangeHomeLocationScreen}
           options={{ headerShown: false }}
         />
 

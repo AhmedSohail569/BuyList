@@ -7,6 +7,7 @@ import {
   resendOTP,
   resendResetOTP,
   signupUser,
+  updateZone,
   verifyEmail,
   verifyResetToken,
 } from "../actions/authActions";
@@ -247,6 +248,13 @@ const authSlice = createSlice({
       .addCase(resendResetOTP.rejected, (state, action) => {
         state.resendResetOTPLoading = false;
         state.resendResetOTPError = action.payload;
+      })
+
+      // updateZone
+      .addCase(updateZone.fulfilled, (state, action) => {
+        if (state.user) {
+          state.user.zone = action.payload.zone;
+        }
       });
   },
 });
