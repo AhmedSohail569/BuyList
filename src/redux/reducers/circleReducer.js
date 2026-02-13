@@ -13,6 +13,11 @@ import {
   updateMemberRole,
   updateCircleDefaultMemberRole,
 } from "../actions/circleActions";
+import {
+  getCircleInviteLink,
+  getCircleInviteQR,
+  joinCircleViaInvite,
+} from "../actions/inviteActions";
 import { updateZone } from "../actions/authActions";
 import { logout } from "./authReducer";
 
@@ -38,6 +43,14 @@ const initialState = {
 
   // Track which circles have loaded members (avoid refetching)
   loadedMemberCircleIds: [],
+
+  // Invite state
+  inviteCode: null,
+  inviteLink: null,
+  inviteQR: null,
+  inviteLinkLoading: false,
+  inviteQRLoading: false,
+  joiningCircle: false,
 };
 
 // ============================================
@@ -365,6 +378,63 @@ const circleSlice = createSlice({
             },
           };
         }
+      })
+
+      // ============================================
+      // 🔟 GET INVITE LINK
+      // ============================================
+      .addCase(getCircleInviteLink.pending, (state) => {
+        state.inviteLinkLoading = true;
+        state.error = null;
+      })
+      .addCase(getCircleInviteLink.fulfilled, (state, action) => {
+        state.inviteLinkLoading = false;
+        state.inviteCode = action.payload.inviteCode;
+        state.inviteLink = action.payload.inviteLink;
+      })
+      .addCase(getCircleInviteLink.rejected, (state, action) => {
+        state.inviteLinkLoading = false;
+        state.error = action.payload;
+      })
+
+      // ============================================
+      // 1️⃣1️⃣ GET INVITE QR CODE
+      // ============================================
+      .addCase(getCircleInviteQR.pending, (state) => {
+        state.inviteQRLoading = true;
+        state.error = null;
+      })
+      .addCase(getCircleInviteQR.fulfilled, (state, action) => {
+        state.inviteQRLoading = false;
+        state.inviteQR = action.payload.qrCode;
+      })
+      .addCase(getCircleInviteQR.rejected, (state, action) => {
+        state.inviteQRLoading = false;
+        state.error = action.payload;
+      })
+
+      // ============================================
+      // 1️⃣2️⃣ JOIN CIRCLE VIA INVITE
+      // ============================================
+      .addCase(joinCircleViaInvite.pending, (state) => {
+        state.joiningCircle = true;
+        state.error = null;
+      })
+      .addCase(joinCircleViaInvite.fulfilled, (state, action) => {
+        state.joiningCircle = false;
+        // Add the new circle to allCircles
+        if (action.payload.circle) {
+          const circleExists = state.allCircles.some(
+            (c) => c._id === action.payload.circle._id || c.id === action.payload.circle.id
+          );
+          if (!circleExists) {
+            state.allCircles.push(action.payload.circle);
+          }
+        }
+      })
+      .addCase(joinCircleViaInvite.rejected, (state, action) => {
+        state.joiningCircle = false;
+        state.error = action.payload;
       })
 
       // Clear circle state on logout

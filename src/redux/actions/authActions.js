@@ -2,10 +2,13 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 
 import { getErrorMessage, storeAccessToken } from "~utils";
 import axios from "~utils/axiosInstance";
+import { getPendingInvite, clearPendingInvite } from "~utils/deepLinking";
+import { joinCircleViaInvite } from "./inviteActions";
+import Toast from "react-native-toast-message";
 
 export const loginUser = createAsyncThunk(
   "auth/loginUser",
-  async ({ email, password }, { rejectWithValue }) => {
+  async ({ email, password }, { rejectWithValue, dispatch }) => {
     try {
       const response = await axios.post("/auth/login", { email, password });
 
@@ -15,6 +18,33 @@ export const loginUser = createAsyncThunk(
 
       // Save token in AsyncStorage
       await storeAccessToken(data?.data?.token);
+
+      // Check for pending invite (deferred deep linking)
+      const pendingInvite = await getPendingInvite();
+      if (pendingInvite) {
+        console.log("Found pending invite, auto-joining circle:", pendingInvite);
+        
+        // Short delay to ensure auth token is set
+        setTimeout(async () => {
+          try {
+            await dispatch(joinCircleViaInvite({ inviteCode: pendingInvite })).unwrap();
+            await clearPendingInvite();
+            
+            Toast.show({
+              type: "success",
+              text1: "Joined Circle!",
+              text2: "You've been automatically added to the circle",
+            });
+          } catch (err) {
+            console.error("Auto-join failed:", err);
+            Toast.show({
+              type: "error",
+              text1: "Couldn't Join Circle",
+              text2: "You can join manually from the invite link",
+            });
+          }
+        }, 1000);
+      }
 
       return data?.data || data;
     } catch (err) {

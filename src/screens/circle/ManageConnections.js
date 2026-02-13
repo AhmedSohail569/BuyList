@@ -5,6 +5,9 @@ import {
   Image,
   StyleSheet,
   TextInput,
+  Clipboard,
+  Share,
+  ActivityIndicator,
 } from "react-native";
 import {
   Search,
@@ -27,6 +30,7 @@ import {
   updateMemberRole,
   removeMemberFromCircle,
 } from "~redux/actions/circleActions";
+import { getCircleInviteLink } from "~redux/actions/inviteActions";
 import { useAlert } from "~context/AlertContext";
 import { useTheme } from "~context/ThemeContext";
 
@@ -148,7 +152,7 @@ const Avatar = ({ image, name, size = 40, colors }) => {
 const ManageConnectionsScreen = ({ navigation, route }) => {
   const dispatch = useDispatch();
   const { colors } = useTheme();
-  const { ownedCircle, loading } = useSelector(state => state.circles);
+  const { ownedCircle, loading, inviteLink, inviteLinkLoading } = useSelector(state => state.circles);
   const { showAlert, showError } = useAlert();
   const { tab } = route.params || {};
   const [activeTab, setActiveTab] = useState(tab || "Connections");
@@ -165,8 +169,66 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
     }
   }, [dispatch, ownedCircle]);
 
+  // Generate invite link when switching to Invite tab
+  useEffect(() => {
+    if (activeTab === "Invite" && circleId && !inviteLink) {
+      dispatch(getCircleInviteLink({ circleId }));
+    }
+  }, [activeTab, circleId, inviteLink, dispatch]);
+
   // Build connections from ownedCircle data
   const connections = useMemo(() => buildConnections(ownedCircle, colors), [ownedCircle, colors]);
+
+  // ============================================
+  // Invite Handlers
+  // ============================================
+
+  // Copy invite link to clipboard
+  const handleCopyLink = useCallback(() => {
+    if (!inviteLink) {
+      Toast.show({
+        type: "error",
+        text1: "No Invite Link",
+        text2: "Please wait while we generate your invite link",
+      });
+      return;
+    }
+
+    Clipboard.setString(inviteLink);
+    Toast.show({
+      type: "success",
+      text1: "Link Copied!",
+      text2: "Invite link copied to clipboard",
+    });
+  }, [inviteLink]);
+
+  // Share invite link via native share sheet
+  const handleShareLink = useCallback(async () => {
+    if (!inviteLink) {
+      Toast.show({
+        type: "error",
+        text1: "No Invite Link",
+        text2: "Please wait while we generate your invite link",
+      });
+      return;
+    }
+
+    try {
+      const circleName = ownedCircle?.name || "our circle";
+      await Share.share({
+        message: `Join ${circleName} on BuyList! ${inviteLink}`,
+        url: inviteLink,
+        title: `Join ${circleName}`,
+      });
+    } catch (err) {
+      console.error("Share error:", err);
+      // User cancelled share, no need to show error
+    }
+  }, [inviteLink, ownedCircle]);
+
+  // ============================================
+  // Member Management Handlers
+  // ============================================
 
   // Handle menu toggle with proper state management
   const handleMenuToggle = useCallback(
@@ -419,22 +481,42 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
                 <UserPlus size={24} color={colors.primary} />
               </View>
 
-              <Text style={[styles.inviteTitle, { color: colors.textPrimary }]}>Invite to Family Home</Text>
+              <Text style={[styles.inviteTitle, { color: colors.textPrimary }]}>Invite to {ownedCircle?.name || "Circle"}</Text>
               <Text style={[styles.inviteDesc, { color: colors.textSecondary }]}>
                 Share the link below to let others join your shopping circle.
-                They will need the app installed.
+                The app will automatically open if they have it installed.
               </Text>
 
               {/* Copy Link Box */}
               <View style={[styles.copyBox, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
                 <LinkIcon size={16} color={colors.iconMuted} style={{ marginRight: 8 }} />
-                <Text style={[styles.linkText, { color: colors.textSecondary }]} numberOfLines={1}>
-                  buylist.app/join/fam-123
-                </Text>
-                <TouchableOpacity style={[styles.copyButton, { backgroundColor: colors.primary }]}>
-                  <Text style={styles.copyButtonText}>Copy</Text>
-                </TouchableOpacity>
+                {inviteLinkLoading ? (
+                  <View style={{ flex: 1, alignItems: "center" }}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  </View>
+                ) : (
+                  <>
+                    <Text style={[styles.linkText, { color: colors.textSecondary }]} numberOfLines={1}>
+                      {inviteLink || "Generating link..."}
+                    </Text>
+                    <TouchableOpacity 
+                      style={[styles.copyButton, { backgroundColor: colors.primary }]}
+                      onPress={handleCopyLink}
+                      disabled={!inviteLink}>
+                      <Text style={styles.copyButtonText}>Copy</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
+
+              {/* Share Button */}
+              {!inviteLinkLoading && inviteLink && (
+                <TouchableOpacity 
+                  style={[styles.shareButton, { backgroundColor: colors.primary }]}
+                  onPress={handleShareLink}>
+                  <Text style={styles.shareButtonText}>Share Invite Link</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Bottom Action Grid */}
@@ -611,6 +693,19 @@ const styles = StyleSheet.create({
   },
   copyButtonText: {
     fontSize: RFValue(10),
+    fontFamily: FontFamily.bold,
+    color: "#fff",
+  },
+  shareButton: {
+    marginTop: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    width: "100%",
+    alignItems: "center",
+  },
+  shareButtonText: {
+    fontSize: RFValue(11),
     fontFamily: FontFamily.bold,
     color: "#fff",
   },

@@ -39,6 +39,27 @@
         <action android:name="android.intent.action.MAIN" />
         <category android:name="android.intent.category.LAUNCHER" />
       </intent-filter>
+      
+      <!-- Deep Linking for Circle Invites -->
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <!-- Custom scheme -->
+        <data android:scheme="buylist" android:host="invite" />
+      </intent-filter>
+      
+      <!-- App Links (if you have a verified domain) -->
+      <intent-filter android:autoVerify="true">
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <!-- HTTPS links - replace buylist.app with your actual domain -->
+        <data
+          android:scheme="https"
+          android:host="buylist.app"
+          android:pathPrefix="/invite" />
+      </intent-filter>
     </activity>
   </application>
 </manifest>

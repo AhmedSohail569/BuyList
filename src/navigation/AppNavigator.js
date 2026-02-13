@@ -2,6 +2,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import AppLayout from "~containers/layouts/AppLayout";
 import LocationPermissionGate from "~components/LocationPermissionGate";
+import useDeepLinking from "~hooks/useDeepLinking";
 
 import TabNavigator from "./TabNavigator";
 import SearchResultsScreen from "~screens/search/SearchResults";
@@ -20,6 +21,9 @@ import AIRecommendationsScreen from "~screens/home/AIRecommendations";
 const Stack = createNativeStackNavigator();
 
 export default () => {
+  // Initialize deep linking listener (now inside NavigationContainer)
+  useDeepLinking();
+
   return (
     <AppLayout>
       {/* Location permission check for logged-in users */}
