@@ -1,6 +1,13 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 
-import { getErrorMessage, storeAccessToken } from "~utils";
+import { 
+  getErrorMessage, 
+  storeAccessToken, 
+  storeRefreshToken,
+  getRefreshToken,
+  clearAllTokens,
+  getDeviceInfo,
+} from "~utils";
 import axios from "~utils/axiosInstance";
 import { getPendingInvite, clearPendingInvite } from "~utils/deepLinking";
 import { joinCircleViaInvite } from "./inviteActions";
@@ -10,14 +17,24 @@ export const loginUser = createAsyncThunk(
   "auth/loginUser",
   async ({ email, password }, { rejectWithValue, dispatch }) => {
     try {
-      const response = await axios.post("/auth/login", { email, password });
+      // Get device information
+      const deviceInfo = await getDeviceInfo();
+      console.log("📱 Device Info:", deviceInfo);
+
+      // Send login request with device info
+      const response = await axios.post("/auth/login", { 
+        email, 
+        password,
+        deviceInfo,
+      });
 
       const data = response.data;
 
       console.log("response", response);
 
-      // Save token in AsyncStorage
+      // Save both access and refresh tokens in AsyncStorage
       await storeAccessToken(data?.data?.token);
+      await storeRefreshToken(data?.data?.refreshToken);
 
       // Check for pending invite (deferred deep linking)
       const pendingInvite = await getPendingInvite();
@@ -234,6 +251,61 @@ export const resendResetOTP = createAsyncThunk(
     } catch (err) {
       const message = getErrorMessage(err);
       return rejectWithValue(message);
+    }
+  },
+);
+
+// ============================================
+// REFRESH ACCESS TOKEN
+// Automatically called by axios interceptor when access token expires
+// ============================================
+export const refreshAccessToken = createAsyncThunk(
+  "auth/refreshAccessToken",
+  async (_, { rejectWithValue }) => {
+    try {
+      const refreshToken = await getRefreshToken();
+      
+      if (!refreshToken) {
+        throw new Error("No refresh token available");
+      }
+
+      // Call refresh token endpoint
+      const response = await axios.post("/auth/refresh-token", {
+        refreshToken,
+      });
+
+      console.log('response', response)
+
+      const newAccessToken = response.data?.data?.accessToken || response.data?.accessToken;
+      const newRefreshToken = response.data?.data?.refreshToken || response.data?.refreshToken;
+      
+      if (!newAccessToken) {
+        throw new Error("No access token in response");
+      }
+
+      // Store new access token
+      await storeAccessToken(newAccessToken);
+
+      // Store new refresh token (token rotation for security)
+      if (newRefreshToken) {
+        await storeRefreshToken(newRefreshToken);
+        console.log("✅ Refresh token rotated successfully");
+      }
+
+      console.log("✅ Access token refreshed successfully");
+
+      return {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken, // Return new refresh token
+      };
+    } catch (err) {
+      console.error("❌ Token refresh failed:", err);
+      
+      // Clear all tokens on refresh failure
+      await clearAllTokens();
+      
+      const message = getErrorMessage(err);
+      return rejectWithValue(message || "Failed to refresh token");
     }
   },
 );

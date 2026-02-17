@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import DeviceInfo from "react-native-device-info";
 
 export const storeAccessToken = async token => {
   try {
@@ -25,6 +26,69 @@ export const clearAccessToken = async () => {
     await AsyncStorage.removeItem("accessToken");
   } catch (err) {
     console.log("❌ Error removing token:", err);
+  }
+};
+
+// ============================================
+// REFRESH TOKEN UTILITIES
+// ============================================
+
+export const storeRefreshToken = async token => {
+  try {
+    if (token) {
+      await AsyncStorage.setItem("refreshToken", token);
+      console.log("✅ Refresh token saved to AsyncStorage");
+    }
+  } catch (error) {
+    console.log("❌ Error saving refresh token:", error);
+  }
+};
+
+export const getRefreshToken = async () => {
+  try {
+    return await AsyncStorage.getItem("refreshToken");
+  } catch (err) {
+    console.log("❌ Error getting refresh token:", err);
+    return null;
+  }
+};
+
+export const clearRefreshToken = async () => {
+  try {
+    await AsyncStorage.removeItem("refreshToken");
+    console.log("✅ Refresh token cleared");
+  } catch (err) {
+    console.log("❌ Error removing refresh token:", err);
+  }
+};
+
+/**
+ * Clear both access and refresh tokens
+ * Use this on logout or when refresh token expires
+ */
+export const clearAllTokens = async () => {
+  try {
+    await AsyncStorage.multiRemove(["accessToken", "refreshToken"]);
+    console.log("✅ All tokens cleared");
+  } catch (err) {
+    console.log("❌ Error clearing tokens:", err);
+  }
+};
+
+/**
+ * Get device information for session tracking
+ * Returns a simple string like: "iPhone 13 Pro" or "Samsung Galaxy S21"
+ * @returns {Promise<string>} Device model name
+ */
+export const getDeviceInfo = async () => {
+  try {
+    // Get device model - returns string like "iPhone 13 Pro"
+    const model = await DeviceInfo.getModel();
+    console.log("📱 Device Model:", model);
+    return model || "Unknown Device";
+  } catch (error) {
+    console.error("❌ Error getting device info:", error);
+    return "Unknown Device";
   }
 };
 

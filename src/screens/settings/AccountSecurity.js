@@ -1,24 +1,35 @@
-import {useState} from "react";
+import {useState, useEffect} from "react";
 import {
   View,
   StyleSheet,
   Switch,
   TouchableOpacity,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import {
   Lock,
   ShieldCheck,
   Smartphone,
   Laptop,
+  Tablet,
+  Monitor,
   LogOut,
   ChevronRight,
 } from "lucide-react-native";
+import {useDispatch, useSelector} from "react-redux";
 import Header from "~components/Header";
-import {ScrollView, Text} from "~components/Common";
+import {ScrollView, Text, Alert as CustomAlert} from "~components/Common";
 import {RFValue} from "react-native-responsive-fontsize";
 import {FontFamily} from "~theme/fonts";
 import {useTheme} from "~context/ThemeContext";
+import {
+  getSessions,
+  logoutSession,
+  logoutAllOtherSessions,
+  logoutAllSessions,
+} from "~redux/actions/sessionActions";
+import {logout} from "~redux/reducers/authReducer";
 
 const SecurityRow = ({
   icon: Icon,
@@ -66,6 +77,7 @@ const SessionRow = ({
   onLogout,
   isLast,
   colors,
+  loading,
 }) => {
   return (
     <View style={[styles.rowContainer, {backgroundColor: colors.card}, !isLast && [styles.separator, {borderBottomColor: colors.divider}]]}>
@@ -81,7 +93,12 @@ const SessionRow = ({
       {/* Session Info */}
       <View style={styles.textContainer}>
         <View style={styles.deviceHeader}>
-          <Text style={[styles.title, {color: colors.textPrimary}]}>{device}</Text>
+          <Text 
+            style={[styles.title, {color: colors.textPrimary}]} 
+            numberOfLines={1}
+            ellipsizeMode="tail">
+            {device}
+          </Text>
           {isCurrent && (
             <View style={[styles.currentBadge, {backgroundColor: colors.badgeBackground}]}>
               <Text style={[styles.currentBadgeText, {color: colors.badgeText}]}>Current</Text>
@@ -93,17 +110,165 @@ const SessionRow = ({
 
       {/* Logout Action */}
       {!isCurrent && (
-        <TouchableOpacity style={[styles.logoutSmallBtn, {borderColor: colors.logoutBorder}]} onPress={onLogout}>
-          <Text style={[styles.logoutSmallText, {color: colors.error}]}>Log Out</Text>
+        <TouchableOpacity 
+          style={[styles.logoutSmallBtn, {borderColor: colors.logoutBorder}]} 
+          onPress={onLogout}
+          disabled={loading}>
+          {loading ? (
+            <ActivityIndicator size="small" color={colors.error} />
+          ) : (
+            <Text style={[styles.logoutSmallText, {color: colors.error}]}>Log Out</Text>
+          )}
         </TouchableOpacity>
       )}
     </View>
   );
 };
 
+// Helper function to determine device icon
+const getDeviceIcon = (deviceType) => {
+  switch (deviceType?.toLowerCase()) {
+    case 'mobile':
+    case 'phone':
+      return Smartphone;
+    case 'tablet':
+      return Tablet;
+    case 'desktop':
+      return Monitor;
+    case 'laptop':
+      return Laptop;
+    default:
+      return Smartphone;
+  }
+};
+
+// Format last active time
+const formatLastActive = (lastActive) => {
+  if (!lastActive) return 'Unknown';
+  
+  const now = new Date();
+  const activeDate = new Date(lastActive);
+  const diffMs = now - activeDate;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Active now';
+  if (diffMins === 1) return '1 minute ago';
+  if (diffMins < 60) return `${diffMins} minutes ago`;
+  if (diffHours === 1) return '1 hour ago';
+  if (diffHours < 24) return `${diffHours} hours ago`;
+  if (diffDays === 1) return '1 day ago';
+  return `${diffDays} days ago`;
+};
+
 const SecurityScreen = ({onQuickAction, navigation}) => {
   const {colors, isDark} = useTheme();
+  const dispatch = useDispatch();
   const [is2FAEnabled, setIs2FAEnabled] = useState(true);
+
+  // Alert state
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'confirm',
+    buttons: [],
+  });
+
+  // Redux state
+  const {
+    sessions,
+    loading,
+    logoutSessionLoading,
+    logoutOtherLoading,
+    logoutAllLoading,
+  } = useSelector(state => state.session);
+
+  // Fetch sessions on mount
+  useEffect(() => {
+    dispatch(getSessions());
+  }, [dispatch]);
+
+  // Close alert
+  const closeAlert = () => {
+    setAlertConfig(prev => ({ ...prev, visible: false }));
+  };
+
+  // Handle logout single session
+  const handleLogoutSession = (sessionId, deviceName) => {
+    setAlertConfig({
+      visible: true,
+      title: 'End Session',
+      message: `Are you sure you want to logout from ${deviceName}?`,
+      type: 'confirm',
+      buttons: [
+        { text: 'Cancel', style: 'cancel', onPress: closeAlert },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: () => {
+            dispatch(logoutSession({sessionId}));
+            closeAlert();
+          },
+        },
+      ],
+    });
+  };
+
+  // Handle logout all other sessions
+  const handleLogoutOthers = () => {
+    if (sessions.length <= 1) return;
+
+    setAlertConfig({
+      visible: true,
+      title: 'Logout Other Devices',
+      message: 'This will logout all other devices except this one.',
+      type: 'warning',
+      buttons: [
+        { text: 'Cancel', style: 'cancel', onPress: closeAlert },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: () => {
+            dispatch(logoutAllOtherSessions());
+            closeAlert();
+          },
+        },
+      ],
+    });
+  };
+
+  // Handle logout all sessions
+  const handleLogoutAll = () => {
+    setAlertConfig({
+      visible: true,
+      title: 'Logout from All Devices',
+      message: "You will be logged out from all your devices including this one. You'll need to login again.",
+      type: 'error',
+      buttons: [
+        { text: 'Cancel', style: 'cancel', onPress: closeAlert },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Logout from all sessions on backend
+              await dispatch(logoutAllSessions()).unwrap();
+              
+              // Logout from current device (clear local auth state)
+              dispatch(logout());
+              
+              closeAlert();
+            } catch (error) {
+              console.error('Failed to logout from all devices:', error);
+              closeAlert();
+            }
+          },
+        },
+      ],
+    });
+  };
 
   return (
     <View style={[styles.container, {backgroundColor: colors.background}]}>
@@ -149,32 +314,93 @@ const SecurityScreen = ({onQuickAction, navigation}) => {
 
         {/* ACTIVE SESSIONS SECTION */}
         <Text style={[styles.sectionHeader, {color: colors.textMuted}]}>ACTIVE SESSIONS</Text>
-        <View style={[styles.card, {backgroundColor: colors.card, shadowColor: colors.shadowColor}]}>
-          <SessionRow
-            icon={Smartphone}
-            device="iPhone 14 Pro"
-            location="San Francisco, US • Active now"
-            isCurrent={true}
-            colors={colors}
-          />
-          <SessionRow
-            icon={Laptop}
-            device="MacBook Air"
-            location="San Francisco, US • 2 days ago"
-            isLast={true}
-            onLogout={() => console.log("Logging out macbook")}
-            colors={colors}
-          />
-        </View>
+        
+        {loading ? (
+          <View style={[styles.loadingContainer, {backgroundColor: colors.card}]}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[styles.loadingText, {color: colors.textSecondary}]}>
+              Loading sessions...
+            </Text>
+          </View>
+        ) : sessions.length === 0 ? (
+          <View style={[styles.emptyContainer, {backgroundColor: colors.card}]}>
+            <Text style={[styles.emptyText, {color: colors.textSecondary}]}>
+              No active sessions found
+            </Text>
+          </View>
+        ) : (
+          <View style={[styles.card, {backgroundColor: colors.card, shadowColor: colors.shadowColor}]}>
+            {sessions.map((session, index) => (
+              <SessionRow
+                key={session.id}
+                icon={getDeviceIcon(session.deviceType)}
+                device={session.deviceName || session.browser || 'Unknown Device'}
+                location={`${session.location || 'Unknown'} • ${session?.isCurrent ? 'Active Now' : formatLastActive(session.lastUsedAt)}`}
+                isCurrent={session.isCurrent}
+                isLast={index === sessions.length - 1}
+                onLogout={() => handleLogoutSession(session.id, session.deviceName)}
+                colors={colors}
+                loading={logoutSessionLoading}
+              />
+            ))}
+          </View>
+        )}
 
-        {/* SIGN OUT ALL BUTTON */}
-        <TouchableOpacity style={[styles.signOutAllButton, {backgroundColor: colors.logoutBackground, borderColor: colors.logoutBorder}]}>
-          <LogOut size={RFValue(16)} color={colors.error} style={{marginRight: 8}} />
-          <Text style={[styles.signOutAllText, {color: colors.error}]}>Sign out of all devices</Text>
-        </TouchableOpacity>
+        {/* SESSION ACTIONS */}
+        {sessions.length > 1 && (
+          <TouchableOpacity 
+            style={[
+              styles.signOutButton, 
+              { borderColor: colors.logoutBorder}
+            ]}
+            onPress={handleLogoutOthers}
+            disabled={logoutOtherLoading}>
+            {logoutOtherLoading ? (
+              <ActivityIndicator size="small" color={colors.error} />
+            ) : (
+              <>
+                <LogOut size={RFValue(16)} color={colors.error} style={{marginRight: 8}} />
+                <Text style={[styles.signOutText, {color: colors.error}]}>
+                  Logout All Other Devices
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
+
+        {sessions.length > 0 && (
+          <TouchableOpacity 
+            style={[
+              styles.signOutAllButton, 
+              {borderColor: colors.logoutBorder}
+            ]}
+            onPress={handleLogoutAll}
+            disabled={logoutAllLoading}>
+            {logoutAllLoading ? (
+              <ActivityIndicator size="small" color={colors.error} />
+            ) : (
+              <>
+                <LogOut size={RFValue(16)} color={colors.error} style={{marginRight: 8}} />
+                <Text style={[styles.signOutAllText, {color: colors.error}]}>
+                  Logout from All Devices
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
 
         <View style={{height: 40}} />
       </ScrollView>
+
+      {/* Custom Alert */}
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        buttons={alertConfig.buttons}
+        onClose={closeAlert}
+      />
     </View>
   );
 };
@@ -231,7 +457,9 @@ const styles = StyleSheet.create({
   // Helper to darken the icon color based on bg color (approximate logic for this UI)
   iconColor: bgColor => {
     if (bgColor === "#e0f2fe") return "#0284c7"; // Sky-600
+    if (bgColor === "rgba(14, 165, 233, 0.2)") return "#0ea5e9"; // Sky-500
     if (bgColor === "#dcfce7") return "#16a34a"; // Green-600
+    if (bgColor === "rgba(34, 197, 94, 0.2)") return "#22c55e"; // Green-500
     return "#6b7280";
   },
 
@@ -239,11 +467,13 @@ const styles = StyleSheet.create({
   textContainer: {
     flex: 1,
     justifyContent: "center",
+    marginRight: 8,
   },
   title: {
     fontSize: RFValue(12),
     fontFamily: FontFamily.bold,
     marginBottom: 4,
+    flexShrink: 1,
   },
   subtitle: {
     fontSize: RFValue(10),
@@ -273,6 +503,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 4,
+    flexWrap: "nowrap",
+    maxWidth: "100%",
   },
   currentBadge: {
     paddingHorizontal: 6,
@@ -289,13 +521,55 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 6,
+    minWidth: 70,
+    alignItems: "center",
+    justifyContent: "center",
   },
   logoutSmallText: {
     fontSize: RFValue(10),
     fontFamily: FontFamily.bold,
   },
 
-  // Bottom Action Button
+  // Loading & Empty States
+  loadingContainer: {
+    borderRadius: 16,
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: RFValue(11),
+    fontFamily: FontFamily.medium,
+  },
+  emptyContainer: {
+    borderRadius: 16,
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+  },
+  emptyText: {
+    fontSize: RFValue(11),
+    fontFamily: FontFamily.medium,
+  },
+
+  // Bottom Action Buttons
+  signOutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  signOutText: {
+    fontSize: RFValue(12),
+    fontFamily: FontFamily.medium,
+  },
   signOutAllButton: {
     flexDirection: "row",
     alignItems: "center",

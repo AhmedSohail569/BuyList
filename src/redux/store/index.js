@@ -8,6 +8,7 @@ import listReducer from "../reducers/listReducer";
 import locationReducer from "../reducers/locationReducer";
 import profileReducer from "../reducers/profileReducer";
 import searchReducer from "../reducers/searchReducer";
+import sessionReducer from "../reducers/sessionReducer";
 import themeReducer from "../reducers/themeReducer";
 
 const rootReducer = combineReducers({
@@ -17,6 +18,7 @@ const rootReducer = combineReducers({
   location: locationReducer,
   profile: profileReducer,
   search: searchReducer,
+  session: sessionReducer,
   theme: themeReducer,
 });
 

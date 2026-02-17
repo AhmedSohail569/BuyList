@@ -10,12 +10,15 @@ import {
   updateZone,
   verifyEmail,
   verifyResetToken,
+  refreshAccessToken,
 } from "../actions/authActions";
 import { getProfile } from "../actions/profileActions";
+import { clearAllTokens } from "~utils";
 
 const initialState = {
   user: null,
   accessToken: null,
+  refreshToken: null, // NEW: Store refresh token
   loading: false,
   error: null,
   signupSuccess: false, // Track signup success without storing user data
@@ -48,8 +51,13 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     logout(state) {
+      // Clear all tokens from AsyncStorage
+      clearAllTokens();
+      
+      // Clear Redux state
       state.user = null;
       state.accessToken = null;
+      state.refreshToken = null;
       state.error = null;
       state.pendingLoginEmail = null;
       state.pendingLoginPassword = null;
@@ -106,6 +114,7 @@ const authSlice = createSlice({
         state.loading = false;
         state.user = action.payload.user;
         state.accessToken = action.payload.token ?? null;
+        state.refreshToken = action.payload.refreshToken ?? null;
         // Clear pending credentials on successful login
         state.pendingLoginEmail = null;
         state.pendingLoginPassword = null;
@@ -255,6 +264,26 @@ const authSlice = createSlice({
         if (state.user) {
           state.user.zone = action.payload.zone;
         }
+      })
+
+      // ============================================
+      // REFRESH ACCESS TOKEN
+      // ============================================
+      .addCase(refreshAccessToken.fulfilled, (state, action) => {
+        // Update both access and refresh tokens (token rotation)
+        state.accessToken = action.payload.accessToken;
+        if (action.payload.refreshToken) {
+          state.refreshToken = action.payload.refreshToken;
+        }
+        console.log("✅ Tokens updated in Redux state");
+      })
+      .addCase(refreshAccessToken.rejected, (state) => {
+        // Token refresh failed - clear all auth data
+        // User will be logged out by axios interceptor
+        state.accessToken = null;
+        state.refreshToken = null;
+        state.user = null;
+        console.log("❌ Token refresh failed, clearing auth state");
       });
   },
 });
