@@ -297,7 +297,28 @@ const CircleTab = ({ navigation }) => {
 
   // Filter and format shared lists
   const sharedLists = useMemo(() => {
-    const filtered = lists.filter(list => list.type === "shared");
+    const PRIORITY_VALUE = {
+      high: 3,
+      medium: 2,
+      low: 1,
+    };
+
+    const getPriorityValue = (p) => PRIORITY_VALUE[p?.toLowerCase()] || 0;
+
+    const filtered = lists
+      .filter(list => list.type === "shared")
+      .sort((a, b) => {
+        // Primary sort: Priority (descending)
+        const pA = getPriorityValue(a.priority);
+        const pB = getPriorityValue(b.priority);
+        if (pA !== pB) return pB - pA;
+        
+        // Secondary sort: Most recently updated (descending)
+        const dateA = new Date(a.updatedAt || a.createdAt).getTime();
+        const dateB = new Date(b.updatedAt || b.createdAt).getTime();
+        return dateB - dateA;
+      });
+
     return filtered.slice(0, 3).map(list => {
       const progress = list.progress || { total: 0, purchased: 0, percentage: 0 };
 

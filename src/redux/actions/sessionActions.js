@@ -145,3 +145,32 @@ export const logoutAllSessions = createAsyncThunk(
     }
   }
 );
+
+/**
+ * Logout the current device session on the server.
+ * POST /session/logout-current
+ *
+ * Call this BEFORE clearing local tokens so the Authorization header is still
+ * attached by the axios interceptor. Errors are silently ignored — a network
+/**
+ * Logout the current device session on the server.
+ * POST /session/logout-current
+ *
+ * On success  → caller proceeds to wipe local state.
+ * On failure  → rejects so the caller can show an error and keep the user logged in.
+ */
+export const logoutCurrentSession = createAsyncThunk(
+  "session/logoutCurrentSession",
+  async (_, { rejectWithValue }) => {
+    console.log("logoutCurrentSession");
+    try {
+      const response = await axios.post("/session/logout-current");
+      console.log("✅ Current session logged out on server");
+      return response.data?.data || response.data;
+    } catch (err) {
+      const message = getErrorMessage(err);
+      console.error("❌ logoutCurrentSession failed:", message);
+      return rejectWithValue(message || "Failed to logout. Please try again.");
+    }
+  }
+);

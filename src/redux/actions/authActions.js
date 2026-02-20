@@ -31,9 +31,13 @@ export const loginUser = createAsyncThunk(
       const data = response.data;
 
       console.log("response", response);
+      
+//       console.log('data?.data', data?.data)
+// console.log('data?.data?.accessToken', data?.data?.accessToken)
+// console.log('data?.data?.refreshToken', data?.data?.refreshToken)
 
       // Save both access and refresh tokens in AsyncStorage
-      await storeAccessToken(data?.data?.token);
+      await storeAccessToken(data?.data?.accessToken);
       await storeRefreshToken(data?.data?.refreshToken);
 
       // Check for pending invite (deferred deep linking)

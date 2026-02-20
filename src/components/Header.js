@@ -91,7 +91,7 @@ const Header = ({
               </Text>
               <Text
                 variant="medium"
-                style={[styles.boldText, { color: colors.textPrimary }]}>
+                style={[styles.boldText, { color: colors.textPrimary, fontSize: RFValue(12) }]}>
                 {userName}
               </Text>
             </View>
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
   },
   boldText: {
-    fontWeight: "600",
+    fontWeight: "800",
   },
   title: {
     fontSize: RFValue(16),

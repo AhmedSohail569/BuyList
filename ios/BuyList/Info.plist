@@ -33,16 +33,18 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>BuyList needs your location to show nearby stores and deals.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>BuyList needs access to your camera to take profile photos and capture receipts.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>BuyList needs access to your photo library to select profile photos and images.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>BuyList needs permission to save photos to your library.</string>
 	<key>NSAppleMusicUsageDescription</key>
 	<string>This app does not directly access Apple Music. This permission may be required by a third-party library used in the app.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>BuyList needs access to your camera to take profile photos and capture receipts.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>BuyList needs your location to show nearby stores and deals.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>BuyList needs permission to save photos to your library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>BuyList needs access to your photo library to select profile photos and images.</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>BuyList uses notifications to keep you updated on your shopping lists and circle activity.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIAppFonts</key>
@@ -81,6 +83,10 @@
 		<string>NeueHaasDisplayXThinItalic.ttf</string>
 		<string>NeueHaasDisplayXXThin.ttf</string>
 		<string>NeueHaasDisplayXXThinItalic.ttf</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>BootSplash</string>

@@ -2,6 +2,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import AppLayout from "~containers/layouts/AppLayout";
 import LocationPermissionGate from "~components/LocationPermissionGate";
+import { usePermissionsContext } from "~context/PermissionsContext";
 import useDeepLinking from "~hooks/useDeepLinking";
 
 import TabNavigator from "./TabNavigator";
@@ -24,10 +25,13 @@ export default () => {
   // Initialize deep linking listener (now inside NavigationContainer)
   useDeepLinking();
 
+  // Gate: only activate location permission AFTER notification flow completes
+  const { locationReady } = usePermissionsContext();
+
   return (
     <AppLayout>
-      {/* Location permission check for logged-in users */}
-      <LocationPermissionGate />
+      {/* Location permission check — enabled only after notification flow */}
+      <LocationPermissionGate enabled={locationReady} />
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen
           name="AppTabNavigator"

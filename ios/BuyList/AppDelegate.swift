@@ -3,6 +3,7 @@ import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
 import Firebase
+import UserNotifications
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -19,7 +20,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     let factory = RCTReactNativeFactory(delegate: delegate)
     delegate.dependencyProvider = RCTAppDependencyProvider()
 
+    // Configure Firebase (must be called before any other Firebase service)
     FirebaseApp.configure()
+
+    // Set this app as the UNUserNotificationCenter delegate so we can:
+    // 1. Show notification banners while the app is in the FOREGROUND
+    // 2. Handle notification taps (opened from notification)
+    UNUserNotificationCenter.current().delegate = self
 
     reactNativeDelegate = delegate
     reactNativeFactory = factory
@@ -33,6 +40,37 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     )
 
     return true
+  }
+}
+
+// ─── UNUserNotificationCenter Delegate ────────────────────────────────────────
+// Required to display notifications when the app is in the FOREGROUND on iOS.
+// Without this, iOS silently swallows the notification and nothing shows.
+extension AppDelegate: UNUserNotificationCenterDelegate {
+
+  /// Called when a notification arrives while the app is in the FOREGROUND.
+  /// Return the presentation options to control what the user sees.
+  func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    willPresent notification: UNNotification,
+    withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+  ) {
+    // Show banner + play sound + update badge even while app is active
+    if #available(iOS 14.0, *) {
+      completionHandler([.banner, .badge, .sound])
+    } else {
+      completionHandler([.alert, .badge, .sound])
+    }
+  }
+
+  /// Called when the user taps on a notification (foreground or background).
+  /// React Native Firebase handles routing via its own listener, so we just complete here.
+  func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    didReceive response: UNNotificationResponse,
+    withCompletionHandler completionHandler: @escaping () -> Void
+  ) {
+    completionHandler()
   }
 }
 

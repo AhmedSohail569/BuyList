@@ -2,7 +2,7 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Config from "react-native-config";
 import {InteractionManager} from "react-native";
-import {store} from "~redux/store";
+import {store, logoutAndPurge, forceLogoutAndPurge} from "~redux/store";
 import {logout} from "~redux/reducers/authReducer";
 import {showError} from "~utils/toast";
 import {getRefreshToken, storeAccessToken, clearAllTokens, storeRefreshToken} from "~utils";
@@ -61,8 +61,8 @@ const handleUnauthorized = async () => {
     // Clear all tokens from AsyncStorage
     await clearAllTokens();
 
-    // Dispatch logout action to clear Redux state
-    store.dispatch(logout());
+    // Token expired — wipe local state immediately (no server round-trip needed)
+    forceLogoutAndPurge();
 
     // Show session expired toast
     InteractionManager.runAfterInteractions(() => {

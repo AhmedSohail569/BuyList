@@ -30,6 +30,7 @@ import {
   logoutAllSessions,
 } from "~redux/actions/sessionActions";
 import {logout} from "~redux/reducers/authReducer";
+import {logoutAndPurge} from "~redux/store";
 
 const SecurityRow = ({
   icon: Icon,
@@ -256,8 +257,8 @@ const SecurityScreen = ({onQuickAction, navigation}) => {
               // Logout from all sessions on backend
               await dispatch(logoutAllSessions()).unwrap();
               
-              // Logout from current device (clear local auth state)
-              dispatch(logout());
+              // Logout from current device (clear local auth state + purge persisted store)
+              logoutAndPurge();
               
               closeAlert();
             } catch (error) {

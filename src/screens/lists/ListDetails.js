@@ -43,6 +43,11 @@ const ListDetailsScreen = ({ navigation, route }) => {
   const listId = route?.params?.listId;
   const list = listId ? listById[listId] : null;
 
+  // Determine if current user is a viewer (read-only) on this list
+  const isViewer = list?.userRole?.toLowerCase() === "viewer";
+
+  console.log("list", JSON.stringify(list, null, 2));
+
   const [activeTab, setActiveTab] = useState("All Items");
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const isHeaderMenuDismissingRef = useRef(false);
@@ -292,7 +297,9 @@ const ListDetailsScreen = ({ navigation, route }) => {
                 styles.itemName,
                 { color: colors.textPrimary },
                 item.status === "purchased" && [styles.itemNameStrike, { color: colors.textSecondary }],
-              ]}>
+              ]}
+              numberOfLines={3}
+              ellipsizeMode="tail">
               {item.name}
             </Text>
             <View style={styles.itemMetaRow}>
@@ -445,27 +452,32 @@ const ListDetailsScreen = ({ navigation, route }) => {
           </View>
         </View>
 
-        {/* Add Item Input */}
-        <View style={[styles.inputContainer, { borderColor: colors.border, backgroundColor: colors.card }]}>
+        {/* Add Item Input — disabled for viewers */}
+        <View style={[
+          styles.inputContainer,
+          { borderColor: colors.border, backgroundColor: colors.card },
+          isViewer && { opacity: 0.5 },
+        ]}>
           <TextInput
             style={[styles.input, { color: colors.textPrimary }]}
-            placeholder="Add an item..."
+            placeholder={isViewer ? "You have view-only access" : "Add an item..."}
             placeholderTextColor={colors.inputPlaceholder}
             value={newItemText}
             onChangeText={setNewItemText}
             onSubmitEditing={handleAddItem}
             returnKeyType="done"
-            editable={!isActionPending(`add-${listId}`)}
+            editable={!isViewer && !isActionPending(`add-${listId}`)}
+            maxLength={50}
           />
           <TouchableOpacity
             style={[
               styles.addButton,
               { backgroundColor: colors.backgroundSecondary },
-              !newItemText.trim() && styles.addButtonDisabled,
+              (!newItemText.trim() || isViewer) && styles.addButtonDisabled,
             ]}
             onPress={handleAddItem}
-            disabled={!newItemText.trim() || isActionPending(`add-${listId}`)}>
-            <Plus size={20} color={newItemText.trim() ? colors.primary : colors.iconMuted} />
+            disabled={isViewer || !newItemText.trim() || isActionPending(`add-${listId}`)}>
+            <Plus size={20} color={!isViewer && newItemText.trim() ? colors.primary : colors.iconMuted} />
           </TouchableOpacity>
         </View>
 

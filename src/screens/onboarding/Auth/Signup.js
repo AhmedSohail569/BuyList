@@ -10,7 +10,7 @@ import { Button, Text, TextInput } from "~components/Common";
 import { Images } from "~assets";
 import { signupUser } from "~redux/actions/authActions";
 import { clearSignupState, clearError } from "~redux/reducers/authReducer";
-import { validateEmail, validatePassword, validateUsername } from "~utils/validation";
+import { validateEmail, validatePassword, validateUsername, removeEmojis } from "~utils/validation";
 
 const SignupScreen = ({ navigation, route }) => {
   const { phone, zone, area } = route?.params || {};
@@ -60,7 +60,8 @@ const SignupScreen = ({ navigation, route }) => {
 
   // Clear field error when user starts typing
   const handleUsernameChange = value => {
-    setUsername(value);
+    const cleanValue = removeEmojis(value);
+    setUsername(cleanValue);
     if (errors.username) {
       setErrors(prev => ({ ...prev, username: null }));
     }

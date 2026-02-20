@@ -1,5 +1,5 @@
-import { View, TouchableOpacity, StyleSheet, Switch } from "react-native";
-import { useDispatch } from "react-redux";
+import { View, TouchableOpacity, StyleSheet, Switch, ActivityIndicator } from "react-native";
+import { useSelector } from "react-redux";
 
 import {
   User,
@@ -22,8 +22,7 @@ import { FontFamily } from "~theme/fonts";
 import { useState } from "react";
 import SelectionModal from "~containers/modals/SelectionModal";
 import { DISTANCE_OPTIONS, LANGUAGE_OPTIONS } from "~constants";
-import { logout } from "~redux/reducers/authReducer";
-import { clearAccessToken } from "~utils";
+import { logoutAndPurge } from "~redux/store";
 import { useAlert } from "~context/AlertContext";
 import { useTheme } from "~context/ThemeContext";
 
@@ -97,8 +96,8 @@ const SettingsSection = ({ title, children }) => {
 
 const SettingsTab = ({ onQuickAction, navigation }) => {
   const { showAlert, showError } = useAlert();
-  const dispatch = useDispatch();
   const { colors, isDark, toggleTheme } = useTheme();
+  const logoutCurrentLoading = useSelector(state => state.session.logoutCurrentLoading);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState(null); // 'language' | 'distance'
@@ -133,11 +132,9 @@ const SettingsTab = ({ onQuickAction, navigation }) => {
           style: "destructive",
           onPress: async () => {
             try {
-              await clearAccessToken();
-              dispatch(logout());
+              await logoutAndPurge();
             } catch (err) {
-              console.error("Logout error:", err);
-              showError("Error", "Failed to logout. Please try again.");
+              showError("Logout Failed", err?.message || "Could not logout. Please try again.");
             }
           },
         },
@@ -272,15 +269,25 @@ const SettingsTab = ({ onQuickAction, navigation }) => {
               backgroundColor: colors.logoutBackground,
               borderColor: colors.logoutBorder,
             },
+            logoutCurrentLoading && { opacity: 0.7 },
           ]}
-          onPress={handleLogout}>
-          <LogOut
-            size={RFValue(18)}
-            color={colors.logoutText}
-            style={styles.logoutIcon}
-          />
+          onPress={handleLogout}
+          disabled={logoutCurrentLoading}>
+          {logoutCurrentLoading ? (
+            <ActivityIndicator
+              size="small"
+              color={colors.logoutText}
+              style={styles.logoutIcon}
+            />
+          ) : (
+            <LogOut
+              size={RFValue(18)}
+              color={colors.logoutText}
+              style={styles.logoutIcon}
+            />
+          )}
           <Text style={[styles.logoutText, { color: colors.logoutText }]}>
-            Log Out
+            {logoutCurrentLoading ? "Logging out..." : "Log Out"}
           </Text>
         </TouchableOpacity>
 

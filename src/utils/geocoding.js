@@ -67,6 +67,8 @@ export const reverseGeocode = async (lat, lng) => {
     try {
         const url = `${GOOGLE_GEOCODING_BASE}/geocode/json?latlng=${lat},${lng}&key=${Config.GOOGLE_MAPS_API_KEY}`;
         const res = await fetch(url);
+
+        console.log("res===>", res);
         
         if (!res.ok) {
             const statusText = res.statusText || 'Unknown error';

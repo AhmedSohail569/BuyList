@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          xmlns:tools="http://schemas.android.com/tools">
   
   
     <uses-permission android:name="android.permission.INTERNET" />
@@ -10,6 +11,11 @@
 
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- FCM: Required for Android 13+ (API 33) push notification permission -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- FCM: Required to receive data-only messages when the app is in background -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
 
   <application
@@ -26,6 +32,29 @@
     <meta-data
       android:name="com.google.android.geo.API_KEY"
       android:value="AIzaSyBStvcv2IrRh80JwnHHLoyYcAYbtYXmc60"/>
+
+    <!--
+      FCM Notification Display Configuration
+      ─────────────────────────────────────────────────────────────────────
+      default_notification_icon : Must be a monochrome (white on transparent)
+        drawable. Using a launcher icon here causes Android to render a grey
+        blob in the status bar — the ic_notification drawable is the fix.
+      default_notification_color: Accent tint for the icon badge.
+      default_notification_channel_id: Must match the channel created in
+        MainApplication.kt. Without this, Android 8+ silently drops banners.
+    -->
+    <meta-data
+      android:name="com.google.firebase.messaging.default_notification_icon"
+      android:resource="@drawable/ic_notification"
+      tools:replace="android:resource" />
+    <meta-data
+      android:name="com.google.firebase.messaging.default_notification_color"
+      android:resource="@color/notification_color"
+      tools:replace="android:resource" />
+    <meta-data
+      android:name="com.google.firebase.messaging.default_notification_channel_id"
+      android:value="buylist_notifications"
+      tools:replace="android:value" />
 
     <activity
       android:name=".MainActivity"

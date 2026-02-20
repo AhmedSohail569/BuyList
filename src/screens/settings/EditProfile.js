@@ -33,10 +33,9 @@ import {
   setProfilePictureOptimistic,
 } from "~redux/reducers/profileReducer";
 import {
-  validateEmail,
-  validatePhone,
   validateGender,
   validateDateOfBirth,
+  removeEmojis,
 } from "~utils/validation";
 
 const { width } = Dimensions.get("window");
@@ -451,7 +450,7 @@ const EditProfileScreen = ({ navigation }) => {
             type={1}
             label="FULL NAME"
             value={name}
-            onChangeText={(val) => handleFieldChange("name", val, setName)}
+            onChangeText={(val) => handleFieldChange("name", removeEmojis(val), setName)}
             leftIcon="user"
             editable={!isLoading}
             maxLength={50}

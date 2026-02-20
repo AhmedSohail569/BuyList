@@ -31,7 +31,7 @@ import {
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-const LocationPermissionGate = () => {
+const LocationPermissionGate = ({ enabled = true }) => {
     const { colors, isDark } = useTheme();
     const dispatch = useDispatch();
 
@@ -57,6 +57,8 @@ const LocationPermissionGate = () => {
      * Show modal only if permission not granted and user hasn't dismissed
      */
     useEffect(() => {
+    // Don't run until the notification permission flow has completed
+        if (!enabled) return;
         if (permissionGranted || promptDismissed) return;
 
         const checkPermission = async () => {
@@ -90,7 +92,7 @@ const LocationPermissionGate = () => {
         const timer = setTimeout(checkPermission, 1000);
         return () => clearTimeout(timer);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [permissionGranted, promptDismissed]);
+    }, [permissionGranted, promptDismissed, enabled]);
 
 
     /**

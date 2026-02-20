@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -29,6 +29,7 @@ import { getProfile } from "~redux/actions/profileActions";
 import { useTheme } from "~context/ThemeContext";
 import { AD_OFFERS_DATA } from "~constants";
 import AdsOffersCarousel from "~components/AdsOffersCarousel";
+import NotificationsDropdown from "~components/NotificationsDropdown";
 
 const { width } = Dimensions.get("window");
 
@@ -209,6 +210,9 @@ const HomeTab = ({ onQuickAction, navigation }) => {
   console.log("latitude=>", latitude);
   console.log("longitude=>", longitude);
 
+  // Notification dropdown state
+  const [showNotifications, setShowNotifications] = useState(false);
+
 
 
   // Fetch recent activities on mount
@@ -271,7 +275,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
         avatar={profile?.profilePicture ? { uri: profile.profilePicture } : null}
         rightIcon="notifications-outline"
         notificationBadge
-        onRightPress={() => navigation.navigate("Notifications")}
+        onRightPress={() => setShowNotifications(true)}
       />
 
       <SearchBar placeholder="Search products, categories..." />
@@ -508,6 +512,12 @@ const HomeTab = ({ onQuickAction, navigation }) => {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Notification dropdown modal */}
+      <NotificationsDropdown
+        visible={showNotifications}
+        onClose={() => setShowNotifications(false)}
+      />
     </View>
   );
 };

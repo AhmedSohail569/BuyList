@@ -219,7 +219,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
   const [deletingListId, setDeletingListId] = useState(null);
   const [activeMenuListId, setActiveMenuListId] = useState(null);
   const [isCreatingList, setIsCreatingList] = useState(false);
-  const [sortOption, setSortOption] = useState("createdOn");
+  const [sortOption, setSortOption] = useState("priority");
   const [showSortMenu, setShowSortMenu] = useState(false);
   const isDismissingRef = useRef(false);
   const isFetchingOnFocusRef = useRef(false);
@@ -295,6 +295,21 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
     const sorted = [...listsToSort];
 
     switch (sortOption) {
+      case "priority":
+        // Sort by priority (High > Medium > Low)
+        return sorted.sort((a, b) => {
+          const PRIORITY_VALUE = { high: 3, medium: 2, low: 1 };
+          const pA = PRIORITY_VALUE[a.priority?.toLowerCase()] || 0;
+          const pB = PRIORITY_VALUE[b.priority?.toLowerCase()] || 0;
+          
+          if (pA !== pB) return pB - pA;
+          
+          // Secondary sort: Most recently updated
+          const dateA = new Date(a.updatedAt || a.createdAt || 0);
+          const dateB = new Date(b.updatedAt || b.createdAt || 0);
+          return dateB - dateA;
+        });
+
       case "createdOn":
         // Sort by created date (oldest first)
         return sorted.sort((a, b) => {
@@ -576,6 +591,21 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
                 </TouchableOpacity>
               }
               contentStyle={[styles.sortMenuContent, { backgroundColor: colors.card }]}>
+              <Menu.Item
+                onPress={() => {
+                  isDismissingRef.current = true;
+                  setSortOption("priority");
+                  setShowSortMenu(false);
+                  setTimeout(() => {
+                    isDismissingRef.current = false;
+                  }, 100);
+                }}
+                title="Priority"
+                titleStyle={[
+                  styles.sortMenuItem,
+                  { color: sortOption === "priority" ? colors.primary : colors.textPrimary },
+                ]}
+              />
               <Menu.Item
                 onPress={() => {
                   isDismissingRef.current = true;

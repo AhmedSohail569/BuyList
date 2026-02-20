@@ -1,5 +1,6 @@
 // src/redux/reducers/authReducer.js
 import { createSlice } from "@reduxjs/toolkit";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   forgotPassword,
   loginUser,
@@ -53,6 +54,9 @@ const authSlice = createSlice({
     logout(state) {
       // Clear all tokens from AsyncStorage
       clearAllTokens();
+
+      // Clear notification permission flag so next user gets their own prompt
+      AsyncStorage.removeItem("@notification_permission_asked");
       
       // Clear Redux state
       state.user = null;
@@ -113,7 +117,7 @@ const authSlice = createSlice({
         console.log("action.payload", action.payload);
         state.loading = false;
         state.user = action.payload.user;
-        state.accessToken = action.payload.token ?? null;
+        state.accessToken = action.payload.accessToken ?? null;
         state.refreshToken = action.payload.refreshToken ?? null;
         // Clear pending credentials on successful login
         state.pendingLoginEmail = null;

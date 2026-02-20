@@ -8,6 +8,7 @@ import {
   logoutSession,
   logoutAllOtherSessions,
   logoutAllSessions,
+  logoutCurrentSession,
 } from "../actions/sessionActions";
 
 const initialState = {
@@ -16,6 +17,7 @@ const initialState = {
   error: null,
   
   // Individual action loading states
+  logoutCurrentLoading: false,
   logoutSessionLoading: false,
   logoutOtherLoading: false,
   logoutAllLoading: false,
@@ -103,6 +105,21 @@ const sessionSlice = createSlice({
       })
       .addCase(logoutAllSessions.rejected, (state, action) => {
         state.logoutAllLoading = false;
+        state.error = action.payload;
+      })
+
+      // ============================================
+      // LOGOUT CURRENT SESSION
+      // ============================================
+      .addCase(logoutCurrentSession.pending, (state) => {
+        state.logoutCurrentLoading = true;
+        state.error = null;
+      })
+      .addCase(logoutCurrentSession.fulfilled, (state) => {
+        state.logoutCurrentLoading = false;
+      })
+      .addCase(logoutCurrentSession.rejected, (state, action) => {
+        state.logoutCurrentLoading = false;
         state.error = action.payload;
       });
   },

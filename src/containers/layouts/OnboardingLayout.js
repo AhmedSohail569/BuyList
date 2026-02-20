@@ -1,6 +1,5 @@
 import React from "react";
 import {View, StyleSheet, ImageBackground, StatusBar} from "react-native";
-import {SafeAreaView} from "react-native-safe-area-context";
 import {Images} from "~assets";
 
 const OnboardingLayout = ({

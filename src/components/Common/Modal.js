@@ -272,6 +272,7 @@ export const BottomModal = ({
             onChangeText={setNewItem}
             onSubmitEditing={handleAddItem}
             returnKeyType="done"
+            maxLength={50}
           />
           <TouchableOpacity
             style={[
@@ -289,7 +290,12 @@ export const BottomModal = ({
           <View style={styles.itemsContainer}>
             {items.map((item, index) => (
               <View key={index} style={[styles.itemChip, {backgroundColor: isDark ? "rgba(14, 165, 233, 0.2)" : "#eff6ff"}]}>
-                <Text style={[styles.itemChipText, {color: colors.primary}]}>{item}</Text>
+                <Text 
+                  style={[styles.itemChipText, {color: colors.primary}]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail">
+                  {item}
+                </Text>
                 <TouchableOpacity
                   onPress={() => handleRemoveItem(item)}
                   hitSlop={8}>
@@ -579,6 +585,7 @@ const styles = StyleSheet.create({
     fontSize: RFValue(11),
     fontFamily: FontFamily.medium,
     color: "#0ea5e9",
+    maxWidth: width * 0.4, // Limit width to prevent overflow
   },
   dropdownContainer: {
     marginBottom: 20,
