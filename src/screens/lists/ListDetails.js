@@ -46,8 +46,6 @@ const ListDetailsScreen = ({ navigation, route }) => {
   // Determine if current user is a viewer (read-only) on this list
   const isViewer = list?.userRole?.toLowerCase() === "viewer";
 
-  console.log("list", JSON.stringify(list, null, 2));
-
   const [activeTab, setActiveTab] = useState("All Items");
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const isHeaderMenuDismissingRef = useRef(false);
@@ -65,8 +63,6 @@ const ListDetailsScreen = ({ navigation, route }) => {
       }
     }, [listId, dispatch]),
   );
-
-  // console.log("list", JSON.stringify(list, null, 2));
 
   // Handle errors
   useEffect(() => {
@@ -379,8 +375,6 @@ const ListDetailsScreen = ({ navigation, route }) => {
       </View>
     );
   }
-
-  console.log("list", list);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

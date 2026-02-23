@@ -1,47 +1,102 @@
 /**
  * Notification Redux Actions
- *
- * Handles syncing the FCM device token to the backend.
- * Token is associated with the authenticated user via Bearer token in Axios.
+ * Handles FCM token sync, fetching notifications, mark-as-read, and clear.
  */
-
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "~utils/axiosInstance";
 import { getErrorMessage } from "~utils";
 
 /**
- * Syncs the FCM device token to the backend.
- *
- * Guards against duplicate submissions by comparing the incoming token
- * with the last successfully synced token stored in Redux.
- *
- * @param {string} fcmToken - The FCM device token to register
+ * Sync FCM device token to backend.
+ * Skips if the token hasn't changed since last successful sync.
  */
 export const syncFCMToken = createAsyncThunk(
   "notifications/syncFCMToken",
   async (fcmToken, { getState, rejectWithValue }) => {
     try {
-      // Guard: skip if token hasn't changed (avoids redundant API calls)
       const { notifications } = getState();
       if (notifications?.lastSyncedToken === fcmToken) {
-        console.log("⏭️  FCM token unchanged — skipping sync");
         return { fcmToken, skipped: true };
       }
-
-      console.log("📤 Syncing FCM token to backend...");
-
-      const response = await axios.patch("/session/fcm-token", {
-        fcmToken,
-      });
-
-      console.log("✅ FCM token synced:", response.data?.message);
-
+      const response = await axios.patch("/session/fcm-token", { fcmToken });
       return { fcmToken, message: response.data?.message };
     } catch (error) {
-      const message = getErrorMessage(error);
-      console.error("❌ Failed to sync FCM token:", message);
-      // Use rejectWithValue to prevent unhandled promise rejection crashes
-      return rejectWithValue(message);
+      return rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
+/**
+ * Fetch paginated notifications.
+ * Skipped automatically if a fetch is already in progress.
+ */
+export const fetchNotifications = createAsyncThunk(
+  "notifications/fetchNotifications",
+  async ({ page = 1 } = {}, { rejectWithValue }) => {
+    try {
+      const res = await axios.get(
+        `/notifications/get-notifications?page=${page}`,
+      );
+      console.log("res", res);
+      const data =
+        res.data?.data?.notifications ||
+        res.data?.data ||
+        res.data?.notifications ||
+        [];
+      const totalPages =
+        res.data?.data?.totalPages || res.data?.totalPages || 1;
+      return { notifications: data, page, totalPages };
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  },
+  {
+    condition: (_, { getState }) => !getState().notifications.loading,
+  },
+);
+
+/**
+ * Mark a single notification as read (optimistic).
+ * The reducer updates immediately; reverts on failure.
+ */
+export const markNotificationRead = createAsyncThunk(
+  "notifications/markNotificationRead",
+  async (notificationId, { rejectWithValue }) => {
+    try {
+      await axios.patch(`/notifications/mark-single-read/${notificationId}`);
+      return { notificationId };
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
+/**
+ * Mark all notifications as read.
+ */
+export const markAllNotificationsRead = createAsyncThunk(
+  "notifications/markAllNotificationsRead",
+  async (_, { rejectWithValue }) => {
+    try {
+      await axios.patch("/notifications/all-read");
+      return {};
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
+/**
+ * Clear (delete) all notifications.
+ */
+export const clearAllNotifications = createAsyncThunk(
+  "notifications/clearAllNotifications",
+  async (_, { rejectWithValue }) => {
+    try {
+      await axios.delete("/notifications/clear-notifications");
+      return {};
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error));
     }
   },
 );

@@ -12,9 +12,7 @@ import searchReducer from "../reducers/searchReducer";
 import sessionReducer from "../reducers/sessionReducer";
 import themeReducer from "../reducers/themeReducer";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Combined slice reducer
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Combined slice reducer ────────────────────────────────────────────────────
 const combinedReducer = combineReducers({
   auth: authReducer,
   circles: circleReducer,
@@ -27,13 +25,8 @@ const combinedReducer = combineReducers({
   theme: themeReducer,
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Root reducer — complete state wipe on logout
-//
-// Passing `undefined` to combinedReducer causes every slice to return its own
-// initialState, giving us a guaranteed clean slate on every logout regardless
-// of which code path triggered it.
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Root reducer — full state reset on logout ─────────────────────────────────
+// Passing `undefined` causes every slice to return its initialState.
 const rootReducer = (state, action) => {
   if (action.type === logout.type) {
     return combinedReducer(undefined, action);
@@ -41,9 +34,7 @@ const rootReducer = (state, action) => {
   return combinedReducer(state, action);
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Persistence — only slices that must survive an app restart are whitelisted.
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Persistence config ────────────────────────────────────────────────────────
 const persistConfig = {
   key: "root",
   storage: AsyncStorage,
@@ -54,49 +45,54 @@ const persistedReducer = persistReducer(persistConfig, rootReducer);
 
 export const store = configureStore({
   reducer: persistedReducer,
-  middleware: getDefaultMiddleware =>
+  middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
-      serializableCheck: false, // suppress redux-persist action type warnings
+      serializableCheck: false,
     }),
 });
 
 export const persistor = persistStore(store);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// logoutAndPurge — server-gated logout.
-//
-// Flow:
-//   1. POST /session/logout-current  (token still valid → axios attaches it)
-//   2. Only on SUCCESS: dispatch(logout()) + persistor.purge()
-//   3. On FAILURE: throws so the caller can show an error toast and abort.
-//
-// Call sites (settings/index.js) are responsible for showing loading state
-// while this resolves and handling the error if it rejects.
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── logoutAndPurge ────────────────────────────────────────────────────────────
+// Server-gated logout for current device.
+// 1. POST /session/logout-current
+// 2. On success → dispatch(logout()) + persistor.purge()
+// 3. On failure → throws so the caller can show an error toast.
 export const logoutAndPurge = async () => {
   const { logoutCurrentSession } = await import("../actions/sessionActions");
 
-  // Step 1 — tell the server; this throws if the server returns an error
   const result = await store.dispatch(logoutCurrentSession());
 
   if (logoutCurrentSession.rejected.match(result)) {
-    // Server rejected the logout — surface the error to the caller
     throw new Error(result.payload || "Failed to logout. Please try again.");
   }
 
-  // Step 2 — server confirmed: wipe Redux state
   store.dispatch(logout());
-
-  // Step 3 — wipe the persisted AsyncStorage snapshot
   persistor.purge();
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// forceLogoutAndPurge — bypass server; used by the 401 interceptor.
-//
-// When the token is already expired the server call would fail or be pointless,
-// so we wipe state immediately without a server round-trip.
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── logoutAllAndPurge ─────────────────────────────────────────────────────────
+// Logout from ALL devices (including current).
+// 1. DELETE /session/logout-all  (invalidates every session server-side)
+// 2. On success → dispatch(logout()) + persistor.purge()
+//    This ensures the current device is logged out gracefully.
+// 3. On failure → throws so the caller can handle the error.
+export const logoutAllAndPurge = async () => {
+  const { logoutAllSessions } = await import("../actions/sessionActions");
+
+  const result = await store.dispatch(logoutAllSessions());
+
+  if (logoutAllSessions.rejected.match(result)) {
+    throw new Error(result.payload || "Failed to logout from all devices.");
+  }
+
+  // Wipe local state after server confirms all sessions ended
+  store.dispatch(logout());
+  persistor.purge();
+};
+
+// ─── forceLogoutAndPurge ───────────────────────────────────────────────────────
+// Bypass server — used by the 401 interceptor when the token is already expired.
 export const forceLogoutAndPurge = () => {
   store.dispatch(logout());
   persistor.purge();

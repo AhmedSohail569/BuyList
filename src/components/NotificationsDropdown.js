@@ -1,14 +1,11 @@
 /**
  * NotificationsDropdown
  *
- * A slide-down dropdown panel that appears when the bell icon is pressed.
- * Fetches notifications with pagination, supports mark-as-read (single + all),
- * clear all, and shows relative timestamps with unread indicators.
- *
- * Matching the screenshot: white card, "Notifications" header + "Mark all as read",
- * icon-left notification rows, blue unread dot, "See all recent Activity" footer link.
+ * A slide-down dropdown panel triggered by the bell icon.
+ * All data is managed via Redux (notificationActions / notificationReducer).
+ * Supports pagination, mark-as-read (single + all), and clear-all.
  */
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useEffect, useCallback, useRef, useMemo } from "react";
 import {
   View,
   StyleSheet,
@@ -24,11 +21,16 @@ import {
 import Icon from "react-native-vector-icons/Ionicons";
 import { RFValue } from "react-native-responsive-fontsize";
 import { useNavigation } from "@react-navigation/native";
+import { useSelector, useDispatch } from "react-redux";
 
 import { Text } from "~components/Common";
 import { FontFamily } from "~theme/fonts";
 import { useTheme } from "~context/ThemeContext";
-import axiosInstance from "~utils/axiosInstance";
+import {
+  fetchNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+} from "~redux/actions/notificationActions";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -76,107 +78,30 @@ const getNotificationIcon = (type) => {
 // Component
 // ────────────────────────────────────────────────────────────────────────────────
 
-const NotificationsDropdown = ({ visible, onClose, anchorY = 0 }) => {
+const NotificationsDropdown = ({ visible, onClose }) => {
   const { colors, isDark } = useTheme();
   const navigation = useNavigation();
+  const dispatch = useDispatch();
 
-  // Data state
-  const [notifications, setNotifications] = useState([]);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [markingAll, setMarkingAll] = useState(false);
+  // Redux state
+  const { items, loading, hasMore, page, markingAll } = useSelector(
+    (state) => state.notifications,
+  );
 
-  // Animation
+  // Animation refs (UI-only — stays local)
   const slideAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
-  // ── Fetch notifications ─────────────────────────────────────────────────────
-
-  const fetchNotifications = useCallback(
-    async (pageNum = 1, append = false) => {
-      if (loading) return;
-      setLoading(true);
-      try {
-        const res = await axiosInstance.get(
-          `/notifications/get-notifications?page=${pageNum}`,
-        );
-        const data = res.data?.data?.notifications || res.data?.data || res.data?.notifications || [];
-        const totalPages = res.data?.data?.totalPages || res.data?.totalPages || 1;
-        
-        if (append) {
-          setNotifications((prev) => [...prev, ...data]);
-        } else {
-          setNotifications(data);
-        }
-        setHasMore(pageNum < totalPages);
-        setPage(pageNum);
-      } catch (err) {
-        console.error("❌ fetchNotifications error:", err);
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [loading],
+  // Derived unread count
+  const unreadCount = useMemo(
+    () => items.filter((n) => !n.isRead).length,
+    [items],
   );
 
-  // ── Mark single as read ─────────────────────────────────────────────────────
-
-  const markAsRead = useCallback(async (notificationId) => {
-    try {
-      await axiosInstance.patch(
-        `/notifications/mark-single-read/${notificationId}`,
-      );
-      setNotifications((prev) =>
-        prev.map((n) =>
-          (n._id || n.id) === notificationId ? { ...n, isRead: true } : n,
-        ),
-      );
-    } catch (err) {
-      console.error("❌ markAsRead error:", err);
-    }
-  }, []);
-
-  // ── Mark all as read ────────────────────────────────────────────────────────
-
-  const markAllAsRead = useCallback(async () => {
-    setMarkingAll(true);
-    try {
-      await axiosInstance.patch("/notifications/all-read");
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    } catch (err) {
-      console.error("❌ markAllAsRead error:", err);
-    } finally {
-      setMarkingAll(false);
-    }
-  }, []);
-
-  // ── Clear all notifications ─────────────────────────────────────────────────
-
-  const clearAll = useCallback(async () => {
-    try {
-      await axiosInstance.delete("/notifications/clear-notifications");
-      setNotifications([]);
-    } catch (err) {
-      console.error("❌ clearAll error:", err);
-    }
-  }, []);
-
-  // ── Load more (pagination) ──────────────────────────────────────────────────
-
-  const loadMore = useCallback(() => {
-    if (!loading && hasMore) {
-      fetchNotifications(page + 1, true);
-    }
-  }, [loading, hasMore, page, fetchNotifications]);
-
-  // ── Animate open/close ──────────────────────────────────────────────────────
-
+  // ── Animate open / close ──────────────────────────────────────────────────
   useEffect(() => {
     if (visible) {
-      fetchNotifications(1, false);
+      dispatch(fetchNotifications({ page: 1 }));
       Animated.parallel([
         Animated.spring(slideAnim, {
           toValue: 1,
@@ -207,40 +132,40 @@ const NotificationsDropdown = ({ visible, onClose, anchorY = 0 }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  // ── Unread count ────────────────────────────────────────────────────────────
+  // ── Load more (pagination) ────────────────────────────────────────────────
+  const loadMore = useCallback(() => {
+    if (!loading && hasMore) {
+      dispatch(fetchNotifications({ page: page + 1 }));
+    }
+  }, [loading, hasMore, page, dispatch]);
 
-  const unreadCount = useMemo(
-    () => notifications.filter((n) => !n.isRead).length,
-    [notifications],
-  );
-
-  // ── Handle notification press ───────────────────────────────────────────────
-
+  // ── Handle notification press ─────────────────────────────────────────────
   const handlePress = useCallback(
     (item) => {
       const id = item._id || item.id;
       if (!item.isRead) {
-        markAsRead(id);
+        dispatch(markNotificationRead(id));
       }
-      // Could navigate somewhere based on item.type / item.data
     },
-    [markAsRead],
+    [dispatch],
   );
 
-  // ── See all activity ────────────────────────────────────────────────────────
+  // ── Mark all as read ──────────────────────────────────────────────────────
+  const handleMarkAll = useCallback(() => {
+    dispatch(markAllNotificationsRead());
+  }, [dispatch]);
 
+  // ── See all activity ──────────────────────────────────────────────────────
   const handleSeeAll = useCallback(() => {
     onClose();
     navigation.navigate("Notifications");
   }, [onClose, navigation]);
 
-  // ── Render a single notification row ────────────────────────────────────────
-
+  // ── Render a single notification row ──────────────────────────────────────
   const renderItem = useCallback(
     ({ item }) => {
       const iconCfg = getNotificationIcon(item.type);
       const isUnread = !item.isRead;
-      const id = item._id || item.id;
 
       return (
         <TouchableOpacity
@@ -256,9 +181,7 @@ const NotificationsDropdown = ({ visible, onClose, anchorY = 0 }) => {
           ]}
         >
           {/* Icon */}
-          <View
-            style={[styles.notifIcon, { backgroundColor: iconCfg.bg }]}
-          >
+          <View style={[styles.notifIcon, { backgroundColor: iconCfg.bg }]}>
             {item.senderAvatar || item.actor?.profilePicture ? (
               <Image
                 source={{
@@ -267,7 +190,11 @@ const NotificationsDropdown = ({ visible, onClose, anchorY = 0 }) => {
                 style={styles.notifAvatarImg}
               />
             ) : (
-              <Icon name={iconCfg.name} size={RFValue(18)} color={iconCfg.color} />
+              <Icon
+                name={iconCfg.name}
+                size={RFValue(18)}
+                color={iconCfg.color}
+              />
             )}
           </View>
 
@@ -304,19 +231,17 @@ const NotificationsDropdown = ({ visible, onClose, anchorY = 0 }) => {
     [colors, isDark, handlePress],
   );
 
-  // ── Footer loader ──────────────────────────────────────────────────────────
-
+  // ── Footer loader ─────────────────────────────────────────────────────────
   const renderFooter = useCallback(() => {
-    if (!loading || notifications.length === 0) return null;
+    if (!loading || items.length === 0) return null;
     return (
       <View style={styles.footerLoader}>
         <ActivityIndicator size="small" color={colors.primary} />
       </View>
     );
-  }, [loading, notifications.length, colors.primary]);
+  }, [loading, items.length, colors.primary]);
 
-  // ── Empty state ────────────────────────────────────────────────────────────
-
+  // ── Empty state ───────────────────────────────────────────────────────────
   const renderEmpty = useCallback(() => {
     if (loading) return null;
     return (
@@ -333,6 +258,12 @@ const NotificationsDropdown = ({ visible, onClose, anchorY = 0 }) => {
     );
   }, [loading, colors.textMuted]);
 
+  // ── Key extractor ─────────────────────────────────────────────────────────
+  const keyExtractor = useCallback(
+    (item, index) => item._id || item.id || `notif-${index}`,
+    [],
+  );
+
   if (!visible) return null;
 
   return (
@@ -344,12 +275,7 @@ const NotificationsDropdown = ({ visible, onClose, anchorY = 0 }) => {
       statusBarTranslucent
     >
       <TouchableWithoutFeedback onPress={onClose}>
-        <Animated.View
-          style={[
-            styles.overlay,
-            { opacity: opacityAnim },
-          ]}
-        >
+        <Animated.View style={[styles.overlay, { opacity: opacityAnim }]}>
           <TouchableWithoutFeedback>
             <Animated.View
               style={[
@@ -384,7 +310,7 @@ const NotificationsDropdown = ({ visible, onClose, anchorY = 0 }) => {
                 </Text>
                 {unreadCount > 0 && (
                   <TouchableOpacity
-                    onPress={markAllAsRead}
+                    onPress={handleMarkAll}
                     disabled={markingAll}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
@@ -403,12 +329,12 @@ const NotificationsDropdown = ({ visible, onClose, anchorY = 0 }) => {
 
               {/* ── Notification list ────────────────────────────────────── */}
               <FlatList
-                data={notifications}
+                data={items}
                 renderItem={renderItem}
-                keyExtractor={(item) => item._id || item.id || String(Math.random())}
+                keyExtractor={keyExtractor}
                 style={styles.list}
                 contentContainerStyle={
-                  notifications.length === 0 && styles.emptyList
+                  items.length === 0 && styles.emptyList
                 }
                 showsVerticalScrollIndicator={false}
                 onEndReached={loadMore}
@@ -421,14 +347,13 @@ const NotificationsDropdown = ({ visible, onClose, anchorY = 0 }) => {
 
               {/* ── Footer link ──────────────────────────────────────────── */}
               <TouchableOpacity
-                style={[
-                  styles.footer,
-                  { borderTopColor: colors.divider },
-                ]}
+                style={[styles.footer, { borderTopColor: colors.divider }]}
                 activeOpacity={0.7}
                 onPress={handleSeeAll}
               >
-                <Text style={[styles.seeAllText, { color: colors.textSecondary }]}>
+                <Text
+                  style={[styles.seeAllText, { color: colors.textSecondary }]}
+                >
                   See all recent Activity
                 </Text>
               </TouchableOpacity>

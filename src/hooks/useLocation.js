@@ -1,7 +1,6 @@
 /**
  * useLocation Hook
  * Handles location permissions, geolocation, and reverse geocoding
- * Uses Google Geocoding API for reliable address resolution
  */
 import { useState, useCallback, useRef } from "react";
 import { Platform, Alert, Linking } from "react-native";
@@ -19,26 +18,20 @@ import {
     getAreaFromComponents,
 } from "~utils/geocoding";
 
-// Geolocation config
 const GEOLOCATION_OPTIONS = {
     enableHighAccuracy: true,
     timeout: 20000,
     maximumAge: 10000,
 };
 
-/**
- * Get the appropriate location permission based on platform
- */
-const getLocationPermission = () => {
-    return Platform.select({
+/** Platform-appropriate location permission */
+const getLocationPermission = () =>
+    Platform.select({
         ios: PERMISSIONS.IOS.LOCATION_WHEN_IN_USE,
         android: PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
     });
-};
 
-/**
- * Show settings alert when permission is permanently denied
- */
+/** Prompt user to open settings when permission is permanently blocked */
 const showSettingsAlert = () => {
     Alert.alert(
         "Location Access Required",
@@ -53,20 +46,14 @@ const showSettingsAlert = () => {
     );
 };
 
-/**
- * Custom hook for location detection with permissions handling
- */
 const useLocation = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [coordinates, setCoordinates] = useState(null); // { latitude, longitude }
-    const [locationData, setLocationData] = useState(null); // { city, area, latitude, longitude }
+    const [coordinates, setCoordinates] = useState(null);
+    const [locationData, setLocationData] = useState(null);
     const isFetchingRef = useRef(false);
 
-    /**
-     * Check and request location permission
-     * @returns {Promise<boolean>} Whether permission was granted
-     */
+    /** Check / request location permission */
     const requestLocationPermission = useCallback(async () => {
         const permission = getLocationPermission();
         if (!permission) return false;
@@ -80,11 +67,8 @@ const useLocation = () => {
                     return true;
 
                 case RESULTS.DENIED: {
-                    const requestResult = await request(permission);
-                    return (
-                        requestResult === RESULTS.GRANTED ||
-                        requestResult === RESULTS.LIMITED
-                    );
+                    const result = await request(permission);
+                    return result === RESULTS.GRANTED || result === RESULTS.LIMITED;
                 }
 
                 case RESULTS.BLOCKED:
@@ -98,17 +82,13 @@ const useLocation = () => {
                 default:
                     return false;
             }
-        } catch (err) {
-            console.error("Location permission error:", err);
+        } catch {
             setError("Failed to check location permission");
             return false;
         }
     }, []);
 
-    /**
-     * Get current position using Geolocation
-     * @returns {Promise<{latitude: number, longitude: number}|null>}
-     */
+    /** Get current device position */
     const getCurrentPosition = useCallback(() => {
         return new Promise((resolve) => {
             Geolocation.getCurrentPosition(
@@ -117,23 +97,12 @@ const useLocation = () => {
                     resolve({ latitude, longitude });
                 },
                 (err) => {
-                    console.error("Geolocation error:", err);
-
-                    // Provide user-friendly error messages
-                    switch (err.code) {
-                        case 1: // PERMISSION_DENIED
-                            setError("Location permission was denied");
-                            break;
-                        case 2: // POSITION_UNAVAILABLE
-                            setError("Unable to determine your location. Please try again.");
-                            break;
-                        case 3: // TIMEOUT
-                            setError("Location request timed out. Please try again.");
-                            break;
-                        default:
-                            setError("Failed to get your location");
-                    }
-
+                    const messages = {
+                        1: "Location permission was denied",
+                        2: "Unable to determine your location. Please try again.",
+                        3: "Location request timed out. Please try again.",
+                    };
+                    setError(messages[err.code] || "Failed to get your location");
                     resolve(null);
                 },
                 GEOLOCATION_OPTIONS,
@@ -141,12 +110,8 @@ const useLocation = () => {
         });
     }, []);
 
-    /**
-     * Full location flow: permission → geolocation → reverse geocoding
-     * @returns {Promise<{latitude, longitude, city, area}|null>}
-     */
+    /** Full location flow: permission → geolocation → reverse geocoding */
     const detectLocation = useCallback(async () => {
-        // Prevent duplicate calls
         if (isFetchingRef.current) return null;
         isFetchingRef.current = true;
 
@@ -154,76 +119,39 @@ const useLocation = () => {
         setError(null);
 
         try {
-            // Step 1: Request permission
             const hasPermission = await requestLocationPermission();
-            if (!hasPermission) {
-                setLoading(false);
-                isFetchingRef.current = false;
-                return null;
-            }
+            if (!hasPermission) return null;
 
-            // Step 2: Get current position
             const position = await getCurrentPosition();
-            if (!position) {
-                setLoading(false);
-                isFetchingRef.current = false;
-                return null;
-            }
+            if (!position) return null;
 
             setCoordinates(position);
 
-            // Step 3: Reverse geocode using Google API
+            // Attempt reverse geocoding — fallback to coords-only if it fails
+            let city = "";
+            let area = "";
+
             try {
-                const geoResult = await reverseGeocode(
-                    position.latitude,
-                    position.longitude,
-                );
-
-                const city = getCityFromComponents(geoResult.address_components);
-                const area = getAreaFromComponents(geoResult.address_components);
-
-                const result = {
-                    latitude: position.latitude,
-                    longitude: position.longitude,
-                    city,
-                    area,
-                };
-
-                setLocationData(result);
-                setLoading(false);
-                isFetchingRef.current = false;
-                return result;
-            } catch (geoErr) {
-                // If geocoding fails, still return coordinates without city/area
-                console.error("Reverse geocoding error:", geoErr);
-                
-                const result = {
-                    latitude: position.latitude,
-                    longitude: position.longitude,
-                    city: "",
-                    area: "",
-                };
-
-                setLocationData(result);
-                setLoading(false);
-                isFetchingRef.current = false;
-                return result;
+                const geoResult = await reverseGeocode(position.latitude, position.longitude);
+                city = getCityFromComponents(geoResult.address_components);
+                area = getAreaFromComponents(geoResult.address_components);
+            } catch {
+                // Geocoding failed — coordinates still usable
             }
-        } catch (err) {
-            console.error("Location detection error:", err);
+
+            const result = { ...position, city, area };
+            setLocationData(result);
+            return result;
+        } catch {
             setError("Something went wrong while detecting your location");
+            return null;
+        } finally {
             setLoading(false);
             isFetchingRef.current = false;
-            return null;
         }
     }, [requestLocationPermission, getCurrentPosition]);
 
-    /**
-     * Clear error state
-     */
-    const clearError = useCallback(() => {
-        setError(null);
-    }, []);
+    const clearError = useCallback(() => setError(null), []);
 
     return {
         detectLocation,

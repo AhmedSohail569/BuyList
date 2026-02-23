@@ -57,7 +57,7 @@ const LocationPermissionGate = ({ enabled = true }) => {
      * Show modal only if permission not granted and user hasn't dismissed
      */
     useEffect(() => {
-    // Don't run until the notification permission flow has completed
+        // Don't run until the notification permission flow has completed
         if (!enabled) return;
         if (permissionGranted || promptDismissed) return;
 
@@ -83,8 +83,8 @@ const LocationPermissionGate = ({ enabled = true }) => {
                     // Permission not granted — show the modal
                     showModal();
                 }
-            } catch (err) {
-                console.error("Location permission check error:", err);
+            } catch {
+                // Permission check failed — silently skip
             }
         };
 

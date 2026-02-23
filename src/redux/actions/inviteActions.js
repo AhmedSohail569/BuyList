@@ -17,7 +17,6 @@ export const getCircleInviteLink = createAsyncThunk(
         try {
             const response = await axios.get(`/circles/invite-link/${circleId}`);
             const data = response.data?.data || response.data;
-            console.log('response', response)
 
             return {
                 circleId,

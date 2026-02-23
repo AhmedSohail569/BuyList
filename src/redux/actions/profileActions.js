@@ -11,21 +11,18 @@ export const getProfile = createAsyncThunk(
     async (_, { rejectWithValue }) => {
         try {
             const response = await axios.get("/auth/me");
+            console.log("response", response);
             const data = response.data;
             return data?.data?.user || data?.user || data;
         } catch (err) {
-            const message = getErrorMessage(err);
-            return rejectWithValue(message);
+            return rejectWithValue(getErrorMessage(err));
         }
     },
 );
 
 /**
  * Upload profile picture
- * @param {Object} image - Image object from image picker
- * @param {string} image.path - Local file path
- * @param {string} image.mime - MIME type (e.g., 'image/jpeg')
- * @param {string} image.filename - Original filename
+ * @param {Object} image - Image from picker { path, mime, filename }
  */
 export const uploadProfilePicture = createAsyncThunk(
     "profile/uploadProfilePicture",
@@ -33,7 +30,6 @@ export const uploadProfilePicture = createAsyncThunk(
         try {
             const formData = new FormData();
 
-            // Prepare file object for FormData
             const file = {
                 uri: Platform.OS === "ios" ? image.path.replace("file://", "") : image.path,
                 type: image.mime || "image/jpeg",
@@ -43,28 +39,21 @@ export const uploadProfilePicture = createAsyncThunk(
             formData.append("profilePicture", file);
 
             const response = await axios.post("/auth/upload-profile-picture", formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
-                // Increase timeout for image upload
+                headers: { "Content-Type": "multipart/form-data" },
                 timeout: 120000,
             });
-
-            console.log('responseUploadProfilePicture=>', response)
 
             const data = response.data;
             return data?.data?.profilePicture || data?.profilePicture || data?.data?.user?.profilePicture;
         } catch (err) {
-            const message = getErrorMessage(err);
-            return rejectWithValue(message);
+            return rejectWithValue(getErrorMessage(err));
         }
     },
 );
 
 /**
- * Update user info
- * @param {Object} userInfo - Object containing fields to update
- * Only sends modified fields to the API
+ * Update user info — only sends modified fields
+ * @param {Object} userInfo - Fields to update
  */
 export const updateUserInfo = createAsyncThunk(
     "profile/updateUserInfo",
@@ -84,11 +73,9 @@ export const updateUserInfo = createAsyncThunk(
 
             const response = await axios.patch("/auth/update-user-info", filteredInfo);
             const data = response.data;
-            console.log('dataUpdateUserInfo=>', data)
             return data?.data?.user || data?.user || data?.data || data;
         } catch (err) {
-            const message = getErrorMessage(err);
-            return rejectWithValue(message);
+            return rejectWithValue(getErrorMessage(err));
         }
     },
 );

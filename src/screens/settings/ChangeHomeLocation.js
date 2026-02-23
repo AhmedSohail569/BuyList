@@ -71,9 +71,9 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
 
     // Track whether location permission is granted (to safely enable showsUserLocation)
     const [hasLocationPermission, setHasLocationPermission] = useState(false);
-    
+
     // Track if we're loading the initial home location
-    const [loadingHomeLocation, setLoadingHomeLocation] = useState(false);
+    const [, setLoadingHomeLocation] = useState(false);
 
     // Search state
     const [searchQuery, setSearchQuery] = useState("");
@@ -100,7 +100,7 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
             try {
                 // Forward geocode the saved home address to get coordinates
                 const results = await forwardGeocode(savedHomeAddress);
-                
+
                 if (results && results.length > 0) {
                     const firstResult = results[0];
                     const coords = {
@@ -108,14 +108,13 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
                         longitude: firstResult.lon,
                     };
                     setSelectedCoords(coords);
-                    
+
                     // Animate map to the geocoded home location
                     setTimeout(() => {
                         animateToCoords(coords.latitude, coords.longitude);
                     }, 300);
                 }
-            } catch (err) {
-                console.error("Failed to geocode home address:", err);
+            } catch {
                 // Keep default location if geocoding fails
             } finally {
                 setLoadingHomeLocation(false);
@@ -123,6 +122,7 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
         };
 
         loadHomeLocation();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Run only once on mount
 
     // ============================================
@@ -196,17 +196,16 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
                     } else {
                         // Reverse geocoding returned no results
                         setSelectedAddress(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
-                        setSearchQuery('');
+                        setSearchQuery("");
                         Toast.show({
                             type: "info",
                             text1: "Location Selected",
                             text2: "No address found for this location. Coordinates saved.",
                         });
                     }
-                } catch (err) {
-                    console.error("Reverse geocoding failed:", err);
+                } catch {
                     setSelectedAddress(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
-                    setSearchQuery('');
+                    setSearchQuery("");
                     Toast.show({
                         type: "error",
                         text1: "Geocoding Error",
@@ -285,12 +284,11 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
                         text1: "Location Detected",
                         text2: address || "Location coordinates saved",
                     });
-                } catch (geoErr) {
-                    console.error("Reverse geocoding error:", geoErr);
+                } catch {
                     // Still save coordinates even if geocoding fails
                     setSelectedAddress(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
-                    setSearchQuery('');
-                    
+                    setSearchQuery("");
+
                     dispatch(
                         setLocation({
                             latitude,
@@ -309,7 +307,7 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
                     setReverseLoading(false);
                 }
             }
-        } catch (err) {
+        } catch {
             Toast.show({
                 type: "error",
                 text1: "Location Error",

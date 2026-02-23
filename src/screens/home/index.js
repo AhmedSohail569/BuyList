@@ -205,15 +205,8 @@ const HomeTab = ({ onQuickAction, navigation }) => {
   const { profile } = useSelector(state => state.profile);
   const { recentActivities } = useSelector(state => state.lists);
 
-  const { latitude, longitude } = useSelector((state) => state.location);
-
-  console.log("latitude=>", latitude);
-  console.log("longitude=>", longitude);
-
   // Notification dropdown state
   const [showNotifications, setShowNotifications] = useState(false);
-
-
 
   // Fetch recent activities on mount
   useEffect(() => {
@@ -323,7 +316,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
 
         <NearbyStores navigation={navigation} />
 
-        <AdsOffersCarousel data={AD_OFFERS_DATA} title="Ads & Offers" onAdPress={() => console.log("Ad pressed")} autoPlay={true} />
+        <AdsOffersCarousel data={AD_OFFERS_DATA} title="Ads & Offers" onAdPress={() => { }} autoPlay={true} />
 
         <YourLists navigation={navigation} />
 

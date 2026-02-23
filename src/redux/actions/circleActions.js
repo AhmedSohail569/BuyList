@@ -103,8 +103,6 @@ export const editCircleName = createAsyncThunk(
         name,
       });
 
-      console.log("response", response);
-
       return {
         circleId,
         name,

@@ -12,32 +12,26 @@ import { PermissionsProvider } from "~context/PermissionsContext";
 const Stack = createNativeStackNavigator();
 
 const RootNavigator = () => {
-  const { user, accessToken } = useSelector(state => state.auth);
-  const dispatch = useDispatch();
-
-  // ── Sequential permission flow ───────────────────────────────────────────
-  // Runs notification flow first, then unlocks location permission gate.
-  const { locationReady } = usePermissions();
+  const { user, accessToken } = useSelector((state) => state.auth);
 
   console.log("user", user);
+  const dispatch = useDispatch();
 
-  // Fetch profile on app start if access token exists and when it becomes available
+  // Sequential permission flow: notifications first, then location
+  const { locationReady } = usePermissions();
+
+  // Fetch profile on app start if user has a token but no profile loaded
   useEffect(() => {
     const fetchProfileIfLoggedIn = async () => {
       try {
-        // Check if we have access token in AsyncStorage
         const token = await getAccessToken();
-        console.log('token=>', token)
-        // Also check Redux state
         const hasToken = token || accessToken;
-console.log('hasToken=>', hasToken)
-console.log('user=>', user)
-        // If we have a token but no user/profile, fetch profile
+
         if (hasToken && !user) {
           dispatch(getProfile());
         }
-      } catch (error) {
-        console.log("Error checking access token:", error);
+      } catch {
+        // Token check failed — user will remain on onboarding
       }
     };
 
@@ -47,15 +41,9 @@ console.log('user=>', user)
   return (
     <PermissionsProvider locationReady={locationReady}>
       <NavigationContainer>
-        <Stack.Navigator
-          screenOptions={{
-            headerShown: false,
-          }}>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
           {!user ? (
-            <Stack.Screen
-              name="OnboardingNavigator"
-              component={OnboardingNavigator}
-            />
+            <Stack.Screen name="OnboardingNavigator" component={OnboardingNavigator} />
           ) : (
             <Stack.Screen name="AppNavigator" component={AppNavigator} />
           )}

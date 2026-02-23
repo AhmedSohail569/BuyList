@@ -238,8 +238,6 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
     }, [route?.params?.openCreateListModal, isCreateListVisible, navigation]),
   );
 
-  console.log("lists", lists);
-
   // Fetch lists on mount and refresh when screen is focused to get latest data
   useFocusEffect(
     useCallback(() => {
@@ -301,9 +299,9 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
           const PRIORITY_VALUE = { high: 3, medium: 2, low: 1 };
           const pA = PRIORITY_VALUE[a.priority?.toLowerCase()] || 0;
           const pB = PRIORITY_VALUE[b.priority?.toLowerCase()] || 0;
-          
+
           if (pA !== pB) return pB - pA;
-          
+
           // Secondary sort: Most recently updated
           const dateA = new Date(a.updatedAt || a.createdAt || 0);
           const dateB = new Date(b.updatedAt || b.createdAt || 0);
