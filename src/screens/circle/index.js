@@ -312,7 +312,7 @@ const CircleTab = ({ navigation }) => {
         const pA = getPriorityValue(a.priority);
         const pB = getPriorityValue(b.priority);
         if (pA !== pB) return pB - pA;
-        
+
         // Secondary sort: Most recently updated (descending)
         const dateA = new Date(a.updatedAt || a.createdAt).getTime();
         const dateB = new Date(b.updatedAt || b.createdAt).getTime();
@@ -489,6 +489,7 @@ const CircleTab = ({ navigation }) => {
                       colors={colors}
                     />
                     <Text style={[styles.listUpdated, { color: colors.textMuted }]}>{list.updated}</Text>
+
                   </View>
                   <TouchableOpacity
                     onPress={(e) => {

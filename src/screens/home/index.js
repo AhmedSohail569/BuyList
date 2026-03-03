@@ -7,7 +7,12 @@ import {
   Image,
   ScrollView as ReactScrollView,
   Dimensions,
+  Clipboard,
+  TextInput,
+  Linking,
 } from "react-native";
+import Toast from "react-native-toast-message";
+import { Copy } from "lucide-react-native";
 import {
   Plus,
   List,
@@ -201,12 +206,22 @@ const HomeTab = ({ onQuickAction, navigation }) => {
   const dispatch = useDispatch();
 
   const { colors, isDark } = useTheme();
-  const { user } = useSelector(state => state.auth);
+  const { user, accessToken } = useSelector(state => state.auth);
   const { profile } = useSelector(state => state.profile);
   const { recentActivities } = useSelector(state => state.lists);
+  const { lastSyncedToken: fcmToken } = useSelector(state => state.notifications);
 
   // Notification dropdown state
   const [showNotifications, setShowNotifications] = useState(false);
+
+  // Deep link tester
+  const [testDeepLink, setTestDeepLink] = useState("buylist://invite/FfOd91riIq");
+
+  const copyToClipboard = (label, value) => {
+    if (!value) return;
+    Clipboard.setString(value);
+    Toast.show({ type: "success", text1: `${label} copied to clipboard` });
+  };
 
   // Fetch recent activities on mount
   useEffect(() => {
@@ -312,6 +327,106 @@ const HomeTab = ({ onQuickAction, navigation }) => {
             labelColor={colors.textSecondary}
             onPress={() => navigation.navigate("PriceCheck")}
           />
+        </View>
+
+        {/* --- TEMP: Dev Token Section --- */}
+        <View
+          style={[
+            styles.tokenCard,
+            {
+              backgroundColor: isDark ? "rgba(30,30,30,0.8)" : "#F9FAFB",
+              borderColor: isDark ? "#333" : "#E5E7EB",
+            },
+          ]}>
+          <Text style={[styles.tokenSectionTitle, { color: colors.textPrimary }]}>
+            Dev Tokens
+          </Text>
+
+          {/* Access Token */}
+          <View style={styles.tokenRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.tokenLabel, { color: colors.textMuted }]}>
+                Access Token
+              </Text>
+              <Text
+                style={[styles.tokenValue, { color: colors.textSecondary }]}
+                numberOfLines={2}
+                ellipsizeMode="middle">
+                {accessToken || "Not available"}
+              </Text>
+            </View>
+            {accessToken ? (
+              <TouchableOpacity
+                style={[styles.copyBtn, { backgroundColor: colors.primary }]}
+                onPress={() => copyToClipboard("Access Token", accessToken)}>
+                <Copy size={14} color="#FFF" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          {/* FCM Token */}
+          <View style={[styles.tokenRow, { marginTop: 10 }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.tokenLabel, { color: colors.textMuted }]}>
+                FCM Token
+              </Text>
+              <Text
+                style={[styles.tokenValue, { color: colors.textSecondary }]}
+                numberOfLines={2}
+                ellipsizeMode="middle">
+                {fcmToken || "Not available"}
+              </Text>
+            </View>
+            {fcmToken ? (
+              <TouchableOpacity
+                style={[styles.copyBtn, { backgroundColor: colors.primary }]}
+                onPress={() => copyToClipboard("FCM Token", fcmToken)}>
+                <Copy size={14} color="#FFF" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          {/* Deep Link Tester */}
+          <View style={[styles.tokenRow, { marginTop: 14 }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.tokenLabel, { color: colors.textMuted }]}>
+                Test Deep Link
+              </Text>
+              <TextInput
+                style={[
+                  styles.deepLinkInput,
+                  {
+                    color: colors.textPrimary,
+                    borderColor: isDark ? "#444" : "#D1D5DB",
+                    backgroundColor: isDark ? "#1a1a1a" : "#FFF",
+                  },
+                ]}
+                value={testDeepLink}
+                onChangeText={setTestDeepLink}
+                placeholder="buylist://invite/CODE"
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <Text style={[styles.deepLinkHint, { color: colors.textMuted }]}>
+                Use buylist:// (works now) or https:// (needs domain setup)
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.copyBtn, { backgroundColor: "#16A34A", marginLeft: 10 }]}
+              onPress={() => {
+                if (!testDeepLink) return;
+                Linking.openURL(testDeepLink).catch(() => {
+                  Toast.show({
+                    type: "error",
+                    text1: "Failed",
+                    text2: "Could not open this URL.",
+                  });
+                });
+              }}>
+              <ArrowRight size={14} color="#FFF" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <NearbyStores navigation={navigation} />
@@ -542,6 +657,54 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   actionLabel: { fontSize: 12, fontWeight: "600" },
+
+  // Dev Token Section
+  tokenCard: {
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+  },
+  tokenSectionTitle: {
+    fontSize: RFValue(11),
+    fontFamily: FontFamily.bold,
+    marginBottom: 10,
+  },
+  tokenRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  tokenLabel: {
+    fontSize: RFValue(8),
+    fontFamily: FontFamily.medium,
+    marginBottom: 2,
+  },
+  tokenValue: {
+    fontSize: RFValue(8),
+    fontFamily: FontFamily.regular,
+  },
+  copyBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 10,
+  },
+  deepLinkInput: {
+    fontSize: RFValue(9),
+    fontFamily: FontFamily.regular,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginTop: 4,
+  },
+  deepLinkHint: {
+    fontSize: RFValue(7),
+    fontFamily: FontFamily.regular,
+    marginTop: 4,
+  },
 
   // Section Headers
   sectionTitle: {

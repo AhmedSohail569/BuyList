@@ -41,6 +41,28 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     return true
   }
+
+  // ─── Deep Linking: Custom URL Scheme (buylist://invite/...) ──────────────
+  func application(
+    _ app: UIApplication,
+    open url: URL,
+    options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+  ) -> Bool {
+    return RCTLinkingManager.application(app, open: url, options: options)
+  }
+
+  // ─── Deep Linking: Universal Links (https://buylist.app/invite/...) ──────
+  func application(
+    _ application: UIApplication,
+    continue userActivity: NSUserActivity,
+    restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void
+  ) -> Bool {
+    return RCTLinkingManager.application(
+      application,
+      continue: userActivity,
+      restorationHandler: restorationHandler
+    )
+  }
 }
 
 // ─── UNUserNotificationCenter Delegate ────────────────────────────────────────
@@ -55,12 +77,16 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     willPresent notification: UNNotification,
     withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
   ) {
-    // Show banner + play sound + update badge even while app is active
-    if #available(iOS 14.0, *) {
-      completionHandler([.banner, .badge, .sound])
-    } else {
-      completionHandler([.alert, .badge, .sound])
-    }
+    // // Show banner + play sound + update badge even while app is active
+    // if #available(iOS 14.0, *) {
+    //   completionHandler([.banner, .badge, .sound])
+    // } else {
+    //   completionHandler([.alert, .badge, .sound])
+    // }
+    // App is in foreground:
+    // We show our own in-app toast (JS) so we suppress the native iOS banner/alert here.
+    // This prevents duplicate UI (toast + system banner).
+    completionHandler([])
   }
 
   /// Called when the user taps on a notification (foreground or background).

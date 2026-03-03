@@ -4,9 +4,11 @@
  * Manages:
  * - FCM token sync state (not persisted — re-synced on app restart)
  * - Notification list with pagination, mark-as-read, and clear
+ * - Notification preference settings with per-key loading
  *
  * Optimistic updates:
  * - markNotificationRead: flips isRead immediately, reverts on failure
+ * - updateNotificationSetting: flips value immediately, reverts on failure
  */
 import { createSlice } from "@reduxjs/toolkit";
 import {
@@ -15,6 +17,8 @@ import {
   markNotificationRead,
   markAllNotificationsRead,
   clearAllNotifications,
+  fetchNotificationSettings,
+  updateNotificationSetting,
 } from "../actions/notificationActions";
 
 const initialState = {
@@ -33,6 +37,19 @@ const initialState = {
   // Action-specific loading flags
   markingAll: false,
   clearing: false,
+
+  // Notification preference settings
+  settings: {
+    pushEnabled: true,
+    sharedListUpdates: true,
+    itemAddedAlerts: true,
+    weeklyReminders: true,
+    promotions: true,
+    tips: true,
+  },
+  settingsLoading: false,
+  settingsError: null,
+  updatingKeys: {},
 };
 
 const notificationSlice = createSlice({
@@ -119,6 +136,36 @@ const notificationSlice = createSlice({
       })
       .addCase(clearAllNotifications.rejected, (state) => {
         state.clearing = false;
+      })
+
+      // ── Fetch Notification Settings ───────────────────────────────────
+      .addCase(fetchNotificationSettings.pending, (state) => {
+        state.settingsLoading = true;
+        state.settingsError = null;
+      })
+      .addCase(fetchNotificationSettings.fulfilled, (state, action) => {
+        state.settingsLoading = false;
+        state.settings = { ...state.settings, ...action.payload };
+      })
+      .addCase(fetchNotificationSettings.rejected, (state, action) => {
+        state.settingsLoading = false;
+        state.settingsError = action.payload ?? "Failed to load settings";
+      })
+
+      // ── Update Notification Setting (optimistic) ──────────────────────
+      .addCase(updateNotificationSetting.pending, (state, action) => {
+        const { key, value } = action.meta.arg;
+        state.updatingKeys[key] = true;
+        state.settings[key] = value;
+      })
+      .addCase(updateNotificationSetting.fulfilled, (state, action) => {
+        const { key } = action.payload;
+        delete state.updatingKeys[key];
+      })
+      .addCase(updateNotificationSetting.rejected, (state, action) => {
+        const { key } = action.payload || action.meta.arg;
+        delete state.updatingKeys[key];
+        state.settings[key] = !state.settings[key];
       });
   },
 });

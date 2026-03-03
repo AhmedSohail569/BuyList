@@ -29,6 +29,9 @@ export const loginUser = createAsyncThunk(
         deviceInfo,
       });
 
+
+      console.log("response loginUser", response);
+
       const data = response.data;
 
       // Persist tokens

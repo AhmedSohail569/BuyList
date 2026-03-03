@@ -43,6 +43,7 @@ const ListDetailsScreen = ({ navigation, route }) => {
   const listId = route?.params?.listId;
   const list = listId ? listById[listId] : null;
 
+
   // Determine if current user is a viewer (read-only) on this list
   const isViewer = list?.userRole?.toLowerCase() === "viewer";
 

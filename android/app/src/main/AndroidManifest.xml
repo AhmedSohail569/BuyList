@@ -69,21 +69,25 @@
         <category android:name="android.intent.category.LAUNCHER" />
       </intent-filter>
       
-      <!-- Deep Linking for Circle Invites -->
+      <!-- Deep Linking: Custom URL Scheme (buylist://invite/CODE) -->
+      <!-- ✅ Works immediately - no domain setup required -->
       <intent-filter>
         <action android:name="android.intent.action.VIEW" />
         <category android:name="android.intent.category.DEFAULT" />
         <category android:name="android.intent.category.BROWSABLE" />
-        <!-- Custom scheme -->
         <data android:scheme="buylist" android:host="invite" />
       </intent-filter>
       
-      <!-- App Links (if you have a verified domain) -->
+      <!-- Deep Linking: HTTPS App Links (https://buylist.app/invite/CODE) -->
+      <!-- ⚠️ Requires domain verification for automatic association -->
+      <!-- Without verification, Android shows a disambiguation dialog -->
+      <!-- To enable automatic opening, host assetlinks.json at: -->
+      <!-- https://buylist.app/.well-known/assetlinks.json -->
+      <!-- See DEEP_LINKING_SETUP.md for instructions -->
       <intent-filter android:autoVerify="true">
         <action android:name="android.intent.action.VIEW" />
         <category android:name="android.intent.category.DEFAULT" />
         <category android:name="android.intent.category.BROWSABLE" />
-        <!-- HTTPS links - replace buylist.app with your actual domain -->
         <data
           android:scheme="https"
           android:host="buylist.app"

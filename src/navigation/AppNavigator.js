@@ -3,7 +3,6 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import AppLayout from "~containers/layouts/AppLayout";
 import LocationPermissionGate from "~components/LocationPermissionGate";
 import { usePermissionsContext } from "~context/PermissionsContext";
-import useDeepLinking from "~hooks/useDeepLinking";
 
 import TabNavigator from "./TabNavigator";
 import SearchResultsScreen from "~screens/search/SearchResults";
@@ -22,9 +21,6 @@ import AIRecommendationsScreen from "~screens/home/AIRecommendations";
 const Stack = createNativeStackNavigator();
 
 export default () => {
-  // Initialize deep linking listener (now inside NavigationContainer)
-  useDeepLinking();
-
   // Gate: only activate location permission AFTER notification flow completes
   const { locationReady } = usePermissionsContext();
 

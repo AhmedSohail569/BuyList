@@ -1,6 +1,7 @@
 /**
  * Notification Redux Actions
- * Handles FCM token sync, fetching notifications, mark-as-read, and clear.
+ * Handles FCM token sync, fetching notifications, mark-as-read, clear,
+ * and notification preference settings.
  */
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "~utils/axiosInstance";
@@ -37,7 +38,6 @@ export const fetchNotifications = createAsyncThunk(
       const res = await axios.get(
         `/notifications/get-notifications?page=${page}`,
       );
-      console.log("res", res);
       const data =
         res.data?.data?.notifications ||
         res.data?.data ||
@@ -97,6 +97,46 @@ export const clearAllNotifications = createAsyncThunk(
       return {};
     } catch (error) {
       return rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
+/**
+ * Fetch notification preference settings.
+ * GET /notifications/notification-settings
+ */
+export const fetchNotificationSettings = createAsyncThunk(
+  "notifications/fetchNotificationSettings",
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await axios.get("/notifications/notification-settings");
+      console.log("res", res);
+      const settings = res.data?.data?.notificationSettings || res.data?.data || res.data || {};
+      return settings;
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
+/**
+ * Update one or more notification preference settings.
+ * PATCH /notifications/notification-settings
+ * Body: partial object, e.g. { itemAddedAlerts: false }
+ *
+ * @param {{ key: string, value: boolean }} — the setting key and its new value.
+ *   `key` is also used by the reducer to track per-key loading state.
+ */
+export const updateNotificationSetting = createAsyncThunk(
+  "notifications/updateNotificationSetting",
+  async ({ key, value }, { rejectWithValue }) => {
+    try {
+      console.log("key", key);
+      console.log("value", value);
+      await axios.patch("/notifications/notification-settings", { [key]: value });
+      return { key, value };
+    } catch (error) {
+      return rejectWithValue({ key, message: getErrorMessage(error) });
     }
   },
 );
