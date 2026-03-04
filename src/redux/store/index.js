@@ -35,11 +35,47 @@ const rootReducer = (state, action) => {
 };
 
 // ─── Persistence config ────────────────────────────────────────────────────────
+//
+// stateReconciler: On rehydration, walk every persisted slice and force all
+// loading flags → false and error flags → null.  This prevents a crash or
+// kill mid-request from permanently baking `loading: true` into AsyncStorage.
+//
+const sanitizeLoadingState = (inboundState, originalState, reducedState) => {
+  const sanitized = { ...reducedState };
+
+  // Only sanitize slices that are actually persisted (in whitelist)
+  const persistedKeys = ["auth", "circles", "lists", "location", "profile", "theme"];
+
+  for (const sliceKey of persistedKeys) {
+    const inbound = inboundState?.[sliceKey];
+    if (!inbound || typeof inbound !== "object") continue;
+
+    // Start with the rehydrated values
+    const cleaned = { ...inbound };
+
+    // Reset every key that looks like a loading flag or error flag
+    for (const key of Object.keys(cleaned)) {
+      const lower = key.toLowerCase();
+      if (lower.includes("loading")) {
+        cleaned[key] = false;
+      } else if (lower === "error" || lower.endsWith("error")) {
+        cleaned[key] = null;
+      }
+    }
+
+    sanitized[sliceKey] = cleaned;
+  }
+
+  return sanitized;
+};
+
 const persistConfig = {
   key: "root",
   storage: AsyncStorage,
   whitelist: ["auth", "circles", "lists", "location", "profile", "theme"],
+  stateReconciler: sanitizeLoadingState,
 };
+
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 

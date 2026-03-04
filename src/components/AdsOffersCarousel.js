@@ -1,12 +1,16 @@
 /**
- * AdsOffersCarousel - Reusable carousel component for ads and promotional offers
- * Features smooth horizontal scrolling with dot pagination
+ * AdsOffersCarousel - Full-width center-focused carousel for ads & offers.
+ *
+ * The active (center) card is magnified; neighbouring cards are scaled down
+ * and slightly transparent, giving a smooth "spotlight" effect as the user
+ * scrolls. Uses Animated.ScrollView with scroll-position interpolation for
+ * buttery-smooth 60fps animations driven on the native thread.
  */
 import React, { useRef, useState, useCallback, memo } from "react";
 import {
     View,
     StyleSheet,
-    FlatList,
+    Animated,
     Dimensions,
     ImageBackground,
     TouchableOpacity,
@@ -17,74 +21,117 @@ import { useTheme } from "~context/ThemeContext";
 import { FontFamily } from "~theme/fonts";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const CAROUSEL_SIDE_INSET = RFValue(16);
-const CARD_WIDTH = SCREEN_WIDTH - CAROUSEL_SIDE_INSET * 2;
+
+// ── Layout constants ────────────────────────────────────────────────────────────
+const CARD_WIDTH = SCREEN_WIDTH * 0.85; // visible card width
+const CARD_SPACING = RFValue(2); // gap between cards
+const SIDE_INSET = (SCREEN_WIDTH - CARD_WIDTH) / 2 - CARD_SPACING / 2; // account for card margin
+const SNAP_INTERVAL = CARD_WIDTH + CARD_SPACING;
 const CARD_HEIGHT = RFValue(160);
+
+// Animation tuning
+const ACTIVE_SCALE = 1.0;
+const INACTIVE_SCALE = 0.88;
+const ACTIVE_OPACITY = 1;
+const INACTIVE_OPACITY = 0.6;
 
 // ============================================
 // AD CARD COMPONENT
 // ============================================
-const AdCard = memo(({ item, onPress }) => {
+const AdCard = memo(({ item, index, scrollX, onPress }) => {
     const { colors } = useTheme();
 
+    // Interpolations driven by scroll position
+    const inputRange = [
+        (index - 1) * SNAP_INTERVAL,
+        index * SNAP_INTERVAL,
+        (index + 1) * SNAP_INTERVAL,
+    ];
+
+    const scale = scrollX.interpolate({
+        inputRange,
+        outputRange: [INACTIVE_SCALE, ACTIVE_SCALE, INACTIVE_SCALE],
+        extrapolate: "clamp",
+    });
+
+    const opacity = scrollX.interpolate({
+        inputRange,
+        outputRange: [INACTIVE_OPACITY, ACTIVE_OPACITY, INACTIVE_OPACITY],
+        extrapolate: "clamp",
+    });
+
     return (
-        <TouchableOpacity
-            activeOpacity={0.95}
-            onPress={() => onPress?.(item)}
-            style={styles.cardContainer}>
-            <ImageBackground
-                source={
-                    typeof item.image === "string" ? { uri: item.image } : item.image
-                }
-                style={styles.cardImage}
-                imageStyle={styles.cardImageStyle}
-                resizeMode="cover">
-                {/* Gradient overlay for better text visibility */}
-                <View style={styles.gradientOverlay}>
-                    <View style={styles.cardContent}>
-                        {/* Title pill/button */}
-                        <View style={[styles.titlePill, { backgroundColor: "#2563EB" }]}>
-                            <Text style={styles.titleText}>{item.title}</Text>
+        <Animated.View
+            style={[
+                styles.cardWrapper,
+                { transform: [{ scale }], opacity },
+            ]}>
+            <TouchableOpacity
+                activeOpacity={0.95}
+                onPress={() => onPress?.(item)}
+                style={styles.cardContainer}>
+                <ImageBackground
+                    source={
+                        typeof item.image === "string"
+                            ? { uri: item.image }
+                            : item.image
+                    }
+                    style={styles.cardImage}
+                    imageStyle={styles.cardImageStyle}
+                    resizeMode="cover">
+                    {/* Gradient overlay for text legibility */}
+                    <View style={styles.gradientOverlay}>
+                        <View style={styles.cardContent}>
+                            {/* Title pill */}
+                            <View
+                                style={[
+                                    styles.titlePill,
+                                    { backgroundColor: "#2563EB" },
+                                ]}>
+                                <Text style={styles.titleText}>
+                                    {item.title}
+                                </Text>
+                            </View>
+
+                            {/* Subtitle */}
+                            {item.subtitle && (
+                                <Text
+                                    style={styles.subtitleText}
+                                    numberOfLines={2}>
+                                    {item.subtitle}
+                                </Text>
+                            )}
                         </View>
-
-                        {/* Subtitle */}
-                        {item.subtitle && (
-                            <Text style={styles.subtitleText} numberOfLines={2}>
-                                {item.subtitle}
-                            </Text>
-                        )}
                     </View>
-                </View>
-            </ImageBackground>
-        </TouchableOpacity>
+                </ImageBackground>
+            </TouchableOpacity>
+        </Animated.View>
     );
 });
 
 // ============================================
-// DOT PAGINATION COMPONENT
+// DOT PAGINATION
 // ============================================
-const DotPagination = memo(({ total, activeIndex, colors }) => {
-    return (
-        <View style={styles.paginationContainer}>
-            {Array.from({ length: total }).map((_, index) => (
-                <View
-                    key={index}
-                    style={[
-                        styles.dot,
-                        {
-                            backgroundColor:
-                                index === activeIndex ? colors.primary : colors.border,
-                            width: index === activeIndex ? RFValue(16) : RFValue(6),
-                        },
-                    ]}
-                />
-            ))}
-        </View>
-    );
-});
+const DotPagination = memo(({ total, activeIndex, colors }) => (
+    <View style={styles.paginationContainer}>
+        {Array.from({ length: total }).map((_, i) => (
+            <View
+                key={i}
+                style={[
+                    styles.dot,
+                    {
+                        backgroundColor:
+                            i === activeIndex ? colors.primary : colors.border,
+                        width: i === activeIndex ? RFValue(16) : RFValue(6),
+                    },
+                ]}
+            />
+        ))}
+    </View>
+));
 
 // ============================================
-// MAIN CAROUSEL COMPONENT
+// MAIN CAROUSEL
 // ============================================
 const AdsOffersCarousel = ({
     data = [],
@@ -95,96 +142,86 @@ const AdsOffersCarousel = ({
     autoPlayInterval = 4000,
 }) => {
     const { colors } = useTheme();
-    const flatListRef = useRef(null);
+    const scrollX = useRef(new Animated.Value(0)).current;
+    const scrollViewRef = useRef(null);
     const [activeIndex, setActiveIndex] = useState(0);
     const autoPlayRef = useRef(null);
 
-    // Handle scroll end to update active index
+    // Track active index from scroll position
     const onMomentumScrollEnd = useCallback(
         (event) => {
-            const contentOffset = event.nativeEvent.contentOffset.x;
-            const index = Math.round(contentOffset / CARD_WIDTH);
+            const offsetX = event.nativeEvent.contentOffset.x;
+            const index = Math.round(offsetX / SNAP_INTERVAL);
             setActiveIndex(Math.max(0, Math.min(index, data.length - 1)));
         },
         [data.length],
     );
 
-    // Auto-play functionality
+    // Auto-play
     React.useEffect(() => {
         if (autoPlay && data.length > 1) {
             autoPlayRef.current = setInterval(() => {
-                setActiveIndex((prevIndex) => {
-                    const nextIndex = (prevIndex + 1) % data.length;
-                    flatListRef.current?.scrollToIndex({
-                        index: nextIndex,
+                setActiveIndex((prev) => {
+                    const next = (prev + 1) % data.length;
+                    scrollViewRef.current?.scrollTo({
+                        x: next * SNAP_INTERVAL,
                         animated: true,
                     });
-                    return nextIndex;
+                    return next;
                 });
             }, autoPlayInterval);
 
             return () => {
-                if (autoPlayRef.current) {
-                    clearInterval(autoPlayRef.current);
-                }
+                if (autoPlayRef.current) clearInterval(autoPlayRef.current);
             };
         }
     }, [autoPlay, autoPlayInterval, data.length]);
 
-    // Render individual ad card
-    const renderItem = useCallback(
-        ({ item }) => <AdCard item={item} onPress={onAdPress} />,
-        [onAdPress],
-    );
-
-    // Key extractor
-    const keyExtractor = useCallback(
-        (item, index) => item.id?.toString() || index.toString(),
-        [],
-    );
-
-    // Get item layout for better scroll performance
-    const getItemLayout = useCallback(
-        (_, index) => ({
-            length: CARD_WIDTH,
-            offset: CARD_WIDTH * index,
-            index,
-        }),
-        [],
-    );
-
-    // Don't render if no data
-    if (!data || data.length === 0) {
-        return null;
-    }
+    if (!data || data.length === 0) return null;
 
     return (
         <View style={styles.container}>
-            {/* Section Title */}
+            {/* Section title */}
             {showTitle && (
-                <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+                <Text
+                    style={[
+                        styles.sectionTitle,
+                        { color: colors.textPrimary },
+                    ]}>
                     {title}
                 </Text>
             )}
 
             {/* Carousel */}
-            <FlatList
-                ref={flatListRef}
-                data={data}
-                renderItem={renderItem}
-                keyExtractor={keyExtractor}
+            <Animated.ScrollView
+                ref={scrollViewRef}
                 horizontal
-                pagingEnabled
                 showsHorizontalScrollIndicator={false}
-                snapToInterval={CARD_WIDTH}
+                contentContainerStyle={{
+                    paddingHorizontal: SIDE_INSET,
+                }}
+                snapToInterval={SNAP_INTERVAL}
                 snapToAlignment="start"
                 decelerationRate="fast"
-                onMomentumScrollEnd={onMomentumScrollEnd}
-                getItemLayout={getItemLayout}
                 bounces={false}
-            />
+                onScroll={Animated.event(
+                    [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+                    { useNativeDriver: true },
+                )}
+                scrollEventThrottle={16}
+                onMomentumScrollEnd={onMomentumScrollEnd}>
+                {data.map((item, index) => (
+                    <AdCard
+                        key={item.id?.toString() || index.toString()}
+                        item={item}
+                        index={index}
+                        scrollX={scrollX}
+                        onPress={onAdPress}
+                    />
+                ))}
+            </Animated.ScrollView>
 
-            {/* Dot Pagination */}
+            {/* Dot pagination */}
             {data.length > 1 && (
                 <DotPagination
                     total={data.length}
@@ -207,10 +244,17 @@ const styles = StyleSheet.create({
         fontSize: RFValue(13),
         fontFamily: FontFamily.bold,
         marginBottom: RFValue(12),
+        paddingHorizontal: RFValue(16),
     },
-    cardContainer: {
+
+    // Card wrapper (receives animated scale + opacity)
+    cardWrapper: {
         width: CARD_WIDTH,
         height: CARD_HEIGHT,
+        marginHorizontal: CARD_SPACING / 2,
+    },
+    cardContainer: {
+        flex: 1,
         borderRadius: RFValue(16),
         overflow: "hidden",
     },
@@ -234,7 +278,6 @@ const styles = StyleSheet.create({
     },
     titlePill: {
         paddingHorizontal: RFValue(16),
-        // paddingVertical: RFValue(2),
         borderRadius: RFValue(4),
         marginBottom: RFValue(8),
     },
@@ -250,6 +293,8 @@ const styles = StyleSheet.create({
         lineHeight: RFValue(16),
         textAlign: "center",
     },
+
+    // Pagination
     paginationContainer: {
         flexDirection: "row",
         justifyContent: "center",

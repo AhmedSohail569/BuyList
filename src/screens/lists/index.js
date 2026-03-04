@@ -23,6 +23,7 @@ import { Modal, ScrollView, Text } from "~components/Common";
 import Header from "~components/Header";
 import { RFValue } from "react-native-responsive-fontsize";
 import { FontFamily } from "~theme/fonts";
+import useOnReconnect from "~hooks/useOnReconnect";
 import {
   fetchAllLists,
   deleteList,
@@ -256,6 +257,11 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
         });
     }, [dispatch]),
   );
+
+  // Re-fetch lists when internet reconnects
+  useOnReconnect(() => {
+    dispatch(fetchAllLists());
+  });
 
   // Handle navigation params to switch tabs - use useFocusEffect to handle when screen is focused
   useFocusEffect(

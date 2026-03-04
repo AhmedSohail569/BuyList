@@ -5,6 +5,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "~utils/axiosInstance";
 import { getErrorMessage } from "~utils";
+import { requireConnectivity } from "~utils/network";
 
 // ============================================
 // 1️⃣ GET USER OWNED CIRCLE
@@ -84,10 +85,11 @@ export const removeMemberFromCircle = createAsyncThunk(
       return rejectWithValue({ message, previousMembers, circleId });
     }
   },
+  { condition: requireConnectivity },
 );
 
 // ============================================
-// 5️⃣ EDIT CIRCLE NAME (Optimistic Update)
+// 5. EDIT CIRCLE NAME (Optimistic Update)
 // PUT /api/circles/edit-circle/{circleId}
 // ============================================
 export const editCircleName = createAsyncThunk(
@@ -119,6 +121,7 @@ export const editCircleName = createAsyncThunk(
       });
     }
   },
+  { condition: requireConnectivity },
 );
 
 // ============================================
@@ -147,10 +150,11 @@ export const addMemberToCircle = createAsyncThunk(
       return rejectWithValue({ message, previousMembers, circleId });
     }
   },
+  { condition: requireConnectivity },
 );
 
 // ============================================
-// 7️⃣ UPDATE MEMBER ROLE (Optimistic Update)
+// 7. UPDATE MEMBER ROLE (Optimistic Update)
 // PUT /api/circles/members/{circleId}/{memberId}
 // ============================================
 export const updateMemberRole = createAsyncThunk(
@@ -176,10 +180,11 @@ export const updateMemberRole = createAsyncThunk(
       return rejectWithValue({ message, previousMembers, circleId });
     }
   },
+  { condition: requireConnectivity },
 );
 
 // ============================================
-// 8️⃣ UPDATE DEFAULT ROLE FOR INVITED MEMBERS
+// 8. UPDATE DEFAULT ROLE FOR INVITED MEMBERS
 // PUT /circles/default-role/{circleId}
 // Body: { defaultMemberRole: "editor" | "viewer" }
 // ============================================
@@ -209,4 +214,5 @@ export const updateCircleDefaultMemberRole = createAsyncThunk(
       return rejectWithValue(message);
     }
   },
+  { condition: requireConnectivity },
 );

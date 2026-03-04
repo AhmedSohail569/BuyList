@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 30,
-    paddingVertical: 5,
+    paddingVertical: RFValue(8),
   },
   searchInput: {
     flex: 1,

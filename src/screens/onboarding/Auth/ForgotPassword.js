@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, StyleSheet, Image, TouchableOpacity } from "react-native";
+import { View, StyleSheet, Image, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
 
 import { useDispatch, useSelector } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -326,6 +326,15 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
   return (
     <OnboardingLayout>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          automaticallyAdjustKeyboardInsets>
       {/* Header with back button */}
       <TouchableOpacity
         style={styles.backButton}
@@ -502,6 +511,8 @@ const ForgotPasswordScreen = ({ navigation }) => {
           )}
         </View>
       </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </OnboardingLayout>
   );
 };

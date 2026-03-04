@@ -14,8 +14,8 @@ const lightModeColors = {
 
 const CountryPickerButton = ({ onSelect, forceLight = false, disabled = false }) => {
   const { colors, isDark } = useTheme();
-  const [countryCode, setCountryCode] = useState("PK");
-  const [callingCode, setCallingCode] = useState("92");
+  const [countryCode, setCountryCode] = useState("GB");
+  const [callingCode, setCallingCode] = useState("44");
   const [visible, setVisible] = useState(false);
 
   // Use light mode colors if forceLight is true

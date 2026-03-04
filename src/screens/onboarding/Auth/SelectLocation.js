@@ -5,6 +5,9 @@ import {
   Image,
   ActivityIndicator,
   TouchableOpacity,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useDispatch } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -110,6 +113,15 @@ const SelectLocationScreen = ({ navigation, route }) => {
 
   return (
     <OnboardingLayout>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          automaticallyAdjustKeyboardInsets>
       <Image
         source={Images.location}
         style={styles.backgroundImage}
@@ -202,6 +214,8 @@ const SelectLocationScreen = ({ navigation, route }) => {
           />
         </View>
       </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </OnboardingLayout>
   );
 };

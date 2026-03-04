@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingBottom: RFValue(10),
+    paddingBottom: RFValue(15),
   },
 
   fab: {

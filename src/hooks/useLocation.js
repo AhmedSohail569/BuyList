@@ -17,6 +17,7 @@ import {
     getCityFromComponents,
     getAreaFromComponents,
 } from "~utils/geocoding";
+import { checkConnectivity, showNoInternetToast } from "~utils/network";
 
 const GEOLOCATION_OPTIONS = {
     enableHighAccuracy: true,
@@ -113,6 +114,15 @@ const useLocation = () => {
     /** Full location flow: permission → geolocation → reverse geocoding */
     const detectLocation = useCallback(async () => {
         if (isFetchingRef.current) return null;
+
+        // ── Connectivity guard ──
+        const isConnected = await checkConnectivity();
+        if (!isConnected) {
+            showNoInternetToast();
+            setError("Please connect to the internet to detect your location.");
+            return null;
+        }
+
         isFetchingRef.current = true;
 
         setLoading(true);

@@ -33,6 +33,7 @@ import {
 import { getCircleInviteLink } from "~redux/actions/inviteActions";
 import { useAlert } from "~context/AlertContext";
 import { useTheme } from "~context/ThemeContext";
+import useOnReconnect from "~hooks/useOnReconnect";
 
 // Helper function to get initials from a name
 const getInitials = (name) => {
@@ -168,6 +169,11 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
       dispatch(fetchOwnedCircle());
     }
   }, [dispatch, ownedCircle]);
+
+  // Re-fetch circle data when internet reconnects
+  useOnReconnect(() => {
+    dispatch(fetchOwnedCircle());
+  });
 
   // Generate invite link when switching to Invite tab
   useEffect(() => {

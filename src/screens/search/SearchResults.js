@@ -415,7 +415,7 @@ const SearchResultsScreen = ({ navigation, route }) => {
 
       <SearchBar
         type={2}
-        placeholder="Search products, categories..."
+        placeholder="Search products..."
         value={searchQuery}
         onChangeText={setSearchQuery}
         onSubmitEditing={() => performSearch(searchQuery)}

@@ -25,6 +25,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { fetchOwnedCircle } from "~redux/actions/circleActions";
 import { fetchRecentActivities, fetchAllLists } from "~redux/actions/listActions";
 import { useTheme } from "~context/ThemeContext";
+import useOnReconnect from "~hooks/useOnReconnect";
 
 // Helper function to get initials from a name
 const getInitials = (name) => {
@@ -283,6 +284,13 @@ const CircleTab = ({ navigation }) => {
       dispatch(fetchAllLists());
     }, [dispatch])
   );
+
+  // Re-fetch data when internet reconnects
+  useOnReconnect(() => {
+    dispatch(fetchOwnedCircle());
+    dispatch(fetchRecentActivities());
+    dispatch(fetchAllLists());
+  });
 
   // Build connections from ownedCircle data
   const connections = buildConnections(ownedCircle);

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, memo } from "react";
 import {
   View,
   TouchableOpacity,
@@ -36,6 +36,8 @@ const StoreCard = ({ item, onPress, colors }) => (
     </View>
   </TouchableOpacity>
 );
+
+const MemoStoreCard = memo(StoreCard);
 
 const NearbyStores = ({ navigation }) => {
   const { colors } = useTheme();
@@ -80,6 +82,15 @@ const NearbyStores = ({ navigation }) => {
     // navigation.navigate("StoreDetail", {storeId});
   };
 
+  const renderStoreItem = useCallback(
+    ({ item }) => (
+      <MemoStoreCard item={item} onPress={handleStorePress} colors={colors} />
+    ),
+    [handleStorePress, colors],
+  );
+
+  const storeKeyExtractor = useCallback(item => item.id.toString(), []);
+
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
@@ -94,14 +105,13 @@ const NearbyStores = ({ navigation }) => {
 
       <FlatList
         data={stores}
-        renderItem={({ item }) => (
-          <StoreCard item={item} onPress={handleStorePress} colors={colors} />
-        )}
-        keyExtractor={item => item.id.toString()}
+        renderItem={renderStoreItem}
+        keyExtractor={storeKeyExtractor}
         horizontal
         showsHorizontalScrollIndicator={false}
         scrollEventThrottle={16}
         contentContainerStyle={styles.storesList}
+        initialNumToRender={3}
       />
     </View>
   );
@@ -195,4 +205,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default NearbyStores;
+export default memo(NearbyStores);

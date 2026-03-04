@@ -9,10 +9,15 @@ import {
   Info,
 } from "lucide-react-native";
 import Header from "~components/Header";
-import {ScrollView, Text} from "~components/Common";
-import {RFValue} from "react-native-responsive-fontsize";
-import {FontFamily} from "~theme/fonts";
-import {useTheme} from "~context/ThemeContext";
+import { ScrollView, Text } from "~components/Common";
+import { RFValue } from "react-native-responsive-fontsize";
+import { FontFamily } from "~theme/fonts";
+import { useTheme } from "~context/ThemeContext";
+import {
+  fetchNotificationSettings,
+  updateNotificationSetting,
+} from "~redux/actions/notificationActions";
+import useOnReconnect from "~hooks/useOnReconnect";
 
 const NotificationRow = ({
   icon: Icon,
@@ -62,9 +67,49 @@ const NotificationsScreen = ({onQuickAction, navigation}) => {
     promotions: true,
   });
 
-  const handleToggle = key => {
-    setToggles(prev => ({...prev, [key]: !prev[key]}));
-  };
+  // Re-fetch settings when internet reconnects
+  useOnReconnect(() => {
+    dispatch(fetchNotificationSettings());
+  });
+
+  const handleToggle = useCallback(
+    (key, isApi) => {
+      if (!isApi) return;
+      dispatch(
+        updateNotificationSetting({ key, value: !settings[key] }),
+      );
+    },
+    [dispatch, settings],
+  );
+
+  const handleMasterToggle = useCallback(() => {
+    dispatch(
+      updateNotificationSetting({
+        key: "pushEnabled",
+        value: !settings.pushEnabled,
+      }),
+    );
+  }, [dispatch, settings.pushEnabled]);
+
+  const pushDisabled = !settings.pushEnabled;
+
+  if (settingsLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <Header
+          variant="screen"
+          title="Notifications"
+          onBack={() => navigation.goBack()}
+        />
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loaderText, { color: colors.textSecondary }]}>
+            Loading settings...
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, {backgroundColor: colors.background}]}>

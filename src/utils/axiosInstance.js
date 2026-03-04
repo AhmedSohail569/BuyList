@@ -4,6 +4,7 @@ import Config from "react-native-config";
 import { InteractionManager } from "react-native";
 import { forceLogoutAndPurge } from "~redux/store";
 import { showError } from "~utils/toast";
+import { checkConnectivity, showNoInternetToast } from "~utils/network";
 import { getRefreshToken, storeAccessToken, clearAllTokens, storeRefreshToken } from "~utils";
 
 // ── Axios Instance ─────────────────────────────────────────────────────────────
@@ -18,6 +19,15 @@ const axiosInstance = axios.create({
 
 axiosInstance.interceptors.request.use(
   async (config) => {
+    // ── Connectivity guard — reject before request fires ──
+    const isConnected = await checkConnectivity();
+    if (!isConnected) {
+      showNoInternetToast();
+      const error = new Error("No internet connection");
+      error.isOffline = true;
+      return Promise.reject(error);
+    }
+
     const token = await AsyncStorage.getItem("accessToken");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -144,7 +154,8 @@ axiosInstance.interceptors.response.use(
       if (status === 404) {
         showError("Error 404", "Something went wrong!");
       }
-    } else if (error.request) {
+    } else if (error.request && !error.isOffline) {
+      // Only show network error for genuine request failures, not offline-rejected ones
       showNetworkError();
     }
 

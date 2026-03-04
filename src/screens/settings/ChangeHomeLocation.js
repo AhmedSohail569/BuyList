@@ -15,8 +15,9 @@ import {
     FlatList,
     Platform,
     TextInput as RNTextInput,
+    Animated,
 } from "react-native";
-import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
+import MapView, { PROVIDER_GOOGLE } from "react-native-maps";
 import { useDispatch, useSelector } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
@@ -85,6 +86,8 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
 
     const debounceRef = useRef(null);
     const reverseDebounceRef = useRef(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const markerScale = useRef(new Animated.Value(1)).current;
 
     // ============================================
     // Load saved home address on mount
@@ -170,21 +173,46 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
     }, []);
 
     // ============================================
-    // Handle map press — place marker and reverse geocode
+    // Handle map region change (drag / zoom)
     // ============================================
-    const handleMapPress = useCallback(
-        async (e) => {
-            const { latitude, longitude } = e.nativeEvent.coordinate;
+    const handleRegionChange = useCallback(() => {
+        setIsDragging(true);
+        // Scale down marker slightly during drag
+        Animated.spring(markerScale, {
+            toValue: 0.85,
+            friction: 5,
+            useNativeDriver: true,
+        }).start();
+
+        // Clear any pending reverse geocode
+        if (reverseDebounceRef.current) {
+            clearTimeout(reverseDebounceRef.current);
+            reverseDebounceRef.current = null;
+        }
+    }, [markerScale]);
+
+    // ============================================
+    // Handle map region change complete (user stopped dragging)
+    // ============================================
+    const handleRegionChangeComplete = useCallback(
+        (region) => {
+            setIsDragging(false);
+            // Bounce marker back
+            Animated.spring(markerScale, {
+                toValue: 1,
+                friction: 4,
+                useNativeDriver: true,
+            }).start();
+
+            const { latitude, longitude } = region;
             setSelectedCoords({ latitude, longitude });
             setShowResults(false);
-            Keyboard.dismiss();
 
-            // Clear any pending reverse geocode
+            // Debounced reverse geocode
             if (reverseDebounceRef.current) {
                 clearTimeout(reverseDebounceRef.current);
             }
 
-            // Debounce reverse geocoding to prevent excessive API calls
             setReverseLoading(true);
             reverseDebounceRef.current = setTimeout(async () => {
                 try {
@@ -192,31 +220,20 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
                     if (geoResult && geoResult.display_name) {
                         const address = formatAddress(geoResult);
                         setSelectedAddress(address);
-                        setSearchQuery(address);
+                        setSearchQuery("");
                     } else {
-                        // Reverse geocoding returned no results
                         setSelectedAddress(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
                         setSearchQuery("");
-                        Toast.show({
-                            type: "info",
-                            text1: "Location Selected",
-                            text2: "No address found for this location. Coordinates saved.",
-                        });
                     }
                 } catch {
                     setSelectedAddress(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
                     setSearchQuery("");
-                    Toast.show({
-                        type: "error",
-                        text1: "Geocoding Error",
-                        text2: "Could not get address. Using coordinates instead.",
-                    });
                 } finally {
                     setReverseLoading(false);
                 }
-            }, 600);
+            }, 400);
         },
-        [],
+        [markerScale],
     );
 
     // ============================================
@@ -412,29 +429,20 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
                         latitudeDelta: DEFAULT_DELTA,
                         longitudeDelta: DEFAULT_DELTA,
                     }}
-                    onPress={handleMapPress}
+                    onPress={() => Keyboard.dismiss()}
+                    onRegionChange={handleRegionChange}
+                    onRegionChangeComplete={handleRegionChangeComplete}
                     showsUserLocation={hasLocationPermission}
                     showsMyLocationButton={false}
                     showsCompass={false}
                     mapType="standard"
-                    userInterfaceStyle={isDark ? "dark" : "light"}>
-                    {/* Selected location marker */}
-                    <Marker
-                        coordinate={selectedCoords}
-                        anchor={{ x: 0.5, y: 1 }}
-                        tracksViewChanges={false}>
-                        <View style={styles.customMarker}>
-                            <View style={styles.markerCircle}>
-                                <Icon name="navigate" size={RFValue(16)} color="#FFFFFF" />
-                            </View>
-                            <View style={styles.markerTail} />
-                        </View>
-                    </Marker>
-                </MapView>
+                    userInterfaceStyle={isDark ? "dark" : "light"}
+                />
 
-                {/* Address label on map */}
-                {(selectedAddress || reverseLoading) && (
-                    <View style={styles.addressOverlay} pointerEvents="none">
+                {/* Center-pinned marker — moves with map during drag */}
+                <View style={styles.centerMarkerContainer} pointerEvents="none">
+                    {/* Address bubble — sits above the marker */}
+                    {(selectedAddress || reverseLoading) && (
                         <View
                             style={[
                                 styles.addressBubble,
@@ -456,8 +464,23 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
                                 </Text>
                             )}
                         </View>
-                    </View>
-                )}
+                    )}
+
+                    <View style={styles.addressMarkerSpacer} />
+
+                    {/* Marker pin */}
+                    <Animated.View style={{ transform: [{ scale: markerScale }] }}>
+                        <View style={styles.customMarker}>
+                            <View style={[styles.markerCircle, isDragging && styles.markerCircleDragging]}>
+                                <Icon name="navigate" size={RFValue(16)} color="#FFFFFF" />
+                            </View>
+                            <View style={[styles.markerTail, isDragging && styles.markerTailDragging]} />
+                        </View>
+                    </Animated.View>
+                    {/* Marker shadow dot */}
+                    <View style={[styles.markerShadowDot, isDragging && styles.markerShadowDotDragging]} />
+                </View>
+
 
                 {/* Detect Location FAB */}
                 <TouchableOpacity
@@ -528,7 +551,7 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
                         style={styles.searchIcon}
                     />
                     <RNTextInput
-                        value={searchQuery}
+                        value={searchQuery || selectedAddress}
                         onChangeText={(text) => {
                             setSearchQuery(text);
                             if (!text.trim()) {
@@ -536,12 +559,16 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
                                 setSearchResults([]);
                             }
                         }}
-                        placeholder={selectedAddress || "Search for an address..."}
+                        placeholder="Search for an address..."
                         placeholderTextColor={colors.textMuted}
-                        style={[styles.textInput, { color: colors.textPrimary, }]}
+                        style={[styles.textInput, { color: colors.textPrimary }]}
                         returnKeyType="search"
                         autoCorrect={false}
                         onFocus={() => {
+                            // Clear the displayed address so user can type fresh
+                            if (!searchQuery && selectedAddress) {
+                                setSearchQuery("");
+                            }
                             if (searchResults.length > 0) setShowResults(true);
                         }}
                     />
@@ -552,11 +579,12 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
                             style={styles.searchSpinner}
                         />
                     )}
-                    {!searching && searchQuery.length > 0 && (
+                    {!searching && (searchQuery.length > 0 || selectedAddress.length > 0) && (
                         <TouchableOpacity
                             activeOpacity={0.7}
                             onPress={() => {
                                 setSearchQuery("");
+                                setSelectedAddress("");
                                 setSearchResults([]);
                                 setShowResults(false);
                             }}>
@@ -644,6 +672,18 @@ const styles = StyleSheet.create({
         ...StyleSheet.absoluteFillObject,
     },
 
+    // Center-pinned marker overlay
+    centerMarkerContainer: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: "center",
+        alignItems: "center",
+        zIndex: 3,
+    },
+
     // Custom marker
     customMarker: {
         alignItems: "center",
@@ -661,6 +701,10 @@ const styles = StyleSheet.create({
         shadowRadius: 6,
         elevation: 8,
     },
+    markerCircleDragging: {
+        backgroundColor: "#2C2C54",
+        shadowOpacity: 0.4,
+    },
     markerTail: {
         width: 0,
         height: 0,
@@ -672,16 +716,24 @@ const styles = StyleSheet.create({
         borderTopColor: "#1A1A2E",
         marginTop: -1,
     },
-
-    // Address bubble (floating on map)
-    addressOverlay: {
-        position: "absolute",
-        top: "45%",
-        left: 0,
-        right: 0,
-        alignItems: "center",
-        zIndex: 5,
+    markerTailDragging: {
+        borderTopColor: "#2C2C54",
     },
+    markerShadowDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: "rgba(0,0,0,0.25)",
+        marginTop: 2,
+    },
+    markerShadowDotDragging: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: "rgba(0,0,0,0.15)",
+    },
+
+    // Address bubble (above marker)
     addressBubble: {
         paddingHorizontal: RFValue(14),
         paddingVertical: RFValue(6),
@@ -699,6 +751,9 @@ const styles = StyleSheet.create({
         fontSize: RFValue(10),
         fontFamily: FontFamily.medium,
         textAlign: "center",
+    },
+    addressMarkerSpacer: {
+        height: RFValue(8),
     },
 
     // Detect Location FAB
