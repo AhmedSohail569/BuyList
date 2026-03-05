@@ -206,6 +206,11 @@ const NotificationsScreen = ({ navigation }) => {
     dispatch(fetchNotificationSettings());
   }, [dispatch]);
 
+   // Re-fetch when internet reconnects
+  useOnReconnect(() => {
+    dispatch(fetchNotificationSettings());
+  });
+
   const handleToggle = useCallback(
     (key, isApi) => {
       if (!isApi) return;
