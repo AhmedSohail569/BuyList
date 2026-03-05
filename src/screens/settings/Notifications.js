@@ -14,6 +14,7 @@ import {
   BellOff,
   Info,
   Megaphone,
+  Tag,
   Lightbulb,
 } from "lucide-react-native";
 import { useDispatch, useSelector } from "react-redux";
@@ -28,6 +29,8 @@ import {
 } from "~redux/actions/notificationActions";
 import useOnReconnect from "~hooks/useOnReconnect";
 
+
+
 // ── Reusable Toggle Row ────────────────────────────────────────────────────────
 const NotificationRow = ({
   icon: Icon,
@@ -39,6 +42,7 @@ const NotificationRow = ({
   isLast,
   disabled,
   updating,
+  colors
 }) => (
   <View
     style={[
@@ -55,7 +59,7 @@ const NotificationRow = ({
     <View style={styles.textContainer}>
       <Text
         style={[
-          styles.title,
+          styles.rowTitle,
           { color: disabled ? colors.textDisabled : colors.textPrimary },
         ]}
       >
@@ -63,7 +67,7 @@ const NotificationRow = ({
       </Text>
       <Text
         style={[
-          styles.description,
+          styles.rowDescription,
           { color: disabled ? colors.textDisabled : colors.textSecondary },
         ]}
         numberOfLines={2}
