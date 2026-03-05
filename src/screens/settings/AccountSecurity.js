@@ -29,6 +29,7 @@ import {
   logoutAllOtherSessions,
 } from "~redux/actions/sessionActions";
 import { logoutAllAndPurge } from "~redux/store";
+import useOnReconnect from "~hooks/useOnReconnect";
 
 // ── Reusable Rows ──────────────────────────────────────────────────────────────
 
@@ -185,6 +186,11 @@ const SecurityScreen = ({ navigation }) => {
   useEffect(() => {
     dispatch(getSessions());
   }, [dispatch]);
+
+  // Re-fetch sessions when internet reconnects
+  useOnReconnect(() => {
+    dispatch(getSessions());
+  });
 
   const closeAlert = useCallback(() => {
     setAlertConfig((prev) => ({ ...prev, visible: false }));

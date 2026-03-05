@@ -23,6 +23,7 @@ import { Modal, ScrollView, Text } from "~components/Common";
 import Header from "~components/Header";
 import { RFValue } from "react-native-responsive-fontsize";
 import { FontFamily } from "~theme/fonts";
+import useOnReconnect from "~hooks/useOnReconnect";
 import {
   fetchAllLists,
   deleteList,
@@ -215,6 +216,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
 
   const [activeTab, setActiveTab] = useState("All Lists");
   const [isCreateListVisible, setCreateListVisible] = useState(false);
+  const [openedFromHome, setOpenedFromHome] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [deletingListId, setDeletingListId] = useState(null);
   const [activeMenuListId, setActiveMenuListId] = useState(null);
@@ -229,6 +231,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
     useCallback(() => {
       const shouldOpen = route?.params?.openCreateListModal;
       if (shouldOpen && !isCreateListVisible) {
+        setOpenedFromHome(true);
         setCreateListVisible(true);
       }
       if (shouldOpen) {
@@ -237,6 +240,14 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
       }
     }, [route?.params?.openCreateListModal, isCreateListVisible, navigation]),
   );
+
+  const closeCreateListModal = useCallback(() => {
+    setCreateListVisible(false);
+    if (openedFromHome) {
+      setOpenedFromHome(false);
+      navigation.navigate("Home");
+    }
+  }, [openedFromHome, navigation]);
 
   // Fetch lists on mount and refresh when screen is focused to get latest data
   useFocusEffect(
@@ -256,6 +267,11 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
         });
     }, [dispatch]),
   );
+
+  // Re-fetch lists when internet reconnects
+  useOnReconnect(() => {
+    dispatch(fetchAllLists());
+  });
 
   // Handle navigation params to switch tabs - use useFocusEffect to handle when screen is focused
   useFocusEffect(
@@ -456,7 +472,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
           text1: "List Created",
           text2: "Your list has been created successfully",
         });
-        setCreateListVisible(false);
+        closeCreateListModal();
         // Optimistic update already handled, no refetch needed
       } catch (err) {
         // Error handled by useEffect
@@ -464,7 +480,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
         setIsCreatingList(false);
       }
     },
-    [dispatch, isCreatingList],
+    [dispatch, isCreatingList, closeCreateListModal],
   );
 
   // Navigate to list details
@@ -721,7 +737,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
 
       <Modal
         isVisible={isCreateListVisible}
-        onClose={() => setCreateListVisible(false)}
+        onClose={closeCreateListModal}
         onApply={handleCreateList}
         type="createList"
         loading={isCreatingList}

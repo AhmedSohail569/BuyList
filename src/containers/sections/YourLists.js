@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, memo } from "react";
 import {
   View,
   TouchableOpacity,
@@ -63,6 +63,8 @@ const ListCard = ({ item, onPress, colors, isDark }) => (
   </TouchableOpacity>
 );
 
+const MemoListCard = memo(ListCard);
+
 const YourLists = ({ navigation }) => {
   const { colors, isDark } = useTheme();
   const [lists] = useState([
@@ -112,6 +114,15 @@ const YourLists = ({ navigation }) => {
     navigation.navigate("Lists");
   };
 
+  const renderListItem = useCallback(
+    ({ item }) => (
+      <MemoListCard item={item} onPress={handleListPress} colors={colors} isDark={isDark} />
+    ),
+    [handleListPress, colors, isDark],
+  );
+
+  const listKeyExtractor = useCallback(item => item.id.toString(), []);
+
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
@@ -122,12 +133,12 @@ const YourLists = ({ navigation }) => {
 
       <FlatList
         data={lists}
-        renderItem={({ item }) => (
-          <ListCard item={item} onPress={handleListPress} colors={colors} isDark={isDark} />
-        )}
-        keyExtractor={item => item.id.toString()}
+        renderItem={renderListItem}
+        keyExtractor={listKeyExtractor}
         scrollEnabled={false}
         contentContainerStyle={styles.listsList}
+        initialNumToRender={3}
+        removeClippedSubviews={false}
       />
 
       {/* View All Lists Button */}
@@ -226,4 +237,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default YourLists;
+export default memo(YourLists);

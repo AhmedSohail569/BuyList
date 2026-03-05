@@ -27,9 +27,11 @@ import { DEFAULT_ROLES } from "~constants";
 import {
   editCircleName,
   updateCircleDefaultMemberRole,
+  fetchOwnedCircle,
 } from "~redux/actions/circleActions";
 import { clearCircleError } from "~redux/reducers/circleReducer";
 import { useTheme } from "~context/ThemeContext";
+import useOnReconnect from "~hooks/useOnReconnect";
 
 const SettingsRow = ({
   icon: Icon,
@@ -80,6 +82,16 @@ const CircleSettingsScreen = ({ onQuickAction, navigation }) => {
   const { colors, isDark } = useTheme();
 
   console.log("ownedCircle", ownedCircle);
+
+  // Fetch fresh own circle data on mount
+  useEffect(() => {
+    dispatch(fetchOwnedCircle());
+  }, [dispatch]);
+
+  // Re-fetch circle data when internet reconnects
+  useOnReconnect(() => {
+    dispatch(fetchOwnedCircle());
+  });
 
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState(null);
@@ -331,8 +343,8 @@ const CircleSettingsScreen = ({ onQuickAction, navigation }) => {
           />
         </View>
 
-        {/* DANGER ZONE SECTION */}
-        <Text style={[styles.sectionHeader, styles.dangerHeader]}>
+        {/* DANGER ZONE SECTION - Commented out for now */}
+        {/* <Text style={[styles.sectionHeader, styles.dangerHeader]}>
           DANGER ZONE
         </Text>
         <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
@@ -359,11 +371,10 @@ const CircleSettingsScreen = ({ onQuickAction, navigation }) => {
           />
         </View>
 
-        {/* Footer Note */}
         <Text style={[styles.footerNote, { color: colors.textMuted }]}>
           Deleting a circle is permanent and will remove all shared lists and
           history for everyone.
-        </Text>
+        </Text> */}
 
         <View style={{ height: 40 }} />
       </ScrollView>

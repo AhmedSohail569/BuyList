@@ -15,8 +15,9 @@ import {
     FlatList,
     Platform,
     TextInput as RNTextInput,
+    Animated,
 } from "react-native";
-import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
+import MapView, { PROVIDER_GOOGLE } from "react-native-maps";
 import { useDispatch, useSelector } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
@@ -85,6 +86,41 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
 
     const debounceRef = useRef(null);
     const reverseDebounceRef = useRef(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const markerScale = useRef(new Animated.Value(1)).current;
+
+    // Guard mapPadding until the native GoogleMap instance is ready.
+    // Without this, Android crashes: "setPadding on a null object reference".
+    const [isMapReady, setIsMapReady] = useState(false);
+
+    // Measured height of the bottom sheet (via onLayout).
+    // Drives two things in sync:
+    //   1. mapPadding.bottom  — shifts the map's logical centre above the sheet
+    //   2. centerMarkerContainer.bottom — keeps the pin at the same visual centre
+    const [bottomSheetHeight, setBottomSheetHeight] = useState(0);
+
+    // iOS keyboard animation: slide the absolute sheet up by exactly keyboard height.
+    // Android: windowSoftInputMode="adjustResize" pins the sheet natively — no JS.
+    const sheetBottom = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        if (Platform.OS !== "ios") return;
+        const onShow = Keyboard.addListener("keyboardWillShow", (e) => {
+            Animated.timing(sheetBottom, {
+                toValue: e.endCoordinates.height,
+                duration: e.duration ?? 250,
+                useNativeDriver: false,
+            }).start();
+        });
+        const onHide = Keyboard.addListener("keyboardWillHide", (e) => {
+            Animated.timing(sheetBottom, {
+                toValue: 0,
+                duration: e.duration ?? 200,
+                useNativeDriver: false,
+            }).start();
+        });
+        return () => { onShow.remove(); onHide.remove(); };
+    }, [sheetBottom]);
 
     // ============================================
     // Load saved home address on mount
@@ -170,21 +206,46 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
     }, []);
 
     // ============================================
-    // Handle map press — place marker and reverse geocode
+    // Handle map region change (drag / zoom)
     // ============================================
-    const handleMapPress = useCallback(
-        async (e) => {
-            const { latitude, longitude } = e.nativeEvent.coordinate;
+    const handleRegionChange = useCallback(() => {
+        setIsDragging(true);
+        // Scale down marker slightly during drag
+        Animated.spring(markerScale, {
+            toValue: 0.85,
+            friction: 5,
+            useNativeDriver: true,
+        }).start();
+
+        // Clear any pending reverse geocode
+        if (reverseDebounceRef.current) {
+            clearTimeout(reverseDebounceRef.current);
+            reverseDebounceRef.current = null;
+        }
+    }, [markerScale]);
+
+    // ============================================
+    // Handle map region change complete (user stopped dragging)
+    // ============================================
+    const handleRegionChangeComplete = useCallback(
+        (region) => {
+            setIsDragging(false);
+            // Bounce marker back
+            Animated.spring(markerScale, {
+                toValue: 1,
+                friction: 4,
+                useNativeDriver: true,
+            }).start();
+
+            const { latitude, longitude } = region;
             setSelectedCoords({ latitude, longitude });
             setShowResults(false);
-            Keyboard.dismiss();
 
-            // Clear any pending reverse geocode
+            // Debounced reverse geocode
             if (reverseDebounceRef.current) {
                 clearTimeout(reverseDebounceRef.current);
             }
 
-            // Debounce reverse geocoding to prevent excessive API calls
             setReverseLoading(true);
             reverseDebounceRef.current = setTimeout(async () => {
                 try {
@@ -192,31 +253,20 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
                     if (geoResult && geoResult.display_name) {
                         const address = formatAddress(geoResult);
                         setSelectedAddress(address);
-                        setSearchQuery(address);
+                        setSearchQuery("");
                     } else {
-                        // Reverse geocoding returned no results
                         setSelectedAddress(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
                         setSearchQuery("");
-                        Toast.show({
-                            type: "info",
-                            text1: "Location Selected",
-                            text2: "No address found for this location. Coordinates saved.",
-                        });
                     }
                 } catch {
                     setSelectedAddress(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
                     setSearchQuery("");
-                    Toast.show({
-                        type: "error",
-                        text1: "Geocoding Error",
-                        text2: "Could not get address. Using coordinates instead.",
-                    });
                 } finally {
                     setReverseLoading(false);
                 }
-            }, 600);
+            }, 400);
         },
-        [],
+        [markerScale],
     );
 
     // ============================================
@@ -412,29 +462,25 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
                         latitudeDelta: DEFAULT_DELTA,
                         longitudeDelta: DEFAULT_DELTA,
                     }}
-                    onPress={handleMapPress}
+                    onPress={() => Keyboard.dismiss()}
+                    onRegionChange={handleRegionChange}
+                    onRegionChangeComplete={handleRegionChangeComplete}
                     showsUserLocation={hasLocationPermission}
                     showsMyLocationButton={false}
                     showsCompass={false}
                     mapType="standard"
-                    userInterfaceStyle={isDark ? "dark" : "light"}>
-                    {/* Selected location marker */}
-                    <Marker
-                        coordinate={selectedCoords}
-                        anchor={{ x: 0.5, y: 1 }}
-                        tracksViewChanges={false}>
-                        <View style={styles.customMarker}>
-                            <View style={styles.markerCircle}>
-                                <Icon name="navigate" size={RFValue(16)} color="#FFFFFF" />
-                            </View>
-                            <View style={styles.markerTail} />
-                        </View>
-                    </Marker>
-                </MapView>
+                    userInterfaceStyle={isDark ? "dark" : "light"}
+                    onMapReady={() => setIsMapReady(true)}
+                    // Shift the map's logical centre to match the visual area above the sheet
+                    mapPadding={isMapReady ? { top: 0, left: 0, right: 0, bottom: bottomSheetHeight } : undefined}
+                />
 
-                {/* Address label on map */}
-                {(selectedAddress || reverseLoading) && (
-                    <View style={styles.addressOverlay} pointerEvents="none">
+                {/* Center-pinned marker — always at the visual centre of the visible map */}
+                <View
+                    style={[styles.centerMarkerContainer, { bottom: bottomSheetHeight }]}
+                    pointerEvents="none">
+                    {/* Address bubble — sits above the marker */}
+                    {(selectedAddress || reverseLoading) && (
                         <View
                             style={[
                                 styles.addressBubble,
@@ -456,8 +502,23 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
                                 </Text>
                             )}
                         </View>
-                    </View>
-                )}
+                    )}
+
+                    <View style={styles.addressMarkerSpacer} />
+
+                    {/* Marker pin */}
+                    <Animated.View style={{ transform: [{ scale: markerScale }] }}>
+                        <View style={styles.customMarker}>
+                            <View style={[styles.markerCircle, isDragging && styles.markerCircleDragging]}>
+                                <Icon name="navigate" size={RFValue(16)} color="#FFFFFF" />
+                            </View>
+                            <View style={[styles.markerTail, isDragging && styles.markerTailDragging]} />
+                        </View>
+                    </Animated.View>
+                    {/* Marker shadow dot */}
+                    <View style={[styles.markerShadowDot, isDragging && styles.markerShadowDotDragging]} />
+                </View>
+
 
                 {/* Detect Location FAB */}
                 <TouchableOpacity
@@ -480,13 +541,18 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
             </View>
 
             {/* ======================== BOTTOM SHEET ======================== */}
-            <View
+            {/* Absolute-positioned sheet: stays visible regardless of keyboard.
+                iOS: Animated.timing slides it above the keyboard.
+                Android: adjustResize pins it natively. */}
+            <Animated.View
+                onLayout={(e) => setBottomSheetHeight(e.nativeEvent.layout.height)}
                 style={[
                     styles.bottomSheet,
                     {
                         backgroundColor: isDark ? colors.card : "#FFFFFF",
                         paddingBottom: Math.max(insets.bottom, RFValue(16)),
                         shadowColor: colors.shadowColor,
+                        bottom: sheetBottom,
                     },
                 ]}>
                 {/* Title Row */}
@@ -528,7 +594,7 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
                         style={styles.searchIcon}
                     />
                     <RNTextInput
-                        value={searchQuery}
+                        value={searchQuery || selectedAddress}
                         onChangeText={(text) => {
                             setSearchQuery(text);
                             if (!text.trim()) {
@@ -536,12 +602,16 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
                                 setSearchResults([]);
                             }
                         }}
-                        placeholder={selectedAddress || "Search for an address..."}
+                        placeholder="Search for an address..."
                         placeholderTextColor={colors.textMuted}
-                        style={[styles.textInput, { color: colors.textPrimary, }]}
+                        style={[styles.textInput, { color: colors.textPrimary }]}
                         returnKeyType="search"
                         autoCorrect={false}
                         onFocus={() => {
+                            // Clear the displayed address so user can type fresh
+                            if (!searchQuery && selectedAddress) {
+                                setSearchQuery("");
+                            }
                             if (searchResults.length > 0) setShowResults(true);
                         }}
                     />
@@ -552,11 +622,12 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
                             style={styles.searchSpinner}
                         />
                     )}
-                    {!searching && searchQuery.length > 0 && (
+                    {!searching && (searchQuery.length > 0 || selectedAddress.length > 0) && (
                         <TouchableOpacity
                             activeOpacity={0.7}
                             onPress={() => {
                                 setSearchQuery("");
+                                setSelectedAddress("");
                                 setSearchResults([]);
                                 setShowResults(false);
                             }}>
@@ -622,7 +693,7 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
                         <Text style={styles.saveButtonText}>Save Location</Text>
                     )}
                 </TouchableOpacity>
-            </View>
+            </Animated.View>
         </View>
     );
 };
@@ -644,6 +715,18 @@ const styles = StyleSheet.create({
         ...StyleSheet.absoluteFillObject,
     },
 
+    // Center-pinned marker overlay
+    centerMarkerContainer: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: "center",
+        alignItems: "center",
+        zIndex: 3,
+    },
+
     // Custom marker
     customMarker: {
         alignItems: "center",
@@ -661,6 +744,10 @@ const styles = StyleSheet.create({
         shadowRadius: 6,
         elevation: 8,
     },
+    markerCircleDragging: {
+        backgroundColor: "#2C2C54",
+        shadowOpacity: 0.4,
+    },
     markerTail: {
         width: 0,
         height: 0,
@@ -672,16 +759,24 @@ const styles = StyleSheet.create({
         borderTopColor: "#1A1A2E",
         marginTop: -1,
     },
-
-    // Address bubble (floating on map)
-    addressOverlay: {
-        position: "absolute",
-        top: "45%",
-        left: 0,
-        right: 0,
-        alignItems: "center",
-        zIndex: 5,
+    markerTailDragging: {
+        borderTopColor: "#2C2C54",
     },
+    markerShadowDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: "rgba(0,0,0,0.25)",
+        marginTop: 2,
+    },
+    markerShadowDotDragging: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: "rgba(0,0,0,0.15)",
+    },
+
+    // Address bubble (above marker)
     addressBubble: {
         paddingHorizontal: RFValue(14),
         paddingVertical: RFValue(6),
@@ -699,6 +794,9 @@ const styles = StyleSheet.create({
         fontSize: RFValue(10),
         fontFamily: FontFamily.medium,
         textAlign: "center",
+    },
+    addressMarkerSpacer: {
+        height: RFValue(8),
     },
 
     // Detect Location FAB
@@ -718,8 +816,12 @@ const styles = StyleSheet.create({
         zIndex: 10,
     },
 
-    // Bottom sheet
+    // Bottom sheet — absolute, pinned to bottom, animated above keyboard on iOS
     bottomSheet: {
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: 0,
         borderTopLeftRadius: RFValue(24),
         borderTopRightRadius: RFValue(24),
         paddingTop: RFValue(20),
@@ -728,7 +830,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.08,
         shadowRadius: 12,
         elevation: 16,
-        marginTop: -RFValue(24),
         zIndex: 20,
     },
     sheetHeader: {

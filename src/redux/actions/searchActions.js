@@ -60,7 +60,9 @@ export const searchOnlineStores = createAsyncThunk(
           limit: limit,
         },
       });
+      console.log("response", response);
       const data = response.data;
+      console.log("data", data);
 
       return {
         results: Array.isArray(data?.data) ? data.data : [],
@@ -70,6 +72,7 @@ export const searchOnlineStores = createAsyncThunk(
         hasMore: Array.isArray(data?.data) && data.data.length === limit,
       };
     } catch (err) {
+      console.log("err", err);
       const message = getErrorMessage(err);
       return rejectWithValue(message);
     }

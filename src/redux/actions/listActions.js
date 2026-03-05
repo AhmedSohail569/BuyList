@@ -5,9 +5,10 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "~utils/axiosInstance";
 import { getErrorMessage } from "~utils";
+import { requireConnectivity } from "~utils/network";
 
 // ============================================
-// 1️⃣ CREATE LIST
+// 1. CREATE LIST
 // POST /api/lists/create-list
 // ============================================
 export const createList = createAsyncThunk(
@@ -24,7 +25,7 @@ export const createList = createAsyncThunk(
 );
 
 // ============================================
-// 2️⃣ GET ALL LISTS
+// 2. GET ALL LISTS
 // GET /api/lists/get-all-list
 // ============================================
 export const fetchAllLists = createAsyncThunk(
@@ -41,7 +42,7 @@ export const fetchAllLists = createAsyncThunk(
 );
 
 // ============================================
-// 3️⃣ GET LIST BY ID
+// 3. GET LIST BY ID
 // GET /api/lists/get-by-id/{listId}
 // ============================================
 export const fetchListById = createAsyncThunk(
@@ -61,7 +62,7 @@ export const fetchListById = createAsyncThunk(
 );
 
 // ============================================
-// 4️⃣ ADD ITEMS TO LIST (Optimistic Update)
+// 4. ADD ITEMS TO LIST (Optimistic Update)
 // POST /api/lists/add-item/{listId}
 // ============================================
 export const addItemsToList = createAsyncThunk(
@@ -72,7 +73,6 @@ export const addItemsToList = createAsyncThunk(
     const previousList = state.listById[listId] || null;
     const previousLists = [...state.lists];
 
-
     try {
       const response = await axios.post(`/lists/add-item/${listId}`, { items });
       return {
@@ -80,7 +80,6 @@ export const addItemsToList = createAsyncThunk(
         items: response.data?.data?.items || response.data?.items || items,
         response: response.data?.data || response.data,
       };
-
     } catch (err) {
       const message = getErrorMessage(err);
       // Return previous state for rollback
@@ -92,10 +91,11 @@ export const addItemsToList = createAsyncThunk(
       });
     }
   },
+  { condition: requireConnectivity },
 );
 
 // ============================================
-// 5️⃣ MARK ITEM AS PURCHASED (Optimistic Update)
+// 5. MARK ITEM AS PURCHASED (Optimistic Update)
 // PATCH /api/lists/purchase-item/{listId}/items/{itemId}
 // ============================================
 export const markItemAsPurchased = createAsyncThunk(
@@ -127,10 +127,11 @@ export const markItemAsPurchased = createAsyncThunk(
       });
     }
   },
+  { condition: requireConnectivity },
 );
 
 // ============================================
-// 6️⃣ MARK ITEM AS UNPURCHASED (Optimistic Update)
+// 6. MARK ITEM AS UNPURCHASED (Optimistic Update)
 // PUT /api/lists/unpurchase-item/{listId}/items/{itemId}
 // ============================================
 export const markItemAsUnpurchased = createAsyncThunk(
@@ -161,10 +162,11 @@ export const markItemAsUnpurchased = createAsyncThunk(
       });
     }
   },
+  { condition: requireConnectivity },
 );
 
 // ============================================
-// 7️⃣ DELETE ITEM FROM LIST (Optimistic Update)
+// 7. DELETE ITEM FROM LIST (Optimistic Update)
 // DELETE /api/lists/delete-item/{listId}/items/{itemId}
 // ============================================
 export const deleteItemFromList = createAsyncThunk(
@@ -192,10 +194,11 @@ export const deleteItemFromList = createAsyncThunk(
       });
     }
   },
+  { condition: requireConnectivity },
 );
 
 // ============================================
-// 8️⃣ DELETE LIST (Optimistic Update)
+// 8. DELETE LIST (Optimistic Update)
 // DELETE /api/lists/delete-list/{listId}
 // ============================================
 export const deleteList = createAsyncThunk(
@@ -221,10 +224,11 @@ export const deleteList = createAsyncThunk(
       });
     }
   },
+  { condition: requireConnectivity },
 );
 
 // ============================================
-// 9️⃣ GET RECENT ACTIVITIES
+// 9. GET RECENT ACTIVITIES
 // GET /api/activities/recent
 // ============================================
 export const fetchRecentActivities = createAsyncThunk(

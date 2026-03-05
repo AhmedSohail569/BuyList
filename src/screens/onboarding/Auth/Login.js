@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, StyleSheet, Image } from "react-native";
+import { View, StyleSheet, Image, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RFPercentage, RFValue } from "react-native-responsive-fontsize";
 import { useDispatch, useSelector } from "react-redux";
@@ -113,6 +113,13 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <OnboardingLayout>
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+        automaticallyAdjustKeyboardInsets
+        keyboardDismissMode="interactive">
       <Image
         source={Images.buyListIconBlue}
         style={{
@@ -197,6 +204,7 @@ const LoginScreen = ({ navigation }) => {
           </View>
         </View>
       </View>
+      </ScrollView>
     </OnboardingLayout>
   );
 };
@@ -208,6 +216,7 @@ const styles = StyleSheet.create({
     // alignItems: "center",
     paddingHorizontal: 20,
     marginTop: RFPercentage(20),
+    backgroundColor: 'transparent'
   },
 
   title: {

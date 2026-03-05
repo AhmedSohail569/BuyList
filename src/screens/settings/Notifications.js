@@ -7,8 +7,15 @@ import {
   ActivityIndicator,
 } from "react-native";
 import {
+  View,
+  StyleSheet,
+  Switch,
+  Platform,
+  ActivityIndicator,
+} from "react-native";
+import {
+  Bell,
   Users,
-  Tag,
   ShoppingCart,
   Calendar,
   Bell,
@@ -27,7 +34,10 @@ import {
   fetchNotificationSettings,
   updateNotificationSetting,
 } from "~redux/actions/notificationActions";
+import useOnReconnect from "~hooks/useOnReconnect";
+import { useDispatch, useSelector } from "react-redux";
 
+// ── Reusable Toggle Row ────────────────────────────────────────────────────────
 const NotificationRow = ({
   icon: Icon,
   color,
@@ -36,6 +46,7 @@ const NotificationRow = ({
   isEnabled,
   onToggle,
   isLast,
+  disabled,
   colors,
   disabled,
   updating,
@@ -325,6 +336,7 @@ const NotificationsScreen = ({ navigation }) => {
   );
 };
 
+// ── Styles ─────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -441,12 +453,12 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingRight: 10,
   },
-  title: {
+  rowTitle: {
     fontSize: RFValue(12),
     fontFamily: FontFamily.bold,
     marginBottom: 2,
   },
-  description: {
+  rowDescription: {
     fontSize: RFValue(10),
     fontFamily: FontFamily.regular,
     lineHeight: RFValue(14),

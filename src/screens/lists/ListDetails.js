@@ -22,6 +22,7 @@ import { ScrollView, Text } from "~components/Common";
 import Header from "~components/Header";
 import { RFValue } from "react-native-responsive-fontsize";
 import { FontFamily } from "~theme/fonts";
+import useOnReconnect from "~hooks/useOnReconnect";
 import {
   fetchListById,
   addItemsToList,
@@ -64,6 +65,11 @@ const ListDetailsScreen = ({ navigation, route }) => {
       }
     }, [listId, dispatch]),
   );
+
+  // Re-fetch list when internet reconnects
+  useOnReconnect(() => {
+    if (listId) dispatch(fetchListById({ listId }));
+  });
 
   // Handle errors
   useEffect(() => {
@@ -517,7 +523,11 @@ const ListDetailsScreen = ({ navigation, route }) => {
                 renderItem={renderItem}
                 keyExtractor={item => String(item.id || item._id)}
                 scrollEnabled={false}
+                initialNumToRender={10}
+                maxToRenderPerBatch={10}
+                windowSize={5}
               />
+
             ) : (
               <Text style={[styles.emptyText, { color: colors.textMuted }]}>All caught up! Nothing to buy.</Text>
             )
@@ -530,7 +540,11 @@ const ListDetailsScreen = ({ navigation, route }) => {
                   renderItem={renderItem}
                   keyExtractor={item => String(item.id || item._id)}
                   scrollEnabled={false}
+                  initialNumToRender={10}
+                  maxToRenderPerBatch={10}
+                  windowSize={5}
                 />
+
               ) : null}
 
               {/* Purchased items should always render when present (even if all items are purchased) */}
@@ -544,7 +558,11 @@ const ListDetailsScreen = ({ navigation, route }) => {
                     renderItem={renderItem}
                     keyExtractor={item => String(item.id || item._id)}
                     scrollEnabled={false}
+                    initialNumToRender={10}
+                    maxToRenderPerBatch={10}
+                    windowSize={5}
                   />
+
                 </>
               ) : null}
 

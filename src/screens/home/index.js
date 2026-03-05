@@ -35,6 +35,7 @@ import { useTheme } from "~context/ThemeContext";
 import { AD_OFFERS_DATA } from "~constants";
 import AdsOffersCarousel from "~components/AdsOffersCarousel";
 import NotificationsDropdown from "~components/NotificationsDropdown";
+import useOnReconnect from "~hooks/useOnReconnect";
 
 const { width } = Dimensions.get("window");
 
@@ -228,6 +229,12 @@ const HomeTab = ({ onQuickAction, navigation }) => {
     dispatch(getProfile());
     dispatch(fetchRecentActivities());
   }, [dispatch]);
+
+  // Re-fetch data when internet reconnects
+  useOnReconnect(() => {
+    dispatch(getProfile());
+    dispatch(fetchRecentActivities());
+  });
 
   // Normalize activities for display (limit to 2 for home screen)
   const circleUpdates = useMemo(() => {
@@ -431,7 +438,9 @@ const HomeTab = ({ onQuickAction, navigation }) => {
 
         <NearbyStores navigation={navigation} />
 
-        <AdsOffersCarousel data={AD_OFFERS_DATA} title="Ads & Offers" onAdPress={() => { }} autoPlay={true} />
+        <View style={{ left: RFValue(-16), width: width }}>
+          <AdsOffersCarousel data={AD_OFFERS_DATA} title="Ads & Offers" onAdPress={() => { }} autoPlay={true} />
+        </View>
 
         <YourLists navigation={navigation} />
 
