@@ -7,18 +7,10 @@ import {
   ActivityIndicator,
 } from "react-native";
 import {
-  View,
-  StyleSheet,
-  Switch,
-  Platform,
-  ActivityIndicator,
-} from "react-native";
-import {
   Bell,
   Users,
   ShoppingCart,
   Calendar,
-  Bell,
   BellOff,
   Info,
   Megaphone,
@@ -35,7 +27,6 @@ import {
   updateNotificationSetting,
 } from "~redux/actions/notificationActions";
 import useOnReconnect from "~hooks/useOnReconnect";
-import { useDispatch, useSelector } from "react-redux";
 
 // ── Reusable Toggle Row ────────────────────────────────────────────────────────
 const NotificationRow = ({
@@ -46,8 +37,6 @@ const NotificationRow = ({
   isEnabled,
   onToggle,
   isLast,
-  disabled,
-  colors,
   disabled,
   updating,
 }) => (
