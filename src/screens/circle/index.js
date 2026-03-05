@@ -327,22 +327,25 @@ const CircleTab = ({ navigation }) => {
         return dateB - dateA;
       });
 
+      console.log(filtered);
     return filtered.slice(0, 3).map(list => {
       const progress = list.progress || { total: 0, purchased: 0, percentage: 0 };
 
-      // Get member avatars if available
-      const members = list.shareWithCircle?.members || [];
+      // Get member avatars and names for initials fallback
+      const members = list.members || [];
       const avatars = members
-        .slice(0, 2)
-        .map(member => member?.userId?.profilePicture || member?.profilePicture)
-        .filter(Boolean);
+        .slice(0, 3)
+        .map(member => ({
+          image: member?.profilePicture || null,
+          name: member?.username || member?.name || member?.email || "User",
+        }));
 
       return {
         id: list.id || list._id,
         title: list.name || "Untitled List",
         progress: progress.percentage,
         updated: formatListTimeAgo(list.updatedAt || list.createdAt),
-        avatars: avatars.length > 0 ? avatars : [null, null], // Show initials if no avatars
+        avatars: avatars.length > 0 ? avatars : [{ image: null, name: "User" }],
       };
     });
   }, [lists]);
@@ -488,12 +491,9 @@ const CircleTab = ({ navigation }) => {
                 <View style={styles.listFooter}>
                   <View style={styles.listMeta}>
                     <AvatarStack
-                      items={list.avatars.map(avatar => ({
-                        image: avatar,
-                        name: "User",
-                      }))}
+                      items={list.avatars}
                       size={35}
-                      limit={2}
+                      limit={3}
                       colors={colors}
                     />
                     <Text style={[styles.listUpdated, { color: colors.textMuted }]}>{list.updated}</Text>

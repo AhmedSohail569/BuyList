@@ -15,6 +15,8 @@ import {
   markNotificationRead,
   markAllNotificationsRead,
   clearAllNotifications,
+  fetchNotificationSettings,
+  updateNotificationSetting,
 } from "../actions/notificationActions";
 
 const initialState = {
@@ -33,6 +35,18 @@ const initialState = {
   // Action-specific loading flags
   markingAll: false,
   clearing: false,
+
+  // Notification preference settings
+  settings: {
+    pushEnabled: false,
+    sharedListUpdates: false,
+    itemAddedAlerts: false,
+    weeklyReminders: false,
+    priceDrop: false,
+    promotions: false,
+  },
+  settingsLoading: false,
+  settingsError: null,
 };
 
 const notificationSlice = createSlice({
@@ -119,6 +133,35 @@ const notificationSlice = createSlice({
       })
       .addCase(clearAllNotifications.rejected, (state) => {
         state.clearing = false;
+      })
+
+      // ── Fetch Notification Settings ─────────────────────────────────
+      .addCase(fetchNotificationSettings.pending, (state) => {
+        state.settingsLoading = true;
+        state.settingsError = null;
+      })
+      .addCase(fetchNotificationSettings.fulfilled, (state, action) => {
+        state.settingsLoading = false;
+        state.settings = { ...state.settings, ...action.payload };
+      })
+      .addCase(fetchNotificationSettings.rejected, (state, action) => {
+        state.settingsLoading = false;
+        state.settingsError = action.payload ?? "Failed to load settings";
+      })
+
+      // ── Update Notification Setting (optimistic) ────────────────────
+      .addCase(updateNotificationSetting.pending, (state, action) => {
+        const { key, value } = action.meta.arg;
+        state.settings[key] = value;
+      })
+      .addCase(updateNotificationSetting.fulfilled, (state, action) => {
+        state.settings = { ...state.settings, ...action.payload };
+      })
+      .addCase(updateNotificationSetting.rejected, (state, action) => {
+        const { key } = action.payload ?? {};
+        if (key !== undefined) {
+          state.settings[key] = !state.settings[key];
+        }
       });
   },
 });

@@ -6,8 +6,6 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { useDispatch } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -37,7 +35,7 @@ const SelectLocationScreen = ({ navigation, route }) => {
   // Form state (allows manual override)
   const [city, setCity] = useState("");
   const [area, setArea] = useState("");
-  const [coords, setCoords] = useState(null); // { latitude, longitude }
+  const [coords, setCoords] = useState(null);
   const [detected, setDetected] = useState(false);
 
   /**
@@ -92,7 +90,6 @@ const SelectLocationScreen = ({ navigation, route }) => {
       return;
     }
 
-    // Persist location to Redux
     dispatch(
       setLocation({
         latitude: coords?.latitude ?? null,
@@ -113,109 +110,112 @@ const SelectLocationScreen = ({ navigation, route }) => {
 
   return (
     <OnboardingLayout>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          bounces={false}
-          automaticallyAdjustKeyboardInsets>
-      <Image
-        source={Images.location}
-        style={styles.backgroundImage}
-        resizeMode="contain"
-      />
+      {/*
+        Keyboard handling:
+        - iOS: automaticallyAdjustKeyboardInsets scrolls just enough to reveal the focused input natively.
+        - Android: windowSoftInputMode="adjustResize" in AndroidManifest.xml resizes the window,
+          so ScrollView scrolls the input into view automatically — no JS workarounds needed.
+      */}
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+        automaticallyAdjustKeyboardInsets
+        keyboardDismissMode="interactive">
+        <Image
+          source={Images.location}
+          style={styles.backgroundImage}
+          resizeMode="contain"
+        />
 
-      <View
-        style={[styles.content, { paddingBottom: insets.bottom + RFValue(24) }]}>
-        {/* Header */}
-        <View style={{ paddingHorizontal: RFValue(18) }}>
-          <Text
-            variant="sectionTitle"
-            align="center"
-            style={[styles.title, { color: "#1B1A1F" }]}>
-            Select Your Location
-          </Text>
+        <View
+          style={[styles.content, { paddingBottom: insets.bottom + RFValue(24) }]}>
+          {/* Header */}
+          <View style={{ paddingHorizontal: RFValue(18) }}>
+            <Text
+              variant="sectionTitle"
+              align="center"
+              style={[styles.title, { color: "#1B1A1F" }]}>
+              Select Your Location
+            </Text>
 
-          <Text
-            variant="bodySmall"
-            align="center"
-            style={[styles.subtitle, { color: "#9CA3AF" }]}>
-            Switch on your location to stay in tune with what's happening in
-            your area
-          </Text>
-        </View>
-
-        {/* Form */}
-        <View>
-          {/* Detect Location Button */}
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={handleDetectLocation}
-            disabled={isLoading}
-            style={styles.detectButton}>
-            {isLoading ? (
-              <ActivityIndicator size="small" color="#1E9DF1" />
-            ) : (
-              <Icon name="crosshair" size={RFValue(16)} color="#1E9DF1" />
-            )}
             <Text
               variant="bodySmall"
-              style={styles.detectButtonText}>
-              {isLoading
-                ? "Detecting location..."
-                : detected
-                  ? "Re-detect my location"
-                  : "Detect my location"}
+              align="center"
+              style={[styles.subtitle, { color: "#9CA3AF" }]}>
+              Switch on your location to stay in tune with what's happening in
+              your area
             </Text>
-          </TouchableOpacity>
+          </View>
 
-          <TextInput
-            label="Your City"
-            placeholder="e.g. Lahore"
-            value={city}
-            onChangeText={setCity}
-            maxLength={50}
-            type={2}
-            forceLight
-            editable={!isLoading}
-          />
-
-          <TextInput
-            label="Your Area"
-            placeholder="e.g. Gulberg, DHA"
-            value={area}
-            onChangeText={setArea}
-            maxLength={50}
-            type={2}
-            forceLight
-            editable={!isLoading}
-          />
-
-          {/* Coordinates indicator */}
-          {coords && (
-            <View style={styles.coordsRow}>
-              <Icon name="map-pin" size={RFValue(12)} color="#9CA3AF" />
-              <Text variant="caption" style={styles.coordsText}>
-                {coords.latitude.toFixed(4)}, {coords.longitude.toFixed(4)}
+          {/* Form */}
+          <View>
+            {/* Detect Location Button */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={handleDetectLocation}
+              disabled={isLoading}
+              style={styles.detectButton}>
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#1E9DF1" />
+              ) : (
+                <Icon name="crosshair" size={RFValue(16)} color="#1E9DF1" />
+              )}
+              <Text
+                variant="bodySmall"
+                style={styles.detectButtonText}>
+                {isLoading
+                  ? "Detecting location..."
+                  : detected
+                    ? "Re-detect my location"
+                    : "Detect my location"}
               </Text>
-            </View>
-          )}
+            </TouchableOpacity>
 
-          {/* Submit Button */}
-          <Button
-            title="Submit"
-            onPress={handleSubmit}
-            loading={isLoading}
-            disabled={isLoading}
-            forceLight
-          />
+            <TextInput
+              label="Your City"
+              placeholder="e.g. Lahore"
+              value={city}
+              onChangeText={setCity}
+              maxLength={50}
+              type={2}
+              forceLight
+              editable={!isLoading}
+            />
+
+            <TextInput
+              label="Your Area"
+              placeholder="e.g. Gulberg, DHA"
+              value={area}
+              onChangeText={setArea}
+              maxLength={50}
+              type={2}
+              forceLight
+              editable={!isLoading}
+            />
+
+            {/* Coordinates indicator */}
+            {coords && (
+              <View style={styles.coordsRow}>
+                <Icon name="map-pin" size={RFValue(12)} color="#9CA3AF" />
+                <Text variant="caption" style={styles.coordsText}>
+                  {coords.latitude.toFixed(4)}, {coords.longitude.toFixed(4)}
+                </Text>
+              </View>
+            )}
+
+            {/* Submit Button */}
+            <Button
+              title="Submit"
+              onPress={handleSubmit}
+              loading={isLoading}
+              disabled={isLoading}
+              forceLight
+            />
+          </View>
         </View>
-      </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </ScrollView>
     </OnboardingLayout>
   );
 };

@@ -36,6 +36,8 @@ import {
   validateGender,
   validateDateOfBirth,
   removeEmojis,
+  validateEmail,
+  validatePhone,
 } from "~utils/validation";
 
 const { width } = Dimensions.get("window");

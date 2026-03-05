@@ -56,11 +56,12 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
   ) {
     // Show banner + play sound + update badge even while app is active
-    if #available(iOS 14.0, *) {
-      completionHandler([.banner, .badge, .sound])
-    } else {
-      completionHandler([.alert, .badge, .sound])
-    }
+    // if #available(iOS 14.0, *) {
+    //   completionHandler([.banner, .badge, .sound])
+    // } else {
+    //   completionHandler([.alert, .badge, .sound])
+    // }
+    completionHandler([.sound])
   }
 
   /// Called when the user taps on a notification (foreground or background).

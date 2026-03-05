@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, StyleSheet, Image, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
+import { View, StyleSheet, Image, ScrollView } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
@@ -120,15 +120,13 @@ const SignupScreen = ({ navigation, route }) => {
 
   return (
     <OnboardingLayout>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          bounces={false}
-          automaticallyAdjustKeyboardInsets>
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+        automaticallyAdjustKeyboardInsets
+        keyboardDismissMode="interactive">
       <Image
         source={Images.buyListIconBlue}
         style={{
@@ -227,8 +225,7 @@ const SignupScreen = ({ navigation, route }) => {
           </Text>
         </View>
       </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </ScrollView>
     </OnboardingLayout>
   );
 };

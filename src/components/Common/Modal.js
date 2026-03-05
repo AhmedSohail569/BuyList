@@ -1,4 +1,4 @@
-import {useState, useEffect} from "react";
+import {useState, useEffect, useRef} from "react";
 import {
   StyleSheet,
   Dimensions,
@@ -41,6 +41,13 @@ export const BottomModal = ({
   const [isShared, setIsShared] = useState(true);
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // --- Error States ---
+  const [listNameError, setListNameError] = useState("");
+  const [itemsError, setItemsError] = useState("");
+  
+  // --- Refs ---
+  const scrollViewRef = useRef(null);
 
   // --- CONSTANTS ---
   const sortOptions = [
@@ -82,34 +89,55 @@ export const BottomModal = ({
       setPriority("medium");
       setIsShared(true);
       setShowPriorityDropdown(false);
+      setListNameError("");
+      setItemsError("");
     }
   }, [isVisible, type]);
 
   const handleAddItem = () => {
     const trimmedItem = newItem.trim();
-    if (trimmedItem && !items.includes(trimmedItem)) {
-      setItems([...items, trimmedItem]);
-      setNewItem("");
+    if (!trimmedItem) return;
+
+    if (items.includes(trimmedItem)) {
+      setItemsError(`"${trimmedItem}" is already in the list`);
+      return;
     }
+
+    setItems([...items, trimmedItem]);
+    setNewItem("");
+    if (itemsError) setItemsError("");
   };
 
   const handleRemoveItem = itemToRemove => {
-    setItems(items.filter(item => item !== itemToRemove));
+    const newItems = items.filter(item => item !== itemToRemove);
+    setItems(newItems);
+    if (newItems.length === 0) {
+      // If user removes all items, we can optionally clear error or just let it validate on next submit
+    }
   };
 
   const handleCreateList = async () => {
+    let hasError = false;
+
     // Validate required fields
     if (!listName.trim()) {
-      return;
+      setListNameError("Please enter a list name");
+      hasError = true;
+      
+      // Auto-scroll to top so the list name error is visible
+      scrollViewRef.current?.scrollTo({y: 0, animated: true});
     }
 
     if (items.length === 0) {
-      return;
+      setItemsError("Please add at least one item");
+      hasError = true;
     }
+
+    if (hasError) return;
 
     if (isSubmitting || loading) return;
     setIsSubmitting(true);
-
+   
     try {
       // Await parent handler so we can prevent double submit.
       await Promise.resolve(
@@ -220,18 +248,27 @@ export const BottomModal = ({
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        ref={scrollViewRef}
+        showsVerticalScrollIndicator={false} 
+        keyboardShouldPersistTaps="handled">
         {/* List Name */}
-        <Text style={[styles.inputLabel, {color: colors.textMuted}]}>LIST NAME</Text>
-        <View style={[styles.inputContainer, {backgroundColor: colors.surfaceSecondary, borderColor: colors.border}]}>
+        <Text style={[styles.inputLabel, {color: colors.textMuted}]}>LIST NAME <Text style={{color: "#ef4444"}}>*</Text></Text>
+        <View style={[styles.inputContainer, {backgroundColor: colors.surfaceSecondary, borderColor: listNameError ? "#ef4444" : colors.border, marginBottom: listNameError ? 4 : 20}]}>
           <TextInput
             style={[styles.textInput, {color: colors.textPrimary}]}
             placeholder="e.g., Weekly Groceries"
             placeholderTextColor={colors.inputPlaceholder}
             value={listName}
-            onChangeText={setListName}
+            onChangeText={(text) => {
+              setListName(text);
+              if (listNameError) setListNameError("");
+            }}
           />
         </View>
+        {listNameError ? (
+          <Text style={styles.errorText}>{listNameError}</Text>
+        ) : null}
 
         {/* Category */}
         <Text style={[styles.inputLabel, {color: colors.textMuted}]}>CATEGORY</Text>
@@ -262,8 +299,8 @@ export const BottomModal = ({
         </View>
 
         {/* Add Items */}
-        <Text style={[styles.inputLabel, {color: colors.textMuted}]}>ADD ITEMS</Text>
-        <View style={[styles.inputContainer, {backgroundColor: colors.surfaceSecondary, borderColor: colors.border}]}>
+        <Text style={[styles.inputLabel, {color: colors.textMuted}]}>ADD ITEMS <Text style={{color: "#ef4444"}}>*</Text></Text>
+        <View style={[styles.inputContainer, {backgroundColor: colors.surfaceSecondary, borderColor: itemsError ? "#ef4444" : colors.border, marginBottom: 12}]}>
           <TextInput
             style={[styles.textInput, {color: colors.textPrimary}]}
             placeholder="Add an item..."
@@ -284,6 +321,10 @@ export const BottomModal = ({
             <Plus size={16} color={newItem.trim() ? "#ffffff" : colors.iconMuted} />
           </TouchableOpacity>
         </View>
+
+        {itemsError ? (
+          <Text style={styles.errorText}>{itemsError}</Text>
+        ) : null}
 
         {/* Display Added Items */}
         {items.length > 0 && (
@@ -382,7 +423,7 @@ export const BottomModal = ({
       </ScrollView>
 
       {/* Footer Button */}
-      <View style={styles.modalFooterSingle}>
+      <View style={styles.modalFooterSingle} >
         <TouchableOpacity
           style={[
             styles.createButton,
@@ -543,8 +584,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 50,
     justifyContent: "center",
-    marginBottom: 20,
     position: "relative",
+  },
+  errorText: {
+    color: "#ef4444",
+    fontSize: RFValue(11),
+    fontFamily: FontFamily.medium,
+    marginBottom: 16,
+    marginLeft: 4,
   },
   textInput: {
     flex: 1,

@@ -100,3 +100,39 @@ export const clearAllNotifications = createAsyncThunk(
     }
   },
 );
+
+/**
+ * Fetch notification preference settings.
+ * GET /notifications/notification-settings
+ */
+export const fetchNotificationSettings = createAsyncThunk(
+  "notifications/fetchNotificationSettings",
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await axios.get("/notifications/notification-settings");
+      return res.data?.data ?? res.data ?? {};
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
+/**
+ * Update one or more notification preference settings.
+ * PATCH /notifications/notification-settings
+ * Body: { [key]: value } — send whichever key you want to update.
+ * Optimistic: reducer flips the value immediately, reverts on failure.
+ */
+export const updateNotificationSetting = createAsyncThunk(
+  "notifications/updateNotificationSetting",
+  async ({ key, value }, { rejectWithValue }) => {
+    try {
+      const res = await axios.patch("/notifications/notification-settings", {
+        [key]: value,
+      });
+      return res.data?.data ?? { [key]: value };
+    } catch (error) {
+      return rejectWithValue({ key, error: getErrorMessage(error) });
+    }
+  },
+);

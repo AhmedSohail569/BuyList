@@ -3,8 +3,6 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
 } from "react-native";
 
@@ -229,69 +227,65 @@ const OTPVerficationScreen = ({ navigation, route }) => {
 
   return (
     <OnboardingLayout>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}>
-        {/* OTP CONTENT */}
-        <View style={styles.content}>
-          <Text variant="sectionTitle" style={[styles.title, { color: "#1B1A1F" }]}>
-            Enter your 4-digit code
-          </Text>
+      {/* OTP CONTENT */}
+      <View style={styles.content}>
+        <Text variant="sectionTitle" style={[styles.title, { color: "#1B1A1F" }]}>
+          Enter your 4-digit code
+        </Text>
 
-          <Text variant="bodySmall" style={[styles.subtitle, { color: "#9CA3AF" }]}>
-            We've sent a verification code to{" "}
-            <Text style={{ color: "#1E9DF1" }}>{email}</Text>
-          </Text>
+        <Text variant="bodySmall" style={[styles.subtitle, { color: "#9CA3AF" }]}>
+          We've sent a verification code to{" "}
+          <Text style={{ color: "#1E9DF1" }}>{email}</Text>
+        </Text>
 
-          <TextInput
-            label="Code"
-            placeholder="- - - -"
-            value={code}
-            onChangeText={handleCodeChange}
-            keyboardType="number-pad"
-            maxLength={4}
-            type={2}
-            error={codeError}
-            forceLight
-          />
-        </View>
+        <TextInput
+          label="Code"
+          placeholder="- - - -"
+          value={code}
+          onChangeText={handleCodeChange}
+          keyboardType="number-pad"
+          maxLength={4}
+          type={2}
+          error={codeError}
+          forceLight
+        />
+      </View>
 
-        {/* BOTTOM ACTIONS */}
-        <View style={styles.bottomActions}>
-          {/* Resend Code */}
+      {/* BOTTOM ACTIONS */}
+      <View style={styles.bottomActions}>
+        {/* Resend Code */}
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={handleResendCode}
+          disabled={resendOTPLoading || resendCooldown > 0}>
+          {resendCooldown > 0 ? (
+            <Text variant="bodySmall" style={{ color: "#9CA3AF" }}>
+              Resend code in {resendCooldown}s
+            </Text>
+          ) : (
+            <Text
+              variant="link"
+              style={{ color: resendOTPLoading ? "#9CA3AF" : "#1E9DF1" }}>
+              {resendOTPLoading ? "Sending..." : "Resend code"}
+            </Text>
+          )}
+        </TouchableOpacity>
+
+        {/* FAB */}
+        {showFab && (
           <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={handleResendCode}
-            disabled={resendOTPLoading || resendCooldown > 0}>
-            {resendCooldown > 0 ? (
-              <Text variant="bodySmall" style={{ color: "#9CA3AF" }}>
-                Resend code in {resendCooldown}s
-              </Text>
+            activeOpacity={0.8}
+            style={styles.fab}
+            onPress={() => handleVerify()}
+            disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color={"#FFFFFF"} />
             ) : (
-              <Text
-                variant="link"
-                style={{ color: resendOTPLoading ? "#9CA3AF" : "#1E9DF1" }}>
-                {resendOTPLoading ? "Sending..." : "Resend code"}
-              </Text>
+              <Icon name="chevron-right" size={20} color="#FFFFFF" />
             )}
           </TouchableOpacity>
-
-          {/* FAB */}
-          {showFab && (
-            <TouchableOpacity
-              activeOpacity={0.8}
-              style={styles.fab}
-              onPress={() => handleVerify()}
-              disabled={loading}>
-              {loading ? (
-                <ActivityIndicator color={"#FFFFFF"} />
-              ) : (
-                <Icon name="chevron-right" size={20} color="#FFFFFF" />
-              )}
-            </TouchableOpacity>
-          )}
-        </View>
-      </KeyboardAvoidingView>
+        )}
+      </View>
     </OnboardingLayout>
   );
 };

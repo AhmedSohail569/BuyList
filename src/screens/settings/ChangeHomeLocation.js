@@ -89,6 +89,39 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
     const [isDragging, setIsDragging] = useState(false);
     const markerScale = useRef(new Animated.Value(1)).current;
 
+    // Guard mapPadding until the native GoogleMap instance is ready.
+    // Without this, Android crashes: "setPadding on a null object reference".
+    const [isMapReady, setIsMapReady] = useState(false);
+
+    // Measured height of the bottom sheet (via onLayout).
+    // Drives two things in sync:
+    //   1. mapPadding.bottom  — shifts the map's logical centre above the sheet
+    //   2. centerMarkerContainer.bottom — keeps the pin at the same visual centre
+    const [bottomSheetHeight, setBottomSheetHeight] = useState(0);
+
+    // iOS keyboard animation: slide the absolute sheet up by exactly keyboard height.
+    // Android: windowSoftInputMode="adjustResize" pins the sheet natively — no JS.
+    const sheetBottom = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        if (Platform.OS !== "ios") return;
+        const onShow = Keyboard.addListener("keyboardWillShow", (e) => {
+            Animated.timing(sheetBottom, {
+                toValue: e.endCoordinates.height,
+                duration: e.duration ?? 250,
+                useNativeDriver: false,
+            }).start();
+        });
+        const onHide = Keyboard.addListener("keyboardWillHide", (e) => {
+            Animated.timing(sheetBottom, {
+                toValue: 0,
+                duration: e.duration ?? 200,
+                useNativeDriver: false,
+            }).start();
+        });
+        return () => { onShow.remove(); onHide.remove(); };
+    }, [sheetBottom]);
+
     // ============================================
     // Load saved home address on mount
     // ============================================
@@ -437,10 +470,15 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
                     showsCompass={false}
                     mapType="standard"
                     userInterfaceStyle={isDark ? "dark" : "light"}
+                    onMapReady={() => setIsMapReady(true)}
+                    // Shift the map's logical centre to match the visual area above the sheet
+                    mapPadding={isMapReady ? { top: 0, left: 0, right: 0, bottom: bottomSheetHeight } : undefined}
                 />
 
-                {/* Center-pinned marker — moves with map during drag */}
-                <View style={styles.centerMarkerContainer} pointerEvents="none">
+                {/* Center-pinned marker — always at the visual centre of the visible map */}
+                <View
+                    style={[styles.centerMarkerContainer, { bottom: bottomSheetHeight }]}
+                    pointerEvents="none">
                     {/* Address bubble — sits above the marker */}
                     {(selectedAddress || reverseLoading) && (
                         <View
@@ -503,13 +541,18 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
             </View>
 
             {/* ======================== BOTTOM SHEET ======================== */}
-            <View
+            {/* Absolute-positioned sheet: stays visible regardless of keyboard.
+                iOS: Animated.timing slides it above the keyboard.
+                Android: adjustResize pins it natively. */}
+            <Animated.View
+                onLayout={(e) => setBottomSheetHeight(e.nativeEvent.layout.height)}
                 style={[
                     styles.bottomSheet,
                     {
                         backgroundColor: isDark ? colors.card : "#FFFFFF",
                         paddingBottom: Math.max(insets.bottom, RFValue(16)),
                         shadowColor: colors.shadowColor,
+                        bottom: sheetBottom,
                     },
                 ]}>
                 {/* Title Row */}
@@ -650,7 +693,7 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
                         <Text style={styles.saveButtonText}>Save Location</Text>
                     )}
                 </TouchableOpacity>
-            </View>
+            </Animated.View>
         </View>
     );
 };
@@ -773,8 +816,12 @@ const styles = StyleSheet.create({
         zIndex: 10,
     },
 
-    // Bottom sheet
+    // Bottom sheet — absolute, pinned to bottom, animated above keyboard on iOS
     bottomSheet: {
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: 0,
         borderTopLeftRadius: RFValue(24),
         borderTopRightRadius: RFValue(24),
         paddingTop: RFValue(20),
@@ -783,7 +830,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.08,
         shadowRadius: 12,
         elevation: 16,
-        marginTop: -RFValue(24),
         zIndex: 20,
     },
     sheetHeader: {

@@ -1,16 +1,24 @@
-import { View, StyleSheet, Image, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
+import {
+  View,
+  StyleSheet,
+  Image,
+  ScrollView,
+  Platform,
+  Keyboard,KeyboardAvoidingView
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
 import { RFPercentage, RFValue } from "react-native-responsive-fontsize";
 import { Text, TextInput } from "~components/Common";
 import { Images } from "~assets";
 import OnboardingLayout from "~containers/layouts/OnboardingLayout";
 import Icon from "react-native-vector-icons/FontAwesome";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { FontFamily } from "~theme/fonts";
 
 const GetStartedScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef(null);
+  const inputRef   = useRef(null);
 
   const [phone, setPhone] = useState("");
 
@@ -21,76 +29,113 @@ const GetStartedScreen = ({ navigation }) => {
     [navigation],
   );
 
+  // When the phone input receives focus, scroll just enough to reveal it.
+  // We scroll to the input's Y position inside the ScrollView so only
+  // the input comes into view — the buttons/social section stays hidden
+  // behind the keyboard, which looks natural and graceful.
+  const handleInputFocus = useCallback(() => {
+    if (inputRef.current && scrollRef.current) {
+      // Small delay so the keyboard has started appearing
+      setTimeout(() => {
+        inputRef.current?.measureLayout(
+          scrollRef.current?.getScrollableNode?.() ?? scrollRef.current,
+          (x, y) => {
+            scrollRef.current?.scrollTo({ y: y - RFValue(16), animated: true });
+          },
+          () => {
+            // Fallback: just scroll a fixed amount on Android
+            if (Platform.OS === "android") {
+              scrollRef.current?.scrollToEnd({ animated: true });
+            }
+          },
+        );
+      }, 150);
+    }
+  }, []);
+
+  const handleInputBlur = useCallback(() => {
+    // Scroll back to bottom when keyboard dismisses
+    setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  }, []);
+
   return (
     <OnboardingLayout>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          bounces={false}
-          automaticallyAdjustKeyboardInsets>
-      {/* Content */}
-      <Image
-        source={Images.getStartedBg}
-        style={{ height: RFPercentage(50), width: "100%", position: "absolute" }}
-        resizeMode="stretch"
-      />
-      <View
-        style={[styles.content, { paddingBottom: insets.bottom + RFValue(24) }]}>
-        {/* Title */}
-        <Text variant="sectionTitle" style={[styles.title, { color: "#1B1A1F" }]}>
-          Let's get your shopping{"\n"}done with BuyList!
-        </Text>
-
-        <TextInput
-          type={3}
-          keyboardType="phone-pad"
-          value={phone}
-          onChangeText={setPhone}
-          maxLength={15}
-          forceLight
-          onSubmitPhone={handlePhoneSubmit}
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+        // iOS: native inset adjustment — only scrolls just enough for the input
+        automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+        // Android: be careful not to resize the whole layout
+        keyboardDismissMode="interactive">
+        {/* Background hero image */}
+        <Image
+          source={Images.getStartedBg}
+          style={{ height: RFPercentage(50), width: "100%", position: "absolute" }}
+          resizeMode="stretch"
         />
 
-        {/* Subtitle */}
-        <Text
-          variant="bodySmall"
-          align="center"
-          style={[styles.subtitle, { color: "#9CA3AF" }]}>
-          Or connect with social media
-        </Text>
-
-        <View style={[styles.socialButton, { backgroundColor: "#5383EC" }]}>
-          <Icon name="google" size={30} color={"#FFFFFF"} />
-          <Text variant="bodySmall" style={[styles.textStyle, { color: "#FFFFFF" }]}>
-            Continue with Google
+        <View
+          style={[styles.content, { paddingBottom: insets.bottom + RFValue(24) }]}>
+          {/* Title */}
+          <Text variant="sectionTitle" style={[styles.title, { color: "#1B1A1F" }]}>
+            Let's get your shopping{"\n"}done with BuyList!
           </Text>
-        </View>
 
-        <View style={[styles.socialButton, { backgroundColor: "#000000" }]}>
-          <Icon name="apple" size={30} color={"#FFFFFF"} />
-          <Text variant="bodySmall" style={[styles.textStyle, { color: "#FFFFFF" }]}>
-            Continue with Apple
-          </Text>
-        </View>
+          {/* Phone input — ref used to measure position for scroll */}
+          <View ref={inputRef} collapsable={false}>
+            <TextInput
+              type={3}
+              keyboardType="phone-pad"
+              value={phone}
+              onChangeText={setPhone}
+              maxLength={15}
+              forceLight
+              onSubmitPhone={handlePhoneSubmit}
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
+            />
+          </View>
 
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
-          <Text variant="bodySmall" style={[styles.textStyle, { color: "#9CA3AF" }]}>
-            Already have an Account?{" "}
-          </Text>
+          {/* Subtitle */}
           <Text
-            variant="link"
-            onPress={() => navigation.replace("Login")}
-            style={[styles.textStyle, { color: "#1E9DF1", fontFamily: FontFamily.regular }]}>
-            Login
+            variant="bodySmall"
+            align="center"
+            style={[styles.subtitle, { color: "#9CA3AF" }]}>
+            Or connect with social media
           </Text>
+
+          <View style={[styles.socialButton, { backgroundColor: "#5383EC" }]}>
+            <Icon name="google" size={30} color={"#FFFFFF"} />
+            <Text variant="bodySmall" style={[styles.textStyle, { color: "#FFFFFF" }]}>
+              Continue with Google
+            </Text>
+          </View>
+
+          <View style={[styles.socialButton, { backgroundColor: "#000000" }]}>
+            <Icon name="apple" size={30} color={"#FFFFFF"} />
+            <Text variant="bodySmall" style={[styles.textStyle, { color: "#FFFFFF" }]}>
+              Continue with Apple
+            </Text>
+          </View>
+
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
+            <Text variant="bodySmall" style={[styles.textStyle, { color: "#9CA3AF" }]}>
+              Already have an Account?{" "}
+            </Text>
+            <Text
+              variant="link"
+              onPress={() => navigation.replace("Login")}
+              style={[styles.textStyle, { color: "#1E9DF1", fontFamily: FontFamily.regular }]}>
+              Login
+            </Text>
+          </View>
         </View>
-      </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </ScrollView>
     </OnboardingLayout>
   );
 };
