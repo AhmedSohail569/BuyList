@@ -78,9 +78,12 @@ export const markAllNotificationsRead = createAsyncThunk(
   "notifications/markAllNotificationsRead",
   async (_, { rejectWithValue }) => {
     try {
-      await axios.patch("/notifications/all-read");
+      const response = await axios.patch("/notifications/all-read");
+      console.log("response markAllNotificationsRead", response);
       return {};
     } catch (error) {
+      console.log("error markAllNotificationsRead", error);
+      console.log(error?.response)
       return rejectWithValue(getErrorMessage(error));
     }
   },

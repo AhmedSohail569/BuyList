@@ -27,13 +27,13 @@ const LoginScreen = ({ navigation }) => {
     password: null,
   });
 
-  // Handle API errors with toast
+  // Handle API errors
   useEffect(() => {
     if (error) {
-      // Check if error requires email verification
       const errorObj = typeof error === "object" ? error : null;
+      
+      // Check if error requires email verification
       if (errorObj?.requiresEmailVerification) {
-        // Automatically resend OTP and navigate to verification screen
         Toast.show({
           type: "info",
           text1: "Email Verification Required",
@@ -41,20 +41,33 @@ const LoginScreen = ({ navigation }) => {
           props: { forceLight: true },
         });
 
-        // Resend OTP automatically
         dispatch(resendOTP({ email: email.trim() }));
 
-        // Navigate to OTP verification screen
         navigation.navigate("OTPVerification", {
           email: email.trim(),
         });
       } else {
-        Toast.show({
-          type: "error",
-          text1: "Login Failed",
-          text2: typeof error === "string" ? error : "Something went wrong",
-          props: { forceLight: true },
-        });
+        // Handle validation fields mapping
+        const hasFields = errorObj?.fields && errorObj.fields.length > 0;
+        if (hasFields) {
+          const newErrors = { ...errors };
+          errorObj.fields.forEach(f => {
+            if (newErrors[f.field] !== undefined) {
+              newErrors[f.field] = f.message;
+            }
+          });
+          setErrors(newErrors);
+        }
+        
+        // Show toast ONLY if we did NOT map inline errors
+        if (!hasFields) {
+          Toast.show({
+            type: "error",
+            text1: "Login Failed",
+            text2: errorObj?.message || (typeof error === "string" ? error : "Something went wrong"),
+            props: { forceLight: true },
+          });
+        }
       }
       dispatch(clearError());
     }
@@ -89,12 +102,12 @@ const LoginScreen = ({ navigation }) => {
 
   const handleLogin = async () => {
     if (!validateForm()) {
-      Toast.show({
-        type: "error",
-        text1: "Validation Error",
-        text2: "Please fill in all fields correctly",
-        props: { forceLight: true },
-      });
+      // Toast.show({
+      //   type: "error",
+      //   text1: "Validation Error",
+      //   text2: "Please fill in all fields correctly",
+      //   props: { forceLight: true },
+      // });
       return;
     }
 

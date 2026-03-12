@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "66QQ6D65ZD.com.ios.buylist",
+        "paths": [ "*", "/invite/*" ]
+      }
+    ]
+  }
+}

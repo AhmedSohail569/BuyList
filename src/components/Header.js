@@ -8,16 +8,7 @@ import { FontFamily } from "~theme/fonts";
 import { useNavigation } from "@react-navigation/native";
 import { useSelector } from "react-redux";
 import { useTheme } from "~context/ThemeContext";
-
-// Helper to get user initials
-const getInitials = (name) => {
-  if (!name) return "?";
-  const parts = name.trim().split(" ");
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase();
-  }
-  return name.substring(0, 2).toUpperCase();
-};
+import { getInitials } from "~utils/display";
 
 const Header = ({
   variant = "title",

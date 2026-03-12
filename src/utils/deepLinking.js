@@ -13,8 +13,8 @@ const INVITE_URL_PATTERN = /\/invite\/([A-Za-z0-9-_]+)/;
  * Parse invite code from deep link URL.
  * Supports:
  *   buylist://invite/ABC123
- *   https://buylist.app/invite/ABC123
- *   https://www.buylist.app/invite/ABC123
+ *   https://getbagg.com/invite/ABC123
+ *   https://www.getbagg.com/invite/ABC123
  */
 export const parseInviteLink = (url) => {
     if (!url) return null;
@@ -82,7 +82,7 @@ export const clearPendingInvite = async () => {
 /**
  * Generate a shareable invite link.
  */
-export const generateInviteLink = (inviteCode, domain = "buylist.app") => {
+export const generateInviteLink = (inviteCode, domain = "getbagg.com") => {
     if (!inviteCode) return "";
     return `https://${domain}/invite/${inviteCode}`;
 };

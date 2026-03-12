@@ -81,7 +81,18 @@ export const getDeviceInfo = async () => {
 export const getErrorMessage = (error, firstOnly = true) => {
   if (!error) return "Something went wrong";
 
-  const apiMessage = error.response?.data?.message;
+  const data = error.response?.data;
+  
+  // Check for the new structured `errors` array from validation
+  if (data?.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+    // If it's the structured { field, message } format
+    if (data.errors[0]?.message) {
+      // Just returning the first message, or we could pass the whole array for the screens to parse
+      return firstOnly ? data.errors[0].message : data.errors.map(e => e.message).join("\n");
+    }
+  }
+
+  const apiMessage = data?.message;
 
   if (apiMessage) {
     if (Array.isArray(apiMessage)) {
@@ -91,6 +102,15 @@ export const getErrorMessage = (error, firstOnly = true) => {
   }
 
   return error.message || "Something went wrong";
+};
+
+// Add a new utility specifically for extracting structured validation errors
+export const getValidationErrors = (error) => {
+  const data = error?.response?.data;
+  if (data?.errors && Array.isArray(data.errors)) {
+    return data.errors; // Returns array of { field, message }
+  }
+  return [];
 };
 
 // ── Persisted State ────────────────────────────────────────────────────────────

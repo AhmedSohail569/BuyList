@@ -4,7 +4,9 @@
 <dict>
 	<key>aps-environment</key>
 	<string>development</string>
-	<!-- Associated domains removed temporarily; does not affect buylist:// custom scheme -->
-	<!-- Restore for Universal Links (https://buylist.app/invite/...) when domain is set up -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:getbagg.com</string>
+	</array>
 </dict>
 </plist>

@@ -40,13 +40,16 @@ export const getCircleInviteQR = createAsyncThunk(
     async ({ circleId }, { rejectWithValue }) => {
         try {
             const response = await axios.get(`/circles/invite-qr/${circleId}`);
+            console.log('response', response)
             const data = response.data?.data || response.data;
 
             return {
                 circleId,
-                qrCode: data.qrCode || data.qrCodeUrl || data.qr,
+                qrCode: data.qrCode || data.qrCodeUrl || data.qrUrl,
             };
         } catch (err) {
+            console.log('err', err)
+            console.log('err', err.response)
             const message = getErrorMessage(err);
             return rejectWithValue(message);
         }

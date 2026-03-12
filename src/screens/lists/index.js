@@ -513,7 +513,8 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
         variant="title"
         title={"Your Lists"}
         rightAction={
-          <TouchableOpacity style={[styles.searchButton, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
+          <TouchableOpacity style={[styles.searchButton, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}
+          onPress={() => navigation.navigate('SearchResults')}>
             <Search size={RFValue(20)} color={colors.textPrimary} />
           </TouchableOpacity>
         }

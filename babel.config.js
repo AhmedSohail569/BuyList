@@ -19,6 +19,7 @@ module.exports = {
           "~theme": "./src/theme",
           "~utils": "./src/utils",
           "~services": "./src/services",
+          "~native": "./src/native",
           "~styles": "./src/styles",
         },
       },

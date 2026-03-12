@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -78,11 +79,11 @@
         <data android:scheme="buylist" android:host="invite" />
       </intent-filter>
       
-      <!-- Deep Linking: HTTPS App Links (https://buylist.app/invite/CODE) -->
+      <!-- Deep Linking: HTTPS App Links (https://getbagg.com/invite/CODE) -->
       <!-- ⚠️ Requires domain verification for automatic association -->
       <!-- Without verification, Android shows a disambiguation dialog -->
       <!-- To enable automatic opening, host assetlinks.json at: -->
-      <!-- https://buylist.app/.well-known/assetlinks.json -->
+      <!-- https://getbagg.com/.well-known/assetlinks.json -->
       <!-- See DEEP_LINKING_SETUP.md for instructions -->
       <intent-filter android:autoVerify="true">
         <action android:name="android.intent.action.VIEW" />
@@ -90,7 +91,7 @@
         <category android:name="android.intent.category.BROWSABLE" />
         <data
           android:scheme="https"
-          android:host="buylist.app"
+          android:host="getbagg.com"
           android:pathPrefix="/invite" />
       </intent-filter>
     </activity>

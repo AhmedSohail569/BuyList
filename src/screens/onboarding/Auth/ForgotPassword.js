@@ -118,12 +118,28 @@ const ForgotPasswordScreen = ({ navigation }) => {
   // --- Global Error Handling ---
   useEffect(() => {
     if (error) {
-      Toast.show({
-        type: "error",
-        text1: "Error",
-        text2: typeof error === "string" ? error : "Something went wrong",
-        props: { forceLight: true },
-      });
+      const errorObj = typeof error === "object" ? error : null;
+      
+      const hasFields = errorObj?.fields && errorObj.fields.length > 0;
+      if (hasFields) {
+        const newErrors = { ...errors };
+        errorObj.fields.forEach(f => {
+          if (newErrors[f.field] !== undefined) {
+            newErrors[f.field] = f.message;
+          }
+        });
+        setErrors(newErrors);
+      }
+      
+      // Show toast ONLY if we did NOT map inline errors
+      if (!hasFields) {
+        Toast.show({
+          type: "error",
+          text1: "Validation Error",
+          text2: errorObj?.message || (typeof error === "string" ? error : "Something went wrong"),
+          props: { forceLight: true },
+        });
+      }
       dispatch(clearError());
     }
   }, [error, dispatch]);
@@ -224,12 +240,6 @@ const ForgotPasswordScreen = ({ navigation }) => {
     const emailError = validateEmail(email);
     if (emailError) {
       setErrors(prev => ({ ...prev, email: emailError }));
-      Toast.show({
-        type: "error",
-        text1: "Validation Error",
-        text2: emailError,
-        props: { forceLight: true },
-      });
       return;
     }
     dispatch(forgotPassword({ email: email.trim() }));
@@ -239,12 +249,6 @@ const ForgotPasswordScreen = ({ navigation }) => {
     const otpError = validateOTP(otp);
     if (otpError) {
       setErrors(prev => ({ ...prev, otp: otpError }));
-      Toast.show({
-        type: "error",
-        text1: "Validation Error",
-        text2: otpError,
-        props: { forceLight: true },
-      });
       return;
     }
     dispatch(verifyResetToken({ email: email.trim(), otp }));
@@ -263,12 +267,6 @@ const ForgotPasswordScreen = ({ navigation }) => {
         newPassword: newPasswordError,
         confirmPassword: confirmPasswordError,
       }));
-      Toast.show({
-        type: "error",
-        text1: "Validation Error",
-        text2: newPasswordError || confirmPasswordError,
-        props: { forceLight: true },
-      });
       return;
     }
 

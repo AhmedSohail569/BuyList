@@ -2,12 +2,13 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   View,
   TouchableOpacity,
-  Image,
   StyleSheet,
   TextInput,
   Clipboard,
   Share,
   ActivityIndicator,
+  Linking,
+  Platform,
 } from "react-native";
 import {
   Search,
@@ -30,42 +31,24 @@ import {
   updateMemberRole,
   removeMemberFromCircle,
 } from "~redux/actions/circleActions";
-import { getCircleInviteLink } from "~redux/actions/inviteActions";
+import { getCircleInviteLink, getCircleInviteQR } from "~redux/actions/inviteActions";
 import { useAlert } from "~context/AlertContext";
 import { useTheme } from "~context/ThemeContext";
 import useOnReconnect from "~hooks/useOnReconnect";
+import useScreenFetch from "~hooks/useScreenFetch";
+import Avatar from "~components/Avatar";
+import QRCodeModal from "~components/QRCodeModal";
 
-// Helper function to get initials from a name
-const getInitials = (name) => {
-  if (!name || typeof name !== "string") return "U";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 0) return "U";
-  if (parts.length === 1) {
-    return parts[0].substring(0, 2).toUpperCase();
-  }
-  const firstInitial = parts[0].charAt(0).toUpperCase();
-  const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
-  return `${firstInitial}${lastInitial}`;
-};
-
-// Helper function to check if profile picture is available
-const hasProfilePicture = (profilePicture) => {
-  return profilePicture && profilePicture.trim() !== "";
-};
-
-// Helper function to format role for display
+// Helper function to format role for display (ManageConnections-specific)
 const formatRole = (role) => {
   if (!role) return "Member";
   return role.charAt(0).toUpperCase() + role.slice(1);
 };
 
-// Build connections list from ownedCircle data
+// Build connections list from ownedCircle data with role-based badge colors
 const buildConnections = (ownedCircle, colors) => {
   if (!ownedCircle) return [];
-
   const connections = [];
-
-  // Always add owner first
   if (ownedCircle.owner) {
     connections.push({
       id: ownedCircle.owner._id || ownedCircle.owner.id,
@@ -77,98 +60,52 @@ const buildConnections = (ownedCircle, colors) => {
       textColor: colors.primary,
     });
   }
-
-  // Add members if they exist
   if (ownedCircle.members && Array.isArray(ownedCircle.members)) {
     ownedCircle.members.forEach((member) => {
       if (member.userId) {
         const role = formatRole(member.role);
-        // Determine badge colors based on role
-        let badgeColor = colors.backgroundSecondary;
-        let textColor = colors.textSecondary;
-        if (role === "Editor") {
-          badgeColor = colors.successLight;
-          textColor = colors.success;
-        }
-
+        const isEditor = role === "Editor";
         connections.push({
           id: member.userId._id || member.userId.id,
           name: member.userId.username || member.userId.email || "Member",
           role,
           avatar: member.userId.profilePicture,
           isOwner: false,
-          badgeColor,
-          textColor,
+          badgeColor: isEditor ? colors.successLight : colors.backgroundSecondary,
+          textColor: isEditor ? colors.success : colors.textSecondary,
         });
       }
     });
   }
-
   return connections;
-};
-
-// Avatar Component with initials fallback
-const Avatar = ({ image, name, size = 40, colors }) => {
-  const hasImage = hasProfilePicture(image);
-  const initials = getInitials(name || "User");
-
-  if (hasImage) {
-    return (
-      <View style={{ width: size, height: size, borderRadius: size / 2, marginRight: 12 }}>
-        <Image
-          source={{ uri: image }}
-          style={{
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-          }}
-        />
-      </View>
-    );
-  }
-
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: colors.badgeBackground,
-        justifyContent: "center",
-        alignItems: "center",
-        marginRight: 12,
-      }}>
-      <Text
-        style={{
-          fontSize: RFValue(size * 0.35),
-          color: colors.primary,
-          fontFamily: FontFamily.bold,
-        }}>
-        {initials}
-      </Text>
-    </View>
-  );
 };
 
 const ManageConnectionsScreen = ({ navigation, route }) => {
   const dispatch = useDispatch();
   const { colors } = useTheme();
-  const { ownedCircle, loading, inviteLink, inviteLinkLoading } = useSelector(state => state.circles);
+  const { 
+    ownedCircle, 
+    loading, 
+    inviteLink, 
+    inviteLinkLoading,
+    inviteQR,
+    inviteQRLoading,
+  } = useSelector(state => state.circles);
   const { showAlert, showError } = useAlert();
   const { tab } = route.params || {};
   const [activeTab, setActiveTab] = useState(tab || "Connections");
   const [activeMenuId, setActiveMenuId] = useState(null);
+  const [isQRModalVisible, setQRModalVisible] = useState(false);
   const isMenuDismissingRef = useRef(false);
+
+  console.log('inviteQR', inviteQR)
 
   // Get circle ID
   const circleId = ownedCircle?._id || ownedCircle?.id;
 
-  // Fetch owned circle on mount
-  useEffect(() => {
-    if (!ownedCircle) {
-      dispatch(fetchOwnedCircle());
-    }
-  }, [dispatch, ownedCircle]);
+  // Fetch owned circle; background-refresh silently when navigating back
+  const fetchFn = useCallback(() => dispatch(fetchOwnedCircle()), [dispatch]);
+  useScreenFetch(fetchFn, !!ownedCircle);
 
   // Re-fetch circle data when internet reconnects
   useOnReconnect(() => {
@@ -231,6 +168,48 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
       // User cancelled share, no need to show error
     }
   }, [inviteLink, ownedCircle]);
+
+  // Share invite link via SMS (From Contacts)
+  const handleShareViaSMS = useCallback(async () => {
+    console.log("handleShareViaSMS");
+    if (!inviteLink) {
+      Toast.show({
+        type: "error",
+        text1: "No Invite Link",
+        text2: "Please wait while we generate your invite link",
+      });
+      return;
+    }
+
+    const circleName = ownedCircle?.name || "our circle";
+    const message = `Join ${circleName} on BuyList! ${inviteLink}`;
+    // Use ?body= for both iOS and Android in modern RN, but &body= is safer for some older iOS
+    const separator = Platform.OS === "ios" ? "&" : "?";
+    const url = `sms:${separator}body=${encodeURIComponent(message)}`;
+
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        // Fallback to regular share if SMS is not available (e.g., iPad/Simulator)
+        handleShareLink();
+      }
+    } catch (err) {
+      console.error("Failed to open SMS:", err);
+      handleShareLink(); // Fallback on error
+    }
+  }, [inviteLink, ownedCircle, handleShareLink]);
+
+  // Show QR Code modal
+  const handleShowQR = useCallback(() => {
+    if (circleId) {
+      if (!inviteQR) {
+        dispatch(getCircleInviteQR({ circleId }));
+      }
+      setQRModalVisible(true);
+    }
+  }, [circleId, inviteQR, dispatch]);
 
   // ============================================
   // Member Management Handlers
@@ -527,11 +506,17 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
 
             {/* Bottom Action Grid */}
             <View style={styles.actionGrid}>
-              <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
+              <TouchableOpacity 
+                style={[styles.actionCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}
+                onPress={handleShowQR}
+              >
                 <QrCode size={24} color={colors.textPrimary} style={{ marginBottom: 8 }} />
                 <Text style={[styles.actionText, { color: colors.textPrimary }]}>Show QR Code</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
+              <TouchableOpacity
+                style={[styles.actionCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}
+                onPress={handleShareViaSMS}
+              >
                 <Smartphone
                   size={24}
                   color={colors.textPrimary}
@@ -545,6 +530,14 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <QRCodeModal 
+        visible={isQRModalVisible}
+        onClose={() => setQRModalVisible(false)}
+        qrCodeUrl={inviteQR}
+        loading={inviteQRLoading}
+        circleName={ownedCircle?.name}
+      />
     </View>
   );
 };
@@ -608,6 +601,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     position: "relative",
+    gap: 10
   },
   separator: {
     borderBottomWidth: 1,
@@ -683,7 +677,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     paddingLeft: 16,
-    paddingRight: 6,
     height: 48,
     width: "100%",
   },

@@ -51,7 +51,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     return RCTLinkingManager.application(app, open: url, options: options)
   }
 
-  // ─── Deep Linking: Universal Links (https://buylist.app/invite/...) ──────
+  // ─── Deep Linking: Universal Links (https://getbagg.com/invite/...) ──────
   func application(
     _ application: UIApplication,
     continue userActivity: NSUserActivity,

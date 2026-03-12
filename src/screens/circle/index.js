@@ -3,7 +3,6 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ScrollView as ReactScrollView,
 } from "react-native";
 import {
@@ -21,49 +20,25 @@ import { RFValue } from "react-native-responsive-fontsize";
 import { FontFamily } from "~theme/fonts";
 import Header from "~components/Header";
 import { useDispatch, useSelector } from "react-redux";
-import { useFocusEffect } from "@react-navigation/native";
 import { fetchOwnedCircle } from "~redux/actions/circleActions";
 import { fetchRecentActivities, fetchAllLists } from "~redux/actions/listActions";
 import { useTheme } from "~context/ThemeContext";
 import useOnReconnect from "~hooks/useOnReconnect";
-
-// Helper function to get initials from a name
-const getInitials = (name) => {
-  if (!name || typeof name !== "string") return "U";
-
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 0) return "U";
-
-  if (parts.length === 1) {
-    // Single name - take first 2 letters
-    return parts[0].substring(0, 2).toUpperCase();
-  }
-
-  // Multiple names - take first letter of first and last name
-  const firstInitial = parts[0].charAt(0).toUpperCase();
-  const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
-  return `${firstInitial}${lastInitial}`;
-};
-
-// Helper function to check if profile picture is available
-const hasProfilePicture = (profilePicture) => {
-  return profilePicture && profilePicture.trim() !== "";
-};
+import useScreenFetch from "~hooks/useScreenFetch";
+import Avatar from "~components/Avatar";
+import { normalizeActivity, getInitials, hasProfilePicture } from "~utils/display";
+import { formatListTimeAgo } from "~utils/time";
 
 // Helper function to format role for display
 const formatRole = (role) => {
   if (!role) return "Member";
-  // Capitalize first letter
   return role.charAt(0).toUpperCase() + role.slice(1);
 };
 
-// Build connections list from ownedCircle data
+// Build connections list from ownedCircle data (circle-specific, not shared)
 const buildConnections = (ownedCircle) => {
   if (!ownedCircle) return [];
-
   const connections = [];
-
-  // Always add owner first
   if (ownedCircle.owner) {
     connections.push({
       id: ownedCircle.owner._id || ownedCircle.owner.id,
@@ -73,8 +48,6 @@ const buildConnections = (ownedCircle) => {
       isOwner: true,
     });
   }
-
-  // Add members if they exist
   if (ownedCircle.members && Array.isArray(ownedCircle.members)) {
     ownedCircle.members.forEach((member) => {
       if (member.userId) {
@@ -88,145 +61,10 @@ const buildConnections = (ownedCircle) => {
       }
     });
   }
-
   return connections;
 };
 
-// Helper function to format time ago for lists
-const formatListTimeAgo = (isoDate) => {
-  if (!isoDate) return "Updated recently";
-  const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) return "Updated recently";
-
-  const diffMs = Date.now() - date.getTime();
-  const mins = Math.floor(diffMs / 60000);
-  const hours = Math.floor(diffMs / 3600000);
-  const days = Math.floor(diffMs / 86400000);
-
-  if (mins < 1) return "Updated just now";
-  if (mins < 60) return `Updated ${mins}m ago`;
-  if (hours < 24) return `Updated ${hours}h ago`;
-  if (days < 7) return `Updated ${days}d ago`;
-  return `Updated ${Math.floor(days / 7)}w ago`;
-};
-
-// ---- Recent Activity Helpers (from /activities/recent) ----
-const formatTimeAgo = isoDate => {
-  if (!isoDate) return "";
-  const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) return "";
-
-  const diffMs = Date.now() - date.getTime();
-  const mins = Math.floor(diffMs / 60000);
-  const hours = Math.floor(diffMs / 3600000);
-  const days = Math.floor(diffMs / 86400000);
-
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
-  return `${Math.floor(days / 7)}w ago`;
-};
-
-// Format activity action type to readable text
-const formatActivityAction = (action, metadata) => {
-  const itemCount = metadata?.itemCount || 1;
-
-  switch (action) {
-    case "PURCHASE_ITEMS":
-      return `marked ${itemCount} ${itemCount === 1 ? "item" : "items"} as purchased`;
-    case "ADD_ITEMS":
-      return `added ${itemCount} ${itemCount === 1 ? "item" : "items"}`;
-    case "CREATE_LIST":
-      return "created a list";
-    case "DELETE_LIST":
-      return "deleted a list";
-    case "JOIN_CIRCLE":
-      return "joined the circle";
-    case "LEAVE_CIRCLE":
-      return "left the circle";
-    default:
-      return "updated the circle";
-  }
-};
-
-const normalizeActivity = (activity, index) => {
-  const id = activity?._id || activity?.id || `${index}`;
-
-  // Extract actor info (new API format uses `actor` object)
-  const actor = activity?.actor || {};
-  const userName = actor?.username || activity?.username || "Someone";
-  const userAvatar = actor?.profilePicture || actor?.avatar || "";
-
-  // Extract action and format it
-  const actionType = activity?.action || "";
-  const metadata = activity?.metadata || {};
-  const actionText = formatActivityAction(actionType, metadata);
-
-  // Extract target/list name
-  const listObj = activity?.list || {};
-  const targetText = listObj?.name || metadata?.listName || "";
-
-  // Format timestamp
-  const createdAt = activity?.createdAt || activity?.updatedAt;
-  const timeText = createdAt ? formatTimeAgo(createdAt) : "";
-
-  return {
-    id,
-    userName,
-    userAvatar,
-    actionText,
-    targetText,
-    timeText,
-  };
-};
-
 // --- Sub Components ---
-
-// Avatar Component with initials fallback
-const Avatar = ({ image, name, size = 56, style, colors }) => {
-  const hasImage = hasProfilePicture(image);
-  const initials = getInitials(name || "User");
-
-  if (hasImage) {
-    return (
-      <Image
-        source={{ uri: image }}
-        style={[
-          {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-          },
-          style,
-        ]}
-      />
-    );
-  }
-
-  return (
-    <View
-      style={[
-        {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: colors?.badgeBackground || "#e0f2fe",
-          justifyContent: "center",
-          alignItems: "center",
-        },
-        style,
-      ]}>
-      <Text
-        style={{
-          fontSize: RFValue(size * 0.30),
-          color: colors?.primary || "#0ea5e9",
-        }}>
-        {initials}
-      </Text>
-    </View>
-  );
-};
 
 // Avatar Stack Component
 const AvatarStack = ({ items, size = 24, limit = 3, colors }) => {
@@ -276,14 +114,17 @@ const CircleTab = ({ navigation }) => {
   const { ownedCircle } = useSelector(state => state.circles);
   const { recentActivities, lists } = useSelector(state => state.lists);
 
-  // Fetch data when screen is focused
-  useFocusEffect(
-    useCallback(() => {
-      dispatch(fetchOwnedCircle());
-      dispatch(fetchRecentActivities());
-      dispatch(fetchAllLists());
-    }, [dispatch])
-  );
+  // Fetch all circle data; show loader only on first visit, background refresh on return
+  const fetchCircleData = useCallback(async () => {
+    await Promise.all([
+      dispatch(fetchOwnedCircle()),
+      dispatch(fetchRecentActivities()),
+      dispatch(fetchAllLists()),
+    ]);
+  }, [dispatch]);
+
+  const hasData = !!ownedCircle;
+  useScreenFetch(fetchCircleData, hasData);
 
   // Re-fetch data when internet reconnects
   useOnReconnect(() => {
@@ -361,7 +202,7 @@ const CircleTab = ({ navigation }) => {
         title={"Your Circle"}
         subtitle={"Shared shopping with your household"}
         rightAction={
-          <TouchableOpacity style={[styles.addUserButton, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
+          <TouchableOpacity style={[styles.addUserButton, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]} onPress={() => navigation.navigate("ManageConnections", { tab: "Invite" })}>
             <UserPlus size={20} color={colors.primary} />
           </TouchableOpacity>
         }
@@ -554,16 +395,18 @@ const CircleTab = ({ navigation }) => {
                 Anyone you invite can help add or manage lists.
               </Text>
             </View>
-            <View style={[styles.growIconBox, { backgroundColor: colors.primary }]}>
+            <TouchableOpacity style={[styles.growIconBox, { backgroundColor: colors.primary }]}  onPress={() =>
+              navigation.navigate("ManageConnections", { tab: "Invite" })
+            }>
               <UserPlus size={20} color="#ffffff" />
-            </View>
+            </TouchableOpacity>
           </View>
           <View style={styles.growActions}>
-            <TouchableOpacity style={[styles.inviteLinkBtn, { backgroundColor: colors.card, borderColor: colors.primary }]}>
+            <TouchableOpacity style={[styles.inviteLinkBtn, { backgroundColor: colors.card, borderColor: colors.primary }]} onPress={() => navigation.navigate("ManageConnections", { tab: "Invite" })}>
               <Share2 size={16} color={colors.primary} style={{ marginRight: 8 }} />
               <Text style={[styles.inviteLinkText, { color: colors.primary }]}>Invite via Link</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.qrCodeBtn, { backgroundColor: colors.primary }]}>
+            <TouchableOpacity style={[styles.qrCodeBtn, { backgroundColor: colors.primary }]} onPress={() => navigation.navigate("ManageConnections", { tab: "Invite" })}>
               <QrCode size={16} color="#ffffff" style={{ marginRight: 8 }} />
               <Text style={styles.qrCodeText}>QR Code</Text>
             </TouchableOpacity>

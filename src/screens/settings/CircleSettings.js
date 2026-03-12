@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -32,6 +32,7 @@ import {
 import { clearCircleError } from "~redux/reducers/circleReducer";
 import { useTheme } from "~context/ThemeContext";
 import useOnReconnect from "~hooks/useOnReconnect";
+import useScreenFetch from "~hooks/useScreenFetch";
 
 const SettingsRow = ({
   icon: Icon,
@@ -83,10 +84,9 @@ const CircleSettingsScreen = ({ onQuickAction, navigation }) => {
 
   console.log("ownedCircle", ownedCircle);
 
-  // Fetch fresh own circle data on mount
-  useEffect(() => {
-    dispatch(fetchOwnedCircle());
-  }, [dispatch]);
+  // Fetch fresh circle data; background-refresh silently on screen return
+  const fetchFn = useCallback(() => dispatch(fetchOwnedCircle()), [dispatch]);
+  useScreenFetch(fetchFn, !!ownedCircle);
 
   // Re-fetch circle data when internet reconnects
   useOnReconnect(() => {

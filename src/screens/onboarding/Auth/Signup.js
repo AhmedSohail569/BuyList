@@ -45,15 +45,42 @@ const SignupScreen = ({ navigation, route }) => {
     }
   }, [signupSuccess, navigation, email, dispatch]);
 
-  // Handle API errors with toast
+  // Handle API errors
   useEffect(() => {
     if (error) {
-      Toast.show({
-        type: "error",
-        text1: "Signup Failed",
-        text2: typeof error === "string" ? error : "Something went wrong",
-        props: { forceLight: true },
-      });
+      const errorObj = typeof error === "object" ? error : null;
+      
+      const hasFields = errorObj?.fields && errorObj.fields.length > 0;
+      let mappedAnyInline = false;
+      let unmappedErrorMessages = [];
+
+      if (hasFields) {
+        const newErrors = { ...errors };
+        errorObj.fields.forEach(f => {
+          if (newErrors[f.field] !== undefined) {
+            newErrors[f.field] = f.message;
+            mappedAnyInline = true;
+          } else {
+            unmappedErrorMessages.push(f.message);
+          }
+        });
+        setErrors(newErrors);
+      }
+      
+      // Show toast IF we didn't map any inline error, OR if there's an error for a hidden field
+      if (!mappedAnyInline || unmappedErrorMessages.length > 0) {
+        const toastMessage = unmappedErrorMessages.length > 0 
+          ? unmappedErrorMessages.join('\n') 
+          : errorObj?.message || (typeof error === "string" ? error : "Something went wrong");
+
+        Toast.show({
+          type: "error",
+          text1: "Signup Failed",
+          text2: toastMessage,
+          props: { forceLight: true },
+        });
+      }
+      
       dispatch(clearError());
     }
   }, [error, dispatch]);
@@ -97,12 +124,6 @@ const SignupScreen = ({ navigation, route }) => {
 
   const handleSignUp = () => {
     if (!validateForm()) {
-      Toast.show({
-        type: "error",
-        text1: "Validation Error",
-        text2: "Please fill in all fields correctly",
-        props: { forceLight: true },
-      });
       return;
     }
 

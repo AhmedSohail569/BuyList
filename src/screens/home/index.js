@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -29,141 +29,19 @@ import YourLists from "~containers/sections/YourLists";
 import { RFValue } from "react-native-responsive-fontsize";
 import { FontFamily } from "~theme/fonts";
 import { useSelector, useDispatch } from "react-redux";
-import { fetchRecentActivities } from "~redux/actions/listActions";
+import { fetchRecentActivities, fetchAllLists } from "~redux/actions/listActions";
 import { getProfile } from "~redux/actions/profileActions";
 import { useTheme } from "~context/ThemeContext";
 import { AD_OFFERS_DATA } from "~constants";
 import AdsOffersCarousel from "~components/AdsOffersCarousel";
 import NotificationsDropdown from "~components/NotificationsDropdown";
 import useOnReconnect from "~hooks/useOnReconnect";
+import { fetchBanners } from "~redux/actions/searchActions";
+import useScreenFetch from "~hooks/useScreenFetch";
+import Avatar from "~components/Avatar";
+import { normalizeActivity } from "~utils/display";
 
 const { width } = Dimensions.get("window");
-
-// Helper to format relative time
-const formatTimeAgo = dateString => {
-  if (!dateString) return "Recently";
-  const now = new Date();
-  const date = new Date(dateString);
-  const diffMs = now - date;
-  const mins = Math.floor(diffMs / 60000);
-  const hours = Math.floor(diffMs / 3600000);
-  const days = Math.floor(diffMs / 86400000);
-
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
-  return `${Math.floor(days / 7)}w ago`;
-};
-
-// Format activity action type to readable text
-const formatActivityAction = (action, metadata) => {
-  const itemCount = metadata?.itemCount || 1;
-
-  switch (action) {
-    case "PURCHASE_ITEMS":
-      return `marked ${itemCount} ${itemCount === 1 ? "item" : "items"} as purchased`;
-    case "ADD_ITEMS":
-      return `added ${itemCount} ${itemCount === 1 ? "item" : "items"}`;
-    case "CREATE_LIST":
-      return "created a list";
-    case "DELETE_LIST":
-      return "deleted a list";
-    case "JOIN_CIRCLE":
-      return "joined the circle";
-    case "LEAVE_CIRCLE":
-      return "left the circle";
-    default:
-      return "updated the circle";
-  }
-};
-
-// Normalize activity for display
-const normalizeActivity = (activity, index) => {
-  const id = activity?._id || activity?.id || `${index}`;
-  const actor = activity?.actor || {};
-  const userName = actor?.username || "Someone";
-  const userAvatar = actor?.profilePicture || actor?.avatar || "";
-  const actionType = activity?.action || "";
-  const metadata = activity?.metadata || {};
-  const actionText = formatActivityAction(actionType, metadata);
-  const listObj = activity?.list || {};
-  const targetText = listObj?.name || metadata?.listName || "";
-  const createdAt = activity?.createdAt || activity?.updatedAt;
-  const timeText = createdAt ? formatTimeAgo(createdAt) : "";
-
-  return {
-    id,
-    userName,
-    userAvatar,
-    actionText,
-    targetText,
-    timeText,
-  };
-};
-
-// Helper to get initials from name
-const getInitials = name => {
-  if (!name || typeof name !== "string") return "U";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 0) return "U";
-  if (parts.length === 1) {
-    return parts[0].substring(0, 2).toUpperCase();
-  }
-  const firstInitial = parts[0].charAt(0).toUpperCase();
-  const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
-  return `${firstInitial}${lastInitial}`;
-};
-
-// Helper to check if profile picture is available
-const hasProfilePicture = profilePicture => {
-  return profilePicture && profilePicture.trim() !== "";
-};
-
-// Avatar Component with initials fallback
-const Avatar = ({ image, name, size = 40, style, colors }) => {
-  const hasImage = hasProfilePicture(image);
-  const initials = getInitials(name || "User");
-
-  if (hasImage) {
-    return (
-      <View
-        style={[{ width: size, height: size, borderRadius: size / 2 }, style]}>
-        <Image
-          source={{ uri: image }}
-          style={{
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-          }}
-        />
-      </View>
-    );
-  }
-
-  return (
-    <View
-      style={[
-        {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: colors?.badgeBackground || "#e0f2fe",
-          justifyContent: "center",
-          alignItems: "center",
-        },
-        style,
-      ]}>
-      <Text
-        style={{
-          fontSize: RFValue(size * 0.35),
-          color: colors?.primary || "#0ea5e9",
-        }}>
-        {initials}
-      </Text>
-    </View>
-  );
-};
 
 const BEST_PRICES = [
   {
@@ -211,6 +89,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
   const { profile } = useSelector(state => state.profile);
   const { recentActivities } = useSelector(state => state.lists);
   const { lastSyncedToken: fcmToken } = useSelector(state => state.notifications);
+  const { homeBanners } = useSelector((state) => state.search);
 
   // Notification dropdown state
   const [showNotifications, setShowNotifications] = useState(false);
@@ -224,16 +103,29 @@ const HomeTab = ({ onQuickAction, navigation }) => {
     Toast.show({ type: "success", text1: `${label} copied to clipboard` });
   };
 
-  // Fetch recent activities on mount
-  useEffect(() => {
-    dispatch(getProfile());
-    dispatch(fetchRecentActivities());
+  // Home data: profile + recent activities + lists — refresh silently on return
+  const fetchHomeData = useCallback(async () => {
+    await Promise.all([
+      dispatch(getProfile()),
+      dispatch(fetchRecentActivities()),
+      dispatch(fetchAllLists()),
+    ]);
   }, [dispatch]);
+  useScreenFetch(fetchHomeData, true); // always quiet — home already shows stale data fine
 
-  // Re-fetch data when internet reconnects
+  // Banners: fetch once, background-refresh on return
+  const fetchHomeBanners = useCallback(
+    () => dispatch(fetchBanners({ placement: "home" })),
+    [dispatch],
+  );
+  useScreenFetch(fetchHomeBanners, homeBanners.length > 0);
+
+  // Re-fetch everything on reconnect
   useOnReconnect(() => {
     dispatch(getProfile());
     dispatch(fetchRecentActivities());
+    dispatch(fetchAllLists());
+    dispatch(fetchBanners({ placement: "home" }));
   });
 
   // Normalize activities for display (limit to 2 for home screen)
@@ -305,7 +197,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
             color={quickActionColors.create.bg}
             iconColor={quickActionColors.create.icon}
             labelColor={colors.textSecondary}
-            onPress={() => navigateToListsAndOpenCreate()}
+            onPress={() => navigateToListsAndOpenCreate()}  
           />
           <ActionIcon
             id="lists"
@@ -438,9 +330,26 @@ const HomeTab = ({ onQuickAction, navigation }) => {
 
         <NearbyStores navigation={navigation} />
 
-        <View style={{ left: RFValue(-16), width: width }}>
-          <AdsOffersCarousel data={AD_OFFERS_DATA} title="Ads & Offers" onAdPress={() => { }} autoPlay={true} />
-        </View>
+        {homeBanners && homeBanners.length > 0 && (
+                <View style={{ left: RFValue(-16), width: width }}>
+                    <AdsOffersCarousel
+                      data={homeBanners.map(b => ({
+                        id: b._id,
+                        title: b.title,
+                        subtitle: b.description,
+                        image: b.imageUrl,
+                        url: b.link,
+                      }))}
+                      title="Ads & Offers"
+                      onAdPress={(item) => {
+                        if (item.url) {
+                          // Assuming you have Linking imported. If not we should just pass
+                        }
+                      }}
+                      autoPlay={true}
+                    />
+                  </View>
+                )}
 
         <YourLists navigation={navigation} />
 

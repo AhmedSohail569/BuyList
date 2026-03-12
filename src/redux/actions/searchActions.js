@@ -78,3 +78,90 @@ export const searchOnlineStores = createAsyncThunk(
     }
   },
 );
+/**
+ * Fetch banners by placement
+ * GET /banners/get-banner?placement={placement}
+ */
+export const fetchBanners = createAsyncThunk(
+  "search/fetchBanners",
+  async ({ placement = "home" }, { rejectWithValue }) => {
+    try {
+      if (!placement) {
+        return rejectWithValue("Placement is required");
+      }
+
+
+      const response = await axios.get(`/banners/get-banners/?placement=${placement}`);
+      console.log(`response fetchBanners (${placement})`, response);
+      
+      const data = response.data;
+      return {
+        placement,
+        banners: Array.isArray(data?.data) ? data.data : [],
+      };
+    } catch (err) {
+      console.log("err fetchBanners", err);
+    }
+  },
+);
+
+/**
+ * Fetch Recent Searches
+ * GET /search/recent
+ */
+export const fetchRecentSearches = createAsyncThunk(
+  "search/fetchRecentSearches",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get("/search/recent");
+      console.log("response fetchRecentSearches", response.data);
+      return Array.isArray(response.data?.data) ? response.data.data : [];
+    } catch (err) {
+      console.log("err fetchRecentSearches", err);
+
+      const errorData = err.response;
+      console.log("errorData fetchRecentSearches", errorData);
+
+      const message = getErrorMessage(err);
+      return rejectWithValue(message);
+    }
+  }
+);
+
+/**
+ * Clear Recent Searches
+ * DELETE /search/recent
+ */
+export const clearRecentSearches = createAsyncThunk(
+  "search/clearRecentSearches",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.delete("/search/recent");
+      console.log("response clearRecentSearches", response.data);
+      return true; // return success
+    } catch (err) {
+      console.log("err clearRecentSearches", err);
+      const message = getErrorMessage(err);
+      return rejectWithValue(message);
+    }
+  }
+);
+
+/**
+ * Fetch Trending Searches
+ * GET /search/trending
+ */
+export const fetchTrendingSearches = createAsyncThunk(
+  "search/fetchTrendingSearches",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get("/search/trending");
+      console.log("response fetchTrendingSearches", response.data);
+      return Array.isArray(response.data?.data) ? response.data.data : [];
+    } catch (err) {
+      console.log("err fetchTrendingSearches", err);
+      const message = getErrorMessage(err);
+      return rejectWithValue(message);
+    }
+  }
+);

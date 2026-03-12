@@ -31,7 +31,7 @@ export const navigationRef = createNavigationContainerRef();
  * Maps URL patterns to screen names so the library can parse incoming deep links.
  */
 const linking = {
-  prefixes: ["buylist://", "https://buylist.app", "https://www.buylist.app"],
+  prefixes: ["buylist://", "https://getbagg.com", "https://www.getbagg.com"],
   config: {
     screens: {
       AppNavigator: {
@@ -39,6 +39,7 @@ const linking = {
           AppTabNavigator: {
             screens: {
               Circle: "circle",
+              Lists: 'lists'
             },
           },
           ManageConnections: "manage-connections",
@@ -122,7 +123,7 @@ const RootNavigator = () => {
           // Navigate to circle screen
           if (navigationRef.isReady()) {
             navigationRef.navigate("AppTabNavigator", {
-              screen: "Circle",
+              screen: "Lists",
             });
           }
         } catch (err) {
@@ -196,7 +197,7 @@ const RootNavigator = () => {
         });
 
         if (navigationRef.isReady()) {
-          navigationRef.navigate("AppTabNavigator", { screen: "Circle" });
+          navigationRef.navigate("AppTabNavigator", { screen: "Lists" });
         }
       } catch (err) {
         Toast.show({

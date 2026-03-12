@@ -37,8 +37,14 @@
 	<string>This app does not directly access Apple Music. This permission may be required by a third-party library used in the app.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>BuyList needs access to your camera to take profile photos and capture receipts.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>BuyList needs access to your microphone to search products by voice.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>BuyList needs speech recognition to convert your voice to text for searching products.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>BuyList needs your location to show nearby stores and deals.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>BuyList needs your location to provide enhanced search and personalized notifications about nearby stores and deals.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>BuyList needs permission to save photos to your library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

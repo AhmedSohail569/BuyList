@@ -1299,6 +1299,8 @@ PODS:
     - nanopb/encode (= 3.30910.0)
   - nanopb/decode (3.30910.0)
   - nanopb/encode (3.30910.0)
+  - NativeSpeech (0.0.1):
+    - React-Core
   - PromisesObjC (2.4.0)
   - RCT-Folly (2024.11.18.00):
     - boost
@@ -4481,6 +4483,7 @@ DEPENDENCIES:
   - "gRPC-C++"
   - gRPC-Core
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
+  - NativeSpeech (from `../native_modules/NativeSpeech`)
   - RCT-Folly (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
   - RCTDeprecation (from `../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)
   - RCTRequired (from `../node_modules/react-native/Libraries/Required`)
@@ -4611,6 +4614,8 @@ EXTERNAL SOURCES:
   hermes-engine:
     :podspec: "../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec"
     :tag: hermes-2025-09-01-RNv0.82.0-265ef62ff3eb7289d17e366664ac0da82303e101
+  NativeSpeech:
+    :path: "../native_modules/NativeSpeech"
   RCT-Folly:
     :podspec: "../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec"
   RCTDeprecation:
@@ -4811,6 +4816,7 @@ SPEC CHECKSUMS:
   GTMSessionFetcher: 02d6e866e90bc236f48a703a041dfe43e6221a29
   hermes-engine: 273e30e7fb618279934b0b95ffab60ecedb7acf5
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
+  NativeSpeech: 696044284b1e5799455b4f21fe2ea0d2a5ef59b0
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   RCT-Folly: 846fda9475e61ec7bcbf8a3fe81edfcaeb090669
   RCTDeprecation: f17e2ebc07876ca9ab8eb6e4b0a4e4647497ae3a
@@ -4893,7 +4899,7 @@ SPEC CHECKSUMS:
   RNFBMessaging: 762a5595c6b11bb595a08efd66ec5684afc6033f
   RNGestureHandler: 91eb97c0546ba67b62cf7b96156c7361478a70bd
   RNImageCropPicker: 5432d75a3bc7209dc8b6ab189fcfe19bd6339fb9
-  RNPermissions: 64db94a390a54906de867cf1f8403753c8e29902
+  RNPermissions: a845aed0f01db08254e18aedd8105f70e5d82341
   RNReanimated: 085278ac0a7044df824e13af982bf50bd4771e1b
   RNScreens: d6413aeb1878cdafd3c721e2c5218faf5d5d3b13
   RNSVG: 122ad5db3ef9be375bbf7f371e37306eeed7e4fa
@@ -4903,6 +4909,6 @@ SPEC CHECKSUMS:
   TOCropViewController: 797deaf39c90e6e9ddd848d88817f6b9a8a09888
   Yoga: 526f25666395d30c297d53154398ffd249eaf9e1
 
-PODFILE CHECKSUM: e7df927198cee7958d18007a09724e4c15f418a6
+PODFILE CHECKSUM: cf71ffa4acb29e5773a83998af9c7c7364599c7d
 
 COCOAPODS: 1.16.2

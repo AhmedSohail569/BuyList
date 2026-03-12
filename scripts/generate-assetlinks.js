@@ -1,7 +1,7 @@
 /**
  * Generate assetlinks.json for Android App Links
  * 
- * This file must be hosted at: https://buylist.app/.well-known/assetlinks.json
+ * This file must be hosted at: https://getbagg.com/.well-known/assetlinks.json
  * 
  * Usage:
  *   1. Get your app's SHA-256 fingerprint:
@@ -10,7 +10,7 @@
  * 
  *   2. Run this script: node scripts/generate-assetlinks.js YOUR_SHA256_FINGERPRINT
  * 
- *   3. Copy the output to: https://buylist.app/.well-known/assetlinks.json
+ *   3. Copy the output to: https://getbagg.com/.well-known/assetlinks.json
  */
 
 const sha256Fingerprint = process.argv[2];
@@ -41,9 +41,9 @@ const assetlinks = [
 console.log("\n✅ Generated assetlinks.json:\n");
 console.log(JSON.stringify(assetlinks, null, 2));
 console.log("\n📋 Next steps:");
-console.log("1. Host this JSON at: https://buylist.app/.well-known/assetlinks.json");
+console.log("1. Host this JSON at: https://getbagg.com/.well-known/assetlinks.json");
 console.log("2. Ensure the file is served with Content-Type: application/json");
-console.log("3. Verify it's accessible: curl https://buylist.app/.well-known/assetlinks.json");
+console.log("3. Verify it's accessible: curl https://getbagg.com/.well-known/assetlinks.json");
 console.log("4. Reinstall the app (or clear app data) to trigger Android verification");
 console.log("\n💡 Note: Android verifies the domain on first install. After verification,");
-console.log("   all https://buylist.app/invite/* links will automatically open your app!\n");
+console.log("   all https://getbagg.com/invite/* links will automatically open your app!\n");

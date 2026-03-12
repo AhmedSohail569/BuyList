@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BuyList Setup</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f3f4f6;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-width: 400px;
+            width: 100%;
+        }
+        h1 {
+            color: #111827;
+            margin-bottom: 8px;
+            font-size: 24px;
+        }
+        p {
+            color: #6b7280;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #2563eb;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            margin: 8px 0;
+            width: 80%;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #2563eb;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="spinner" id="spinner"></div>
+        <h1 id="status">Redirecting you...</h1>
+        <p id="invite-box" style="display: none; background: #f3f4f6; padding: 12px; border-radius: 8px; font-weight: bold; border: 1px dashed #2563eb; margin-bottom: 24px; color: #2563eb;">
+            Invite Code: <span id="code-span"></span>
+        </p>
+
+        <p id="desc">You are being taken to the app store to download BuyList.</p>
+        
+        <div id="manual-links" style="display: none; margin-top: 20px;">
+            <p style="margin-bottom: 12px;">If you aren't redirected automatically, tap below:</p>
+            <a href="https://apps.apple.com/us/app/buylist/id6757783448" class="btn">Download on App Store</a>
+            <!-- Replace the XXXXX below with your actual Google Play package name once published -->
+            <a href="https://play.google.com/store/apps/details?id=com.buylist" class="btn">Get it on Google Play</a>
+        </div>
+    </div>
+
+    <script>
+        // Store URLs
+        const IOS_STORE_URL = "https://apps.apple.com/us/app/buylist/id6757783448";
+        // Update this to your actual app package name if it differs
+        const ANDROID_STORE_URL = "https://play.google.com/store/apps/details?id=com.buylist"; 
+        const FALLBACK_URL = "https://getbagg.com";
+
+        function redirect() {
+            // Check if there is an invite code in the URL
+            const pathParts = window.location.pathname.split('/');
+            let inviteCode = null;
+            if (pathParts.length > 2 && pathParts[1] === 'invite') {
+                inviteCode = pathParts[2]; // e.g., '123XYZ'
+            }
+
+            if (inviteCode) {
+                document.getElementById('status').innerText = "You've been invited!";
+                document.getElementById('desc').innerText = "Copy the code below, then download the app and enter it during sign up.";
+                document.getElementById('invite-box').style.display = 'block';
+                document.getElementById('code-span').innerHTML = `<a href="https://getbagg.com/invite/${inviteCode}">https://getbagg.com/invite/${inviteCode}</a>`;
+                
+                // Stop the automatic spinner immediately so they can read the code
+                document.getElementById('spinner').style.display = 'none';
+                document.getElementById('manual-links').style.display = 'block';
+                return; // Do not auto-redirect if an invite code is present, force them to tap the download button
+            }
+
+            const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+            
+            // Detect iOS
+            if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+                window.location.replace(IOS_STORE_URL);
+                return;
+            }
+            
+            // Detect Android
+            if (/android/i.test(userAgent)) {
+                window.location.replace(ANDROID_STORE_URL);
+                return;
+            }
+            
+            // Fallback for desktop users
+            document.getElementById('spinner').style.display = 'none';
+            document.getElementById('status').innerText = 'Download BuyList';
+            document.getElementById('manual-links').style.display = 'block';
+        }
+
+        // Execute redirect immediately
+        window.onload = function() {
+            setTimeout(redirect, 500); // Small 500ms delay to ensure the UI renders first
+            
+            // Show manual links after 3 seconds just in case the redirect gets blocked by the browser
+            setTimeout(() => {
+                document.getElementById('spinner').style.display = 'none';
+                document.getElementById('status').innerText = 'Download BuyList';
+                document.getElementById('manual-links').style.display = 'block';
+            }, 3000);
+        };
+    </script>
+</body>
+</html>

@@ -1,127 +1,135 @@
-import React, { useState, useCallback, memo } from "react";
+import React, { useCallback, useMemo, memo } from "react";
 import {
   View,
   TouchableOpacity,
   Image,
   StyleSheet,
-  FlatList,
 } from "react-native";
 import { ProgressBar } from "react-native-paper";
 import { RFValue } from "react-native-responsive-fontsize";
 import { Text } from "~components/Common";
 import { useTheme } from "~context/ThemeContext";
 import { FontFamily } from "~theme/fonts";
+import { useSelector } from "react-redux";
+import { formatTimeAgo } from "~utils/time";
+import Avatar from "~components/Avatar";
 
-const ListCard = ({ item, onPress, colors, isDark }) => (
-  <TouchableOpacity
-    style={[styles.listCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}
-    onPress={() => onPress(item.id)}
-    activeOpacity={0.7}>
-    <View style={styles.listHeader}>
-      <View style={styles.listTitleContainer}>
-        <Text variant="body" style={[styles.listTitle, { color: colors.textPrimary }]}>
-          {item.name}
-        </Text>
-        <Text variant="caption" color="muted" style={styles.listSubtitle}>
-          Updated {item.updatedTime}
-        </Text>
-      </View>
-      {/* Avatars */}
-      <View style={styles.avatarsContainer}>
-        {item.members && item.members.length > 0 && (
+const MAX_LISTS = 3;
+const MAX_COMPLETED_FILL = 2; // max completed lists allowed to fill up to MAX_LISTS
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Smart filter:
+ * - Prefer uncompleted lists (progress.percentage < 100)
+ * - If uncompleted count < MAX_LISTS, fill remaining slots with up to
+ *   MAX_COMPLETED_FILL completed lists
+ * - Total capped at MAX_LISTS
+ */
+const selectHomeLists = (lists) => {
+  if (!Array.isArray(lists) || lists.length === 0) return [];
+
+  const uncompleted = lists.filter((l) => (l.progress?.percentage ?? 0) < 100);
+  const completed = lists.filter((l) => (l.progress?.percentage ?? 0) >= 100);
+
+  if (uncompleted.length >= MAX_LISTS) {
+    return uncompleted.slice(0, MAX_LISTS);
+  }
+
+  const slotsLeft = Math.min(MAX_LISTS - uncompleted.length, MAX_COMPLETED_FILL);
+  return [...uncompleted, ...completed.slice(0, slotsLeft)];
+};
+
+// ──────────────────────────────────────────────────────────────────────────────
+// ListCard
+// ──────────────────────────────────────────────────────────────────────────────
+
+const ListCard = ({ item, onPress, colors }) => {
+  const progress = item.progress ?? { total: 0, purchased: 0, percentage: 0 };
+  const members = item.members || item.sharedWith || [];
+
+  return (
+    <TouchableOpacity
+      style={[styles.listCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}
+      onPress={() => onPress(item.id || item._id)}
+      activeOpacity={0.7}
+    >
+      <View style={styles.listHeader}>
+        <View style={styles.listTitleContainer}>
+          <Text variant="body" style={[styles.listTitle, { color: colors.textPrimary }]}>
+            {item.name}
+          </Text>
+          <Text variant="caption" color="muted" style={styles.listSubtitle}>
+            Updated {formatTimeAgo(item.updatedAt || item.createdAt)}
+          </Text>
+        </View>
+        {/* Member Avatars */}
+        {members.length > 0 && (
           <View style={styles.avatarStack}>
-            {item.members.map((member, index) => (
-              <Image
-                key={member.id}
-                source={{ uri: member.avatar }}
-                style={[styles.avatar, { marginLeft: index > 0 ? -12 : 0, borderColor: colors.card }]}
-              />
-            ))}
+            {members.slice(0, 3).map((member, index) => {
+              const uri = member.profilePicture || member.avatar;
+              if (!uri) return null;
+              return (
+                <Image
+                  key={member._id || member.id || index}
+                  source={{ uri }}
+                  style={[styles.avatar, { marginLeft: index > 0 ? -12 : 0, borderColor: colors.card }]}
+                />
+              );
+            })}
           </View>
         )}
       </View>
-    </View>
 
-    {/* Progress Bar */}
-    <View style={styles.progressContainer}>
-      <ProgressBar
-        progress={item.progress / 100}
-        color={colors.primary}
-        style={[styles.progressBar, { backgroundColor: colors.progressTrack }]}
-      />
-    </View>
+      {/* Progress Bar */}
+      <View style={styles.progressContainer}>
+        <ProgressBar
+          progress={(progress.percentage ?? 0) / 100}
+          color={colors.primary}
+          style={[styles.progressBar, { backgroundColor: colors.progressTrack }]}
+        />
+      </View>
 
-    {/* Stats Footer */}
-    <View style={styles.statsContainer}>
-      <Text variant="caption" color="muted" style={styles.statsText}>
-        {item.completedItems}/{item.totalItems} items
-      </Text>
-      <Text variant="caption" style={[styles.statsText, { color: colors.primary }]}>
-        {item.progress}% Done
-      </Text>
-    </View>
-  </TouchableOpacity>
-);
+      {/* Stats Footer */}
+      <View style={styles.statsContainer}>
+        <Text variant="caption" color="muted" style={styles.statsText}>
+          {progress.purchased}/{progress.total} items
+        </Text>
+        <Text variant="caption" style={[styles.statsText, { color: colors.primary }]}>
+          {progress.percentage}% Done
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 const MemoListCard = memo(ListCard);
 
+// ──────────────────────────────────────────────────────────────────────────────
+// YourLists
+// ──────────────────────────────────────────────────────────────────────────────
+
 const YourLists = ({ navigation }) => {
-  const { colors, isDark } = useTheme();
-  const [lists] = useState([
-    {
-      id: 1,
-      name: "Weekly Groceries",
-      updatedTime: "2h ago",
-      totalItems: 18,
-      completedItems: 12,
-      progress: 65,
-      members: [
-        { id: 1, avatar: "https://i.pravatar.cc/150?u=user1" },
-        { id: 2, avatar: "https://i.pravatar.cc/150?u=user2" },
-      ],
-    },
-    {
-      id: 2,
-      name: "Weekend Shopping",
-      updatedTime: "1h ago",
-      totalItems: 24,
-      completedItems: 16,
-      progress: 67,
-      members: [
-        { id: 1, avatar: "https://i.pravatar.cc/150?u=user1" },
-        { id: 3, avatar: "https://i.pravatar.cc/150?u=user3" },
-      ],
-    },
-    {
-      id: 3,
-      name: "Pantry Refill",
-      updatedTime: "3h ago",
-      totalItems: 15,
-      completedItems: 10,
-      progress: 67,
-      members: [
-        { id: 1, avatar: "https://i.pravatar.cc/150?u=user1" },
-        { id: 2, avatar: "https://i.pravatar.cc/150?u=user2" },
-      ],
-    },
-  ]);
+  const { colors } = useTheme();
+  const allLists = useSelector((state) => state.lists.lists);
 
-  const handleListPress = listId => {
-    // navigation.navigate("ListDetail", {listId});
-  };
+  // Smart-filtered lists — memoised to avoid recalculation on every render
+  const lists = useMemo(() => selectHomeLists(allLists), [allLists]);
 
-  const handleViewAllLists = () => {
-    navigation.navigate("Lists");
-  };
-
-  const renderListItem = useCallback(
-    ({ item }) => (
-      <MemoListCard item={item} onPress={handleListPress} colors={colors} isDark={isDark} />
-    ),
-    [handleListPress, colors, isDark],
+  const handleListPress = useCallback(
+    (listId) => {
+      navigation.navigate("ListDetails", { listId });
+    },
+    [navigation],
   );
 
-  const listKeyExtractor = useCallback(item => item.id.toString(), []);
+  const handleViewAll = useCallback(() => {
+    navigation.navigate("Lists");
+  }, [navigation]);
+
+  if (lists.length === 0) return null;
 
   return (
     <View style={styles.section}>
@@ -131,21 +139,16 @@ const YourLists = ({ navigation }) => {
         </Text>
       </View>
 
-      <FlatList
-        data={lists}
-        renderItem={renderListItem}
-        keyExtractor={listKeyExtractor}
-        scrollEnabled={false}
-        contentContainerStyle={styles.listsList}
-        initialNumToRender={3}
-        removeClippedSubviews={false}
-      />
+      {lists.map((item) => (
+        <MemoListCard
+          key={item.id || item._id}
+          item={item}
+          onPress={handleListPress}
+          colors={colors}
+        />
+      ))}
 
-      {/* View All Lists Button */}
-      <TouchableOpacity
-        style={styles.viewAllButton}
-        onPress={handleViewAllLists}
-        activeOpacity={0.7}>
+      <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAll} activeOpacity={0.7}>
         <Text variant="bodySmall" color="muted" style={styles.viewAllText}>
           View All Lists
         </Text>
@@ -153,6 +156,10 @@ const YourLists = ({ navigation }) => {
     </View>
   );
 };
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Styles
+// ──────────────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   section: {
@@ -167,10 +174,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: RFValue(13),
     fontFamily: FontFamily.bold,
-  },
-  listsList: {
-    paddingBottom: 0,
-    marginHorizontal: 2,
   },
   listCard: {
     borderRadius: 16,
@@ -197,9 +200,6 @@ const styles = StyleSheet.create({
   },
   listSubtitle: {
     fontSize: 11,
-  },
-  avatarsContainer: {
-    justifyContent: "flex-end",
   },
   avatarStack: {
     flexDirection: "row",

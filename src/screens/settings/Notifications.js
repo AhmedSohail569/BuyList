@@ -28,6 +28,7 @@ import {
   updateNotificationSetting,
 } from "~redux/actions/notificationActions";
 import useOnReconnect from "~hooks/useOnReconnect";
+import useScreenFetch from "~hooks/useScreenFetch";
 
 
 
@@ -206,11 +207,14 @@ const NotificationsScreen = ({ navigation }) => {
     (state) => state.notifications,
   );
 
-  useEffect(() => {
-    dispatch(fetchNotificationSettings());
-  }, [dispatch]);
+  // Fetch settings on focus; background-refresh when navigating back
+  const fetchFn = useCallback(
+    () => dispatch(fetchNotificationSettings()),
+    [dispatch],
+  );
+  useScreenFetch(fetchFn, settings !== undefined);
 
-   // Re-fetch when internet reconnects
+  // Re-fetch when internet reconnects
   useOnReconnect(() => {
     dispatch(fetchNotificationSettings());
   });

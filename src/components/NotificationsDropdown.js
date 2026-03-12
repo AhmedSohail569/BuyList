@@ -31,27 +31,13 @@ import {
   markNotificationRead,
   markAllNotificationsRead,
 } from "~redux/actions/notificationActions";
+import { formatTimeAgo } from "~utils/time";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 // ────────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ────────────────────────────────────────────────────────────────────────────────
-
-const formatTimeAgo = (dateString) => {
-  if (!dateString) return "";
-  const now = new Date();
-  const date = new Date(dateString);
-  const diffMs = now - date;
-  const mins = Math.floor(diffMs / 60000);
-  const hours = Math.floor(diffMs / 3600000);
-  const days = Math.floor(diffMs / 86400000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins} mins ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
-  return `${Math.floor(days / 7)}w ago`;
-};
 
 /** Map notification type to an icon config */
 const getNotificationIcon = (type) => {
@@ -154,12 +140,6 @@ const NotificationsDropdown = ({ visible, onClose }) => {
   const handleMarkAll = useCallback(() => {
     dispatch(markAllNotificationsRead());
   }, [dispatch]);
-
-  // ── See all activity ──────────────────────────────────────────────────────
-  const handleSeeAll = useCallback(() => {
-    onClose();
-    navigation.navigate("Notifications");
-  }, [onClose, navigation]);
 
   // ── Render a single notification row ──────────────────────────────────────
   const renderItem = useCallback(
@@ -308,23 +288,15 @@ const NotificationsDropdown = ({ visible, onClose }) => {
                 >
                   Notifications
                 </Text>
-                {unreadCount > 0 && (
+                <View style={styles.headerRight}>
                   <TouchableOpacity
-                    onPress={handleMarkAll}
-                    disabled={markingAll}
+                    onPress={onClose}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={styles.closeButton}
                   >
-                    <Text
-                      style={[
-                        styles.markAllText,
-                        { color: colors.primary },
-                        markingAll && { opacity: 0.5 },
-                      ]}
-                    >
-                      Mark all as read
-                    </Text>
+                    <Icon name="close" size={RFValue(18)} color={colors.textSecondary} />
                   </TouchableOpacity>
-                )}
+                </View>
               </View>
 
               {/* ── Notification list ────────────────────────────────────── */}
@@ -345,18 +317,25 @@ const NotificationsDropdown = ({ visible, onClose }) => {
                 maxToRenderPerBatch={8}
               />
 
-              {/* ── Footer link ──────────────────────────────────────────── */}
-              <TouchableOpacity
-                style={[styles.footer, { borderTopColor: colors.divider }]}
-                activeOpacity={0.7}
-                onPress={handleSeeAll}
-              >
-                <Text
-                  style={[styles.seeAllText, { color: colors.textSecondary }]}
+              {/* ── Footer ──────────────────────────────────────────────── */}
+              {unreadCount > 0 && (
+                <TouchableOpacity
+                  style={[styles.footer, { borderTopColor: colors.divider }]}
+                  activeOpacity={0.7}
+                  onPress={handleMarkAll}
+                  disabled={markingAll}
                 >
-                  See all recent Activity
-                </Text>
-              </TouchableOpacity>
+                  <Text
+                    style={[
+                      styles.markAllFooterText,
+                      { color: colors.primary },
+                      markingAll && { opacity: 0.5 },
+                    ]}
+                  >
+                    Mark all as read
+                  </Text>
+                </TouchableOpacity>
+              )}
             </Animated.View>
           </TouchableWithoutFeedback>
         </Animated.View>
@@ -399,6 +378,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 12,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  closeButton: {
+    padding: 2,
   },
   headerTitle: {
     fontSize: RFValue(14),
@@ -475,13 +462,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderTopWidth: 1,
   },
-  seeAllText: {
-    fontSize: RFValue(10),
+  markAllFooterText: {
+    fontSize: RFValue(11),
     fontFamily: FontFamily.medium,
-    textDecorationLine: "underline",
   },
 
-  // Footer loader
   footerLoader: {
     paddingVertical: 12,
     alignItems: "center",

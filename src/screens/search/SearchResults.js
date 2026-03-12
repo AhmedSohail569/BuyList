@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Linking,
+  Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -22,15 +23,19 @@ import { useDispatch, useSelector } from "react-redux";
 import Header from "~components/Header";
 import SearchBar from "~components/SearchBar";
 import { Modal, ScrollView, Text } from "~components/Common";
-import { RFValue } from "react-native-responsive-fontsize";
+import { RFPercentage, RFValue } from "react-native-responsive-fontsize";
 import { FontFamily } from "~theme/fonts";
 import { useTheme } from "~context/ThemeContext";
 import {
   searchLocalStores,
   searchOnlineStores,
+  fetchBanners,
 } from "~redux/actions/searchActions";
 import { clearSearchResults } from "~redux/reducers/searchReducer";
 import { calculateDistance, formatDistance } from "~utils";
+import AdsOffersCarousel from "~components/AdsOffersCarousel";
+
+const { width } = Dimensions.get("window");
 
 const SearchResultsScreen = ({ navigation, route }) => {
   const { colors } = useTheme();
@@ -58,6 +63,8 @@ const SearchResultsScreen = ({ navigation, route }) => {
     localLoadingMore,
     localError,
     localHasMore,
+    searchBanners,
+    bannersLoading,
   } = useSelector((state) => state.search);
 
   const { latitude, longitude } = useSelector((state) => state.location);
@@ -141,6 +148,15 @@ const SearchResultsScreen = ({ navigation, route }) => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
+
+  /**
+   * Fetch banners on mount
+   */
+  useEffect(() => {
+    if (searchBanners.length === 0) {
+      dispatch(fetchBanners({ placement: "search" }));
+    }
+  }, [dispatch, searchBanners.length]);
 
   /**
    * Clean up on unmount
@@ -426,7 +442,10 @@ const SearchResultsScreen = ({ navigation, route }) => {
           styles.scrollContent,
           { paddingBottom: Math.max(40, insets.bottom + 40) },
         ]}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets>
         {/* Tab Switcher */}
         <View
           style={[
@@ -600,7 +619,29 @@ const SearchResultsScreen = ({ navigation, route }) => {
             )}
           </>
         )}
+
+        <View style={[{ left: RFValue(-16), width: width }, results.length === 0 && {marginTop: RFPercentage(15) }]}>
+          {searchBanners && searchBanners.length > 0 && (
+            <AdsOffersCarousel
+              data={searchBanners.map(b => ({
+                id: b._id,
+                title: b.title,
+                subtitle: b.description,
+                image: b.imageUrl,
+                url: b.link,
+              }))}
+              title="Ads & Offers"
+              onAdPress={(item) => {
+                if (item.url) {
+                  Linking.openURL(item.url).catch(() => {});
+                }
+              }}
+              autoPlay={true}
+            />
+          )}
+        </View>
       </ScrollView>
+
 
       {/* Filter Modal */}
       <Modal

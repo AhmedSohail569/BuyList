@@ -139,7 +139,7 @@ const AdsOffersCarousel = ({
     showTitle = true,
     onAdPress,
     autoPlay = false,
-    autoPlayInterval = 4000,
+    autoPlayInterval = 8000,
 }) => {
     const { colors } = useTheme();
     const scrollX = useRef(new Animated.Value(0)).current;

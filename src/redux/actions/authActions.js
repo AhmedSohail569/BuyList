@@ -2,6 +2,7 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 
 import {
   getErrorMessage,
+  getValidationErrors,
   storeAccessToken,
   storeRefreshToken,
   getRefreshToken,
@@ -62,8 +63,10 @@ export const loginUser = createAsyncThunk(
 
       return data?.data || data;
     } catch (err) {
+      console.log("err loginUser", err);
       const statusCode = err.response?.status;
       const errorData = err.response?.data;
+      console.log("errorData loginUser", errorData);
 
       // Email verification required — pass structured payload
       if (statusCode === 403 && errorData?.data?.isEmailVerified === false) {
@@ -75,7 +78,10 @@ export const loginUser = createAsyncThunk(
         });
       }
 
-      return rejectWithValue(getErrorMessage(err));
+      return rejectWithValue({
+        message: getErrorMessage(err),
+        fields: getValidationErrors(err),
+      });
     }
   },
 );
@@ -83,6 +89,12 @@ export const loginUser = createAsyncThunk(
 export const signupUser = createAsyncThunk(
   "auth/registerUser",
   async ({ username, email, password, phone, zone, area }, { rejectWithValue }) => {
+console.log('username', username);
+console.log('email', email);
+console.log('password', password);
+console.log('phone', phone);
+console.log('zone', zone);
+console.log('area', area);
     try {
       const response = await axios.post("/auth/signup", {
         username,
@@ -98,7 +110,16 @@ export const signupUser = createAsyncThunk(
         message: response.data?.message || "Account created successfully",
       };
     } catch (err) {
-      return rejectWithValue(getErrorMessage(err));
+
+      console.log('err', err)
+
+            const errorData = err.response?.data;
+      console.log("errorData loginUser", errorData);
+    
+      return rejectWithValue({
+        message: getErrorMessage(err),
+        fields: getValidationErrors(err),
+      });
     }
   },
 );
@@ -110,7 +131,10 @@ export const verifyEmail = createAsyncThunk(
       const response = await axios.post("/auth/verify-email", { email, otp });
       return response.data;
     } catch (err) {
-      return rejectWithValue(getErrorMessage(err));
+      return rejectWithValue({
+        message: getErrorMessage(err),
+        fields: getValidationErrors(err),
+      });
     }
   },
 );
@@ -122,7 +146,10 @@ export const forgotPassword = createAsyncThunk(
       const response = await axios.post("/auth/forgot-password", { email });
       return response.data;
     } catch (err) {
-      return rejectWithValue(getErrorMessage(err));
+      return rejectWithValue({
+        message: getErrorMessage(err),
+        fields: getValidationErrors(err),
+      });
     }
   },
 );
@@ -134,7 +161,10 @@ export const verifyResetToken = createAsyncThunk(
       const response = await axios.post("/auth/verify-reset-otp", { email, otp });
       return response.data;
     } catch (err) {
-      return rejectWithValue(getErrorMessage(err));
+      return rejectWithValue({
+        message: getErrorMessage(err),
+        fields: getValidationErrors(err),
+      });
     }
   },
 );
@@ -151,7 +181,10 @@ export const resetPassword = createAsyncThunk(
       });
       return response.data;
     } catch (err) {
-      return rejectWithValue(getErrorMessage(err));
+      return rejectWithValue({
+        message: getErrorMessage(err),
+        fields: getValidationErrors(err),
+      });
     }
   },
 );
@@ -160,11 +193,14 @@ export const resendOTP = createAsyncThunk(
   "auth/resendOTP",
   async ({ email }, { rejectWithValue }) => {
     try {
-      if (!email) return rejectWithValue("Email is required");
+      if (!email) return rejectWithValue({ message: "Email is required", fields: [] });
       const response = await axios.post("/auth/resend-otp", { email });
       return response.data;
     } catch (err) {
-      return rejectWithValue(getErrorMessage(err));
+      return rejectWithValue({
+        message: getErrorMessage(err),
+        fields: getValidationErrors(err),
+      });
     }
   },
 );
@@ -173,11 +209,14 @@ export const resendResetOTP = createAsyncThunk(
   "auth/resendResetOTP",
   async ({ email }, { rejectWithValue }) => {
     try {
-      if (!email) return rejectWithValue("Email is required");
+      if (!email) return rejectWithValue({ message: "Email is required", fields: [] });
       const response = await axios.post("/auth/resend-reset-otp", { email });
       return response.data;
     } catch (err) {
-      return rejectWithValue(getErrorMessage(err));
+      return rejectWithValue({
+        message: getErrorMessage(err),
+        fields: getValidationErrors(err),
+      });
     }
   },
 );

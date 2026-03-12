@@ -105,15 +105,33 @@ const OTPVerficationScreen = ({ navigation, route }) => {
     }
   }, [emailVerified, navigation, email, code, dispatch, pendingLoginEmail, pendingLoginPassword]);
 
-  // Handle API errors with toast
+  // Handle API errors
   useEffect(() => {
     if (error) {
-      Toast.show({
-        type: "error",
-        text1: "Verification Failed",
-        text2: typeof error === "string" ? error : "Invalid verification code",
-        props: { forceLight: true },
-      });
+      const errorObj = typeof error === "object" ? error : null;
+      
+      const hasFields = errorObj?.fields && errorObj.fields.length > 0;
+      let mappedInlineError = false;
+      
+      if (hasFields) {
+        // Find if there's an error for "otp" or "code"
+        const otpFieldError = errorObj.fields.find(f => f.field === "otp" || f.field === "code");
+        if (otpFieldError) {
+          setCodeError(otpFieldError.message);
+          mappedInlineError = true;
+        }
+      }
+      
+      // Show toast ONLY if we did NOT map inline errors
+      if (!mappedInlineError) {
+        Toast.show({
+          type: "error",
+          text1: "Verification Failed",
+          text2: errorObj?.message || (typeof error === "string" ? error : "Invalid verification code"),
+          props: { forceLight: true },
+        });
+      }
+      
       dispatch(clearError());
     }
   }, [error, dispatch]);
@@ -180,12 +198,12 @@ const OTPVerficationScreen = ({ navigation, route }) => {
     const otpError = validateOTP(code);
     if (otpError) {
       setCodeError(otpError);
-      Toast.show({
-        type: "error",
-        text1: "Validation Error",
-        text2: otpError,
-        props: { forceLight: true },
-      });
+      // Toast.show({
+      //   type: "error",
+      //   text1: "Validation Error",
+      //   text2: otpError,
+      //   props: { forceLight: true },
+      // });
       return;
     }
 

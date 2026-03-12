@@ -2,6 +2,10 @@ import { createSlice } from "@reduxjs/toolkit";
 import {
   searchLocalStores,
   searchOnlineStores,
+  fetchBanners,
+  fetchRecentSearches,
+  clearRecentSearches,
+  fetchTrendingSearches,
 } from "../actions/searchActions";
 import { logout } from "./authReducer";
 
@@ -23,6 +27,20 @@ const initialState = {
   localError: null,
   localPage: 1,
   localHasMore: false,
+
+  // Banners
+  homeBanners: [],
+  searchBanners: [],
+  bannersLoading: false,
+  bannersError: null,
+
+  // Recent & Trending
+  recentSearches: [],
+  recentLoading: false,
+  recentError: null,
+  trendingSearches: [],
+  trendingLoading: false,
+  trendingError: null,
 };
 
 const searchSlice = createSlice({
@@ -128,6 +146,62 @@ const searchSlice = createSlice({
         state.localLoading = false;
         state.localLoadingMore = false;
         state.localError = action.payload;
+      })
+
+      // ============================================
+      // BANNERS
+      // ============================================
+      .addCase(fetchBanners.pending, (state) => {
+        state.bannersLoading = true;
+        state.bannersError = null;
+      })
+      .addCase(fetchBanners.fulfilled, (state, action) => {
+        state.bannersLoading = false;
+        const { placement, banners } = action.payload;
+        if (placement === "home") {
+          state.homeBanners = banners;
+        } else if (placement === "search") {
+          state.searchBanners = banners;
+        }
+      })
+      .addCase(fetchBanners.rejected, (state, action) => {
+        state.bannersLoading = false;
+        state.bannersError = action.payload;
+      })
+
+      // ============================================
+      // RECENT SEARCHES
+      // ============================================
+      .addCase(fetchRecentSearches.pending, (state) => {
+        state.recentLoading = true;
+        state.recentError = null;
+      })
+      .addCase(fetchRecentSearches.fulfilled, (state, action) => {
+        state.recentLoading = false;
+        state.recentSearches = action.payload;
+      })
+      .addCase(fetchRecentSearches.rejected, (state, action) => {
+        state.recentLoading = false;
+        state.recentError = action.payload;
+      })
+      .addCase(clearRecentSearches.fulfilled, (state) => {
+        state.recentSearches = [];
+      })
+
+      // ============================================
+      // TRENDING SEARCHES
+      // ============================================
+      .addCase(fetchTrendingSearches.pending, (state) => {
+        state.trendingLoading = true;
+        state.trendingError = null;
+      })
+      .addCase(fetchTrendingSearches.fulfilled, (state, action) => {
+        state.trendingLoading = false;
+        state.trendingSearches = action.payload;
+      })
+      .addCase(fetchTrendingSearches.rejected, (state, action) => {
+        state.trendingLoading = false;
+        state.trendingError = action.payload;
       })
 
       // Clear on logout
