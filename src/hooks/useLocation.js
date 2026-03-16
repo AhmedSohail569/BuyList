@@ -55,7 +55,7 @@ const useLocation = () => {
     const isFetchingRef = useRef(false);
 
     /** Check / request location permission */
-    const requestLocationPermission = useCallback(async () => {
+    const requestLocationPermission = useCallback(async (interactive = false) => {
         const permission = getLocationPermission();
         if (!permission) return false;
 
@@ -69,7 +69,13 @@ const useLocation = () => {
 
                 case RESULTS.DENIED: {
                     const result = await request(permission);
-                    return result === RESULTS.GRANTED || result === RESULTS.LIMITED;
+                    if (result === RESULTS.GRANTED || result === RESULTS.LIMITED) {
+                        return true;
+                    }
+                    if (interactive) {
+                        showSettingsAlert();
+                    }
+                    return false;
                 }
 
                 case RESULTS.BLOCKED:

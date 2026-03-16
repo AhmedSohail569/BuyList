@@ -5,6 +5,7 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
+  TextInput,
 } from "react-native";
 import {
   Plus,
@@ -14,6 +15,7 @@ import {
   Users,
   Check,
   ListFilter,
+  X,
 } from "lucide-react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { useFocusEffect } from "@react-navigation/native";
@@ -215,6 +217,8 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
   const { colors, isDark } = useTheme();
 
   const [activeTab, setActiveTab] = useState("All Lists");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearchBar, setShowSearchBar] = useState(false);
   const [isCreateListVisible, setCreateListVisible] = useState(false);
   const [openedFromHome, setOpenedFromHome] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -371,7 +375,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
 
   // Filter and sort lists based on active tab and sort option
   const filteredData = useMemo(() => {
-    const filtered = lists.filter(item => {
+    let filtered = lists.filter(item => {
       if (activeTab === "Personal Lists") {
         return item.type === "personal";
       }
@@ -381,8 +385,15 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
       return true;
     });
 
+    if (searchQuery.trim() !== "") {
+      const lowerQuery = searchQuery.toLowerCase();
+      filtered = filtered.filter(item => 
+        (item.name || "").toLowerCase().includes(lowerQuery)
+      );
+    }
+
     return sortLists(filtered);
-  }, [lists, activeTab, sortLists]);
+  }, [lists, activeTab, sortLists, searchQuery]);
 
   // Pull to refresh
   const handleRefresh = useCallback(async () => {
@@ -513,8 +524,17 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
         variant="title"
         title={"Your Lists"}
         rightAction={
-          <TouchableOpacity style={[styles.searchButton, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}
-          onPress={() => navigation.navigate('SearchResults')}>
+          <TouchableOpacity 
+            style={[styles.searchButton, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}
+            onPress={() => {
+              if (showSearchBar) {
+                setSearchQuery("");
+                setShowSearchBar(false);
+              } else {
+                setShowSearchBar(true);
+              }
+            }}
+          >
             <Search size={RFValue(20)} color={colors.textPrimary} />
           </TouchableOpacity>
         }
@@ -544,6 +564,27 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
           </View>
         }
       />
+
+      {showSearchBar && (
+        <View style={[styles.searchBarWrapper, { backgroundColor: colors.background }]}>
+          <View style={[styles.searchBarContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Search size={RFValue(16)} color={colors.iconMuted} />
+            <TextInput
+              style={[styles.searchInput, { color: colors.textPrimary }]}
+              placeholder="Search your lists..."
+              placeholderTextColor={colors.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoFocus
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery("")}>
+                <X size={RFValue(18)} color={colors.iconMuted} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
 
       {loading && lists.length === 0 ? (
         <View style={styles.loadingContainer}>
@@ -1027,6 +1068,26 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 10,
     elevation: 6,
+  },
+  searchBarWrapper: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 5,
+  },
+  searchBarContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    height: RFValue(40),
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: RFValue(12),
+    fontFamily: FontFamily.regular,
+    paddingVertical: 0,
   },
 });
 

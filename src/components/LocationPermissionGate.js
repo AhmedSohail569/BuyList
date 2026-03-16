@@ -156,7 +156,7 @@ const LocationPermissionGate = ({ enabled = true }) => {
     const handleEnableLocation = useCallback(async () => {
         setChecking(true);
 
-        const granted = await requestLocationPermission();
+        const granted = await requestLocationPermission(true);
 
         if (granted) {
             dispatch(setPermissionGranted(true));

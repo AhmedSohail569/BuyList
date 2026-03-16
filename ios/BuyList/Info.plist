@@ -100,6 +100,14 @@
 			<key>CFBundleURLName</key>
 			<string>com.buylist</string>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.785736660794-10e443pictu33oe86nn6rrb3vidcikgh</string>
+			</array>
+		</dict>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>

@@ -14,6 +14,18 @@ import { getPendingInvite, clearPendingInvite } from "~utils/deepLinking";
 import { joinCircleViaInvite } from "./inviteActions";
 import Toast from "react-native-toast-message";
 
+export const checkPhoneExists = createAsyncThunk(
+  "auth/checkPhoneExists",
+  async ({ phone }, { rejectWithValue }) => {
+    try {
+      const response = await axios.post("/auth/check-phone", { phone });
+      return response.data; // Expected { exists: true/false } or similar
+    } catch (err) {
+      return rejectWithValue(getErrorMessage(err));
+    }
+  }
+);
+
 // ============================================
 // AUTH ACTIONS
 // ============================================

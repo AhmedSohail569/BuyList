@@ -28,6 +28,8 @@ const SearchBar = ({
   filterIcon = false,
   style,
   iconColor,
+  showSearchButton = false,
+  onMicPress,
 }) => {
   const { colors, isDark } = useTheme();
   const defaultIconColor = iconColor || colors.iconMuted;
@@ -177,16 +179,21 @@ const SearchBar = ({
           )}
           <View style={styles.searchActions}>
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <TouchableOpacity onPress={!editable ? toggleListening : null}>
+            
+            {showSearchButton && value?.length >= 3 && (
+              <TouchableOpacity onPress={onSubmitEditing}>
+                <Search size={20} color={colors.primary} />
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              onPress={onMicPress ? onMicPress : (!editable ? toggleListening : null)}>
               {isListening ? (
                 <Square size={20} color={colors.error} fill={colors.error} />
               ) : (
                 <Mic size={20} color={colors.primary} />
               )}
             </TouchableOpacity>
-            {/* <TouchableOpacity>
-              <ScanLine size={20} color={colors.icon} />
-            </TouchableOpacity> */}
           </View>
         </Container>
       )}

@@ -103,6 +103,25 @@ const HomeTab = ({ onQuickAction, navigation }) => {
     Toast.show({ type: "success", text1: `${label} copied to clipboard` });
   };
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSearch = () => {
+    if (searchQuery.trim().length >= 3) {
+      navigation.navigate("SearchResults", {
+        query: searchQuery.trim(),
+      });
+      // Optional: Clear search after navigating
+      setSearchQuery("");
+    }
+  };
+
+  const handleMicPress = () => {
+    navigation.navigate("SearchResults", {
+      query: "",
+    });
+  };
+
   // Home data: profile + recent activities + lists — refresh silently on return
   const fetchHomeData = useCallback(async () => {
     await Promise.all([
@@ -185,7 +204,14 @@ const HomeTab = ({ onQuickAction, navigation }) => {
         onRightPress={() => setShowNotifications(true)}
       />
 
-      <SearchBar placeholder="Search products, categories..." />
+      <SearchBar
+        placeholder="Search products, categories..."
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        showSearchButton={true}
+        onMicPress={handleMicPress}
+        onSubmitEditing={handleSearch}
+      />
 
       <ScrollView>
         {/* Quick Actions */}

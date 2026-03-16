@@ -5,6 +5,7 @@ import {
   Text,
   TouchableOpacity,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import PropTypes from "prop-types";
 import { RFValue } from "react-native-responsive-fontsize";
@@ -37,6 +38,7 @@ const Input = ({
   secureTextEntry = false,
   editable = true,
   error,
+  loading = false,
   leftIcon,
   rightIcon,
   onRightIconPress,
@@ -81,7 +83,7 @@ const Input = ({
 
   // Whether the inline submit button should appear (type 3 only)
   const rawPhone = type === 3 ? (value?.phoneNumber || "") : "";
-  const showInlineSubmit = type === 3 && rawPhone.length > 0 && !!onSubmitPhone;
+  const showInlineSubmit = (type === 3 && rawPhone.length > 0 && !!onSubmitPhone) || loading;
 
   // Dynamic styles based on theme
   const themedStyles = {
@@ -143,7 +145,7 @@ const Input = ({
             placeholderTextColor={activeColors.inputPlaceholder}
             keyboardType="number-pad"
             autoCapitalize="none"
-            editable={editable}
+            editable={editable && !loading}
             style={[styles.phoneInput, { color: activeColors.inputText }, inputStyle]}
             returnKeyType="done"
           />
@@ -152,9 +154,16 @@ const Input = ({
           {showInlineSubmit && (
             <TouchableOpacity
               activeOpacity={0.8}
-              style={styles.inlineSubmitBtn}
-              onPress={() => onSubmitPhone(value)}>
-              <Icon name="arrow-right" size={18} color="#FFFFFF" />
+              style={[styles.inlineSubmitBtn, loading && { backgroundColor: "transparent" }]}
+              onPress={() => !loading && onSubmitPhone(value)}
+              disabled={loading}>
+              {loading ? (
+                <View style={{ width: 42, height: 42, alignItems: "center", justifyContent: "center" }}>
+                  <ActivityIndicator color={activeColors.primary} size="small" />
+                </View>
+              ) : (
+                <Icon name="arrow-right" size={18} color="#FFFFFF" />
+              )}
             </TouchableOpacity>
           )}
         </View>

@@ -11,7 +11,10 @@ import {
   verifyEmail,
   verifyResetToken,
   refreshAccessToken,
+  checkPhoneExists,
 } from "../actions/authActions";
+import { googleLogin } from "../actions/googleAuthActions";
+import { appleLogin } from "../actions/appleAuthActions";
 import { getProfile } from "../actions/profileActions";
 import { clearAllTokens } from "~utils";
 
@@ -49,6 +52,7 @@ const initialState = {
   resendResetOTPLoading: false,
   resendResetOTPMessage: null,
   resendResetOTPError: null,
+  checkPhoneLoading: false,
 };
 
 const authSlice = createSlice({
@@ -125,6 +129,38 @@ const authSlice = createSlice({
           state.pendingLoginPassword = errorPayload.password;
         }
         state.error = errorPayload;
+      })
+
+      // ── Google Login ──
+      .addCase(googleLogin.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(googleLogin.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload.user;
+        state.accessToken = action.payload.accessToken ?? null;
+        state.refreshToken = action.payload.refreshToken ?? null;
+      })
+      .addCase(googleLogin.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // ── Apple Login ──
+      .addCase(appleLogin.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(appleLogin.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload.user;
+        state.accessToken = action.payload.accessToken ?? null;
+        state.refreshToken = action.payload.refreshToken ?? null;
+      })
+      .addCase(appleLogin.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       })
 
       // ── Signup ──
@@ -263,6 +299,19 @@ const authSlice = createSlice({
         state.accessToken = null;
         state.refreshToken = null;
         state.user = null;
+      })
+      
+      // ── Check Phone ──
+      .addCase(checkPhoneExists.pending, (state) => {
+        state.checkPhoneLoading = true;
+        state.error = null;
+      })
+      .addCase(checkPhoneExists.fulfilled, (state) => {
+        state.checkPhoneLoading = false;
+      })
+      .addCase(checkPhoneExists.rejected, (state, action) => {
+        state.checkPhoneLoading = false;
+        state.error = action.payload;
       });
   },
 });

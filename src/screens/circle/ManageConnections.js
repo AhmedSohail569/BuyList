@@ -95,10 +95,9 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
   const { tab } = route.params || {};
   const [activeTab, setActiveTab] = useState(tab || "Connections");
   const [activeMenuId, setActiveMenuId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [isQRModalVisible, setQRModalVisible] = useState(false);
   const isMenuDismissingRef = useRef(false);
-
-  console.log('inviteQR', inviteQR)
 
   // Get circle ID
   const circleId = ownedCircle?._id || ownedCircle?.id;
@@ -121,6 +120,17 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
 
   // Build connections from ownedCircle data
   const connections = useMemo(() => buildConnections(ownedCircle, colors), [ownedCircle, colors]);
+
+  // Filter connections based on search query
+  const filteredConnections = useMemo(() => {
+    if (!searchQuery.trim()) return connections;
+    const query = searchQuery.toLowerCase().trim();
+    return connections.filter(
+      (c) =>
+        c.name.toLowerCase().includes(query) ||
+        (c.role && c.role.toLowerCase().includes(query))
+    );
+  }, [connections, searchQuery]);
 
   // ============================================
   // Invite Handlers
@@ -433,19 +443,23 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
                 placeholder="Search connections..."
                 placeholderTextColor={colors.inputPlaceholder}
                 style={[styles.searchInput, { color: colors.textPrimary }]}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
               />
             </View>
 
             <View style={[styles.listCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
-              {connections.length === 0 ? (
+              {filteredConnections.length === 0 ? (
                 <Text style={[styles.emptyConnectionsText, { color: colors.textMuted }]}>
-                  No connections yet. Invite members to get started.
+                  {searchQuery.trim() 
+                    ? `No results found for "${searchQuery}"`
+                    : "No connections yet. Invite members to get started."}
                 </Text>
               ) : (
-                connections.map((item, index) =>
+                filteredConnections.map((item, index) =>
                   renderConnectionItem(
                     item,
-                    index === connections.length - 1,
+                    index === filteredConnections.length - 1,
                   ),
                 )
               )}

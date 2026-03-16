@@ -17,7 +17,6 @@ import { RFValue } from "react-native-responsive-fontsize";
 const { width } = Dimensions.get("window");
 
 const QRCodeModal = ({ visible, onClose, qrCodeUrl, loading, circleName }) => {
-    console.log('qr', qrCodeUrl)
   const { colors, isDark } = useTheme();
 
   return (

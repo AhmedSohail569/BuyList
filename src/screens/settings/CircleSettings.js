@@ -33,6 +33,7 @@ import { clearCircleError } from "~redux/reducers/circleReducer";
 import { useTheme } from "~context/ThemeContext";
 import useOnReconnect from "~hooks/useOnReconnect";
 import useScreenFetch from "~hooks/useScreenFetch";
+import useLocation from "~hooks/useLocation";
 
 const SettingsRow = ({
   icon: Icon,
@@ -141,10 +142,19 @@ const CircleSettingsScreen = ({ onQuickAction, navigation }) => {
     }
   }, [error, dispatch]);
 
-  const openModal = type => {
+  const { requestLocationPermission } = useLocation();
+
+  const handleMapNavigation = useCallback(async () => {
+    const hasPermission = await requestLocationPermission(true);
+    if (hasPermission) {
+      navigation.navigate("ChangeHomeLocation");
+    }
+  }, [requestLocationPermission, navigation]);
+
+  const openModal = useCallback((type) => {
     setModalType(type);
     setModalVisible(true);
-  };
+  }, []);
 
   // Validate circle name
   const validateCircleName = name => {
@@ -306,7 +316,7 @@ const CircleSettingsScreen = ({ onQuickAction, navigation }) => {
             subtitle={homeLocation || "Set your home location"}
             isLast
             colors={colors}
-            onPress={() => navigation.navigate("ChangeHomeLocation")}
+            onPress={handleMapNavigation}
           />
         </View>
 

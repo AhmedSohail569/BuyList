@@ -4,7 +4,9 @@ import {
   Image,
   ScrollView,
   Platform,
-  Keyboard,KeyboardAvoidingView
+  Keyboard,
+  KeyboardAvoidingView,
+  TouchableOpacity,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RFPercentage, RFValue } from "react-native-responsive-fontsize";
@@ -14,6 +16,15 @@ import OnboardingLayout from "~containers/layouts/OnboardingLayout";
 import Icon from "react-native-vector-icons/FontAwesome";
 import { useState, useCallback, useRef } from "react";
 import { FontFamily } from "~theme/fonts";
+import { useDispatch, useSelector } from "react-redux";
+import { signInWithGoogle } from "~utils/googleAuth";
+import { signInWithApple } from "~utils/appleAuth";
+import { googleLogin } from "~redux/actions/googleAuthActions";
+import { appleLogin } from "~redux/actions/appleAuthActions";
+import Toast from "react-native-toast-message";
+import { ActivityIndicator } from "react-native";
+import { checkPhoneExists } from "~redux/actions/authActions";
+import { checkConnectivity, showNoInternetToast } from "~utils/network";
 
 const GetStartedScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -21,12 +32,103 @@ const GetStartedScreen = ({ navigation }) => {
   const inputRef   = useRef(null);
 
   const [phone, setPhone] = useState("");
+  const dispatch = useDispatch();
+  const { loading, checkPhoneLoading } = useSelector((state) => state.auth);
+
+  const handleGoogleLogin = async () => {
+    // Check connectivity
+    const isConnected = await checkConnectivity();
+    if (!isConnected) {
+      showNoInternetToast();
+      return;
+    }
+
+    try {
+      const userInfo = await signInWithGoogle();
+      const idToken = userInfo.data?.idToken || userInfo.idToken;
+      const user = userInfo.data?.user || userInfo.user;
+      
+      if (!idToken) throw new Error("No ID token returned from Google");
+      
+      await dispatch(googleLogin({ token: idToken, user })).unwrap();
+    } catch (error) {
+      if (error.message !== "User cancelled the login flow.") {
+        Toast.show({
+          type: "error",
+          text1: "Google Login Failed",
+          text2: error.message || "An unexpected error occurred",
+        });
+      }
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    // Check connectivity
+    const isConnected = await checkConnectivity();
+    if (!isConnected) {
+      showNoInternetToast();
+      return;
+    }
+
+    try {
+      const authResponse = await signInWithApple();
+      const { identityToken, fullName, email } = authResponse;
+      
+      if (!identityToken) throw new Error("No identity token returned from Apple");
+
+      await dispatch(appleLogin({ token: identityToken, fullName, email })).unwrap();
+    } catch (error) {
+      if (error.message !== "User cancelled the login flow.") {
+        Toast.show({
+          type: "error",
+          text1: "Apple Login Failed",
+          text2: error.message || "An unexpected error occurred",
+        });
+      }
+    }
+  };
 
   const handlePhoneSubmit = useCallback(
-    (phoneData) => {
-      navigation.navigate("SelectLocation", { phone: phoneData });
+    async (phoneData) => {
+      console.log("phoneData", phoneData);
+      // Check connectivity
+      const isConnected = await checkConnectivity();
+      if (!isConnected) {
+        showNoInternetToast();
+        return;
+      }
+
+      if (!phoneData || phoneData.fullPhone.trim().length < 5) {
+        Toast.show({
+          type: "error",
+          text1: "Invalid Phone",
+          text2: "Please enter a valid phone number",
+        });
+        return;
+      }
+
+      try {
+        const result = await dispatch(checkPhoneExists({ phone: phoneData.fullPhone })).unwrap();
+        
+        if (result?.exists) {
+          Toast.show({
+            type: "error",
+            text1: "Phone Number Exists",
+            text2: "This phone number is already registered. Please login instead.",
+          });
+          return;
+        }
+
+        navigation.navigate("SelectLocation", { phone: phoneData });
+      } catch (err) {
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: err || "Something went wrong",
+        });
+      }
     },
-    [navigation],
+    [navigation, dispatch],
   );
 
   // When the phone input receives focus, scroll just enough to reveal it.
@@ -95,6 +197,7 @@ const GetStartedScreen = ({ navigation }) => {
               onChangeText={setPhone}
               maxLength={15}
               forceLight
+              loading={checkPhoneLoading}
               onSubmitPhone={handlePhoneSubmit}
               onFocus={handleInputFocus}
               onBlur={handleInputBlur}
@@ -109,19 +212,39 @@ const GetStartedScreen = ({ navigation }) => {
             Or connect with social media
           </Text>
 
-          <View style={[styles.socialButton, { backgroundColor: "#5383EC" }]}>
-            <Icon name="google" size={30} color={"#FFFFFF"} />
-            <Text variant="bodySmall" style={[styles.textStyle, { color: "#FFFFFF" }]}>
-              Continue with Google
-            </Text>
-          </View>
+          <TouchableOpacity 
+            style={[styles.socialButton, { backgroundColor: "#5383EC" }]}
+            onPress={handleGoogleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" style={{ width: RFValue(30), height: RFValue(30) }} />
+            ) : (
+              <>
+                <Icon name="google" size={30} color={"#FFFFFF"} />
+                <Text variant="bodySmall" style={[styles.textStyle, { color: "#FFFFFF" }]}>
+                  Continue with Google
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
 
-          <View style={[styles.socialButton, { backgroundColor: "#000000" }]}>
-            <Icon name="apple" size={30} color={"#FFFFFF"} />
-            <Text variant="bodySmall" style={[styles.textStyle, { color: "#FFFFFF" }]}>
-              Continue with Apple
-            </Text>
-          </View>
+          {Platform.OS === "ios" && <TouchableOpacity 
+            style={[styles.socialButton, { backgroundColor: "#000000" }]}
+            onPress={handleAppleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" style={{ width: RFValue(30), height: RFValue(30) }} />
+            ) : (
+              <>
+                <Icon name="apple" size={30} color={"#FFFFFF"} />
+                <Text variant="bodySmall" style={[styles.textStyle, { color: "#FFFFFF" }]}>
+                  Continue with Apple
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>}
 
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
             <Text variant="bodySmall" style={[styles.textStyle, { color: "#9CA3AF" }]}>

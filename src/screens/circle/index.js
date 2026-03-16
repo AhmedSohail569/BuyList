@@ -25,6 +25,7 @@ import { fetchRecentActivities, fetchAllLists } from "~redux/actions/listActions
 import { useTheme } from "~context/ThemeContext";
 import useOnReconnect from "~hooks/useOnReconnect";
 import useScreenFetch from "~hooks/useScreenFetch";
+import useLocation from "~hooks/useLocation";
 import Avatar from "~components/Avatar";
 import { normalizeActivity, getInitials, hasProfilePicture } from "~utils/display";
 import { formatListTimeAgo } from "~utils/time";
@@ -195,6 +196,15 @@ const CircleTab = ({ navigation }) => {
     navigation.navigate("ListDetails", { listId });
   }, [navigation]);
 
+  const { requestLocationPermission } = useLocation();
+
+  const handleMapNavigation = useCallback(async () => {
+    const hasPermission = await requestLocationPermission(true);
+    if (hasPermission) {
+      navigation.navigate("ChangeHomeLocation");
+    }
+  }, [requestLocationPermission, navigation]);
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header
@@ -239,7 +249,7 @@ const CircleTab = ({ navigation }) => {
             <Text style={[styles.addressText, { color: colors.textSecondary, maxWidth: "80%" }]} numberOfLines={1} ellipsizeMode="tail">
               {homeLocation}
             </Text>
-            <TouchableOpacity style={{ marginLeft: "auto" }}>
+            <TouchableOpacity style={{ marginLeft: "auto" }} onPress={handleMapNavigation}>
               <Pencil size={14} color={colors.iconMuted} />
             </TouchableOpacity>
           </View>
