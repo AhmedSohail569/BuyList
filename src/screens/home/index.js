@@ -7,17 +7,13 @@ import {
   Image,
   ScrollView as ReactScrollView,
   Dimensions,
-  Clipboard,
-  TextInput,
-  Linking,
 } from "react-native";
-import Toast from "react-native-toast-message";
-import { Copy } from "lucide-react-native";
 import {
   Plus,
   List,
   Users,
   TrendingDown,
+  Search,
   Sparkles,
   ArrowRight,
 } from "lucide-react-native";
@@ -32,11 +28,10 @@ import { useSelector, useDispatch } from "react-redux";
 import { fetchRecentActivities, fetchAllLists } from "~redux/actions/listActions";
 import { getProfile } from "~redux/actions/profileActions";
 import { useTheme } from "~context/ThemeContext";
-import { AD_OFFERS_DATA } from "~constants";
 import AdsOffersCarousel from "~components/AdsOffersCarousel";
 import NotificationsDropdown from "~components/NotificationsDropdown";
 import useOnReconnect from "~hooks/useOnReconnect";
-import { fetchBanners } from "~redux/actions/searchActions";
+import { fetchBanners, searchLocalStores } from "~redux/actions/searchActions";
 import useScreenFetch from "~hooks/useScreenFetch";
 import Avatar from "~components/Avatar";
 import { normalizeActivity } from "~utils/display";
@@ -85,23 +80,17 @@ const HomeTab = ({ onQuickAction, navigation }) => {
   const dispatch = useDispatch();
 
   const { colors, isDark } = useTheme();
-  const { user, accessToken } = useSelector(state => state.auth);
+  const { user } = useSelector(state => state.auth);
   const { profile } = useSelector(state => state.profile);
   const { recentActivities } = useSelector(state => state.lists);
-  const { lastSyncedToken: fcmToken } = useSelector(state => state.notifications);
-  const { homeBanners } = useSelector((state) => state.search);
+  const { homeBanners, localResults } = useSelector((state) => state.search);
+  const { latitude, longitude } = useSelector((state) => state.location);
 
   // Notification dropdown state
   const [showNotifications, setShowNotifications] = useState(false);
 
-  // Deep link tester
-  const [testDeepLink, setTestDeepLink] = useState("buylist://invite/FfOd91riIq");
 
-  const copyToClipboard = (label, value) => {
-    if (!value) return;
-    Clipboard.setString(value);
-    Toast.show({ type: "success", text1: `${label} copied to clipboard` });
-  };
+ 
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -124,12 +113,27 @@ const HomeTab = ({ onQuickAction, navigation }) => {
 
   // Home data: profile + recent activities + lists — refresh silently on return
   const fetchHomeData = useCallback(async () => {
-    await Promise.all([
+    const promises = [
       dispatch(getProfile()),
       dispatch(fetchRecentActivities()),
       dispatch(fetchAllLists()),
-    ]);
-  }, [dispatch]);
+    ];
+
+    if (latitude && longitude) {
+      promises.push(
+        dispatch(
+          searchLocalStores({
+            query: "store",
+            lat: latitude,
+            lng: longitude,
+            limit: 5,
+          })
+        )
+      );
+    }
+
+    await Promise.all(promises);
+  }, [dispatch, latitude, longitude, localResults.length]);
   useScreenFetch(fetchHomeData, true); // always quiet — home already shows stale data fine
 
   // Banners: fetch once, background-refresh on return
@@ -244,117 +248,18 @@ const HomeTab = ({ onQuickAction, navigation }) => {
             onPress={() => navigateToTab("Circle")}
           />
           <ActionIcon
-            id="compare"
-            icon={TrendingDown}
-            label="Compare"
+            id="search"
+            icon={Search}
+            label="Search"
             color={quickActionColors.compare.bg}
             iconColor={quickActionColors.compare.icon}
             labelColor={colors.textSecondary}
-            onPress={() => navigation.navigate("PriceCheck")}
+            onPress={() => navigateToTab("Search")}
           />
         </View>
 
-        {/* --- TEMP: Dev Token Section --- */}
-        <View
-          style={[
-            styles.tokenCard,
-            {
-              backgroundColor: isDark ? "rgba(30,30,30,0.8)" : "#F9FAFB",
-              borderColor: isDark ? "#333" : "#E5E7EB",
-            },
-          ]}>
-          <Text style={[styles.tokenSectionTitle, { color: colors.textPrimary }]}>
-            Dev Tokens
-          </Text>
 
-          {/* Access Token */}
-          <View style={styles.tokenRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.tokenLabel, { color: colors.textMuted }]}>
-                Access Token
-              </Text>
-              <Text
-                style={[styles.tokenValue, { color: colors.textSecondary }]}
-                numberOfLines={2}
-                ellipsizeMode="middle">
-                {accessToken || "Not available"}
-              </Text>
-            </View>
-            {accessToken ? (
-              <TouchableOpacity
-                style={[styles.copyBtn, { backgroundColor: colors.primary }]}
-                onPress={() => copyToClipboard("Access Token", accessToken)}>
-                <Copy size={14} color="#FFF" />
-              </TouchableOpacity>
-            ) : null}
-          </View>
-
-          {/* FCM Token */}
-          <View style={[styles.tokenRow, { marginTop: 10 }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.tokenLabel, { color: colors.textMuted }]}>
-                FCM Token
-              </Text>
-              <Text
-                style={[styles.tokenValue, { color: colors.textSecondary }]}
-                numberOfLines={2}
-                ellipsizeMode="middle">
-                {fcmToken || "Not available"}
-              </Text>
-            </View>
-            {fcmToken ? (
-              <TouchableOpacity
-                style={[styles.copyBtn, { backgroundColor: colors.primary }]}
-                onPress={() => copyToClipboard("FCM Token", fcmToken)}>
-                <Copy size={14} color="#FFF" />
-              </TouchableOpacity>
-            ) : null}
-          </View>
-
-          {/* Deep Link Tester */}
-          <View style={[styles.tokenRow, { marginTop: 14 }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.tokenLabel, { color: colors.textMuted }]}>
-                Test Deep Link
-              </Text>
-              <TextInput
-                style={[
-                  styles.deepLinkInput,
-                  {
-                    color: colors.textPrimary,
-                    borderColor: isDark ? "#444" : "#D1D5DB",
-                    backgroundColor: isDark ? "#1a1a1a" : "#FFF",
-                  },
-                ]}
-                value={testDeepLink}
-                onChangeText={setTestDeepLink}
-                placeholder="buylist://invite/CODE"
-                placeholderTextColor={colors.textMuted}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <Text style={[styles.deepLinkHint, { color: colors.textMuted }]}>
-                Use buylist:// (works now) or https:// (needs domain setup)
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={[styles.copyBtn, { backgroundColor: "#16A34A", marginLeft: 10 }]}
-              onPress={() => {
-                if (!testDeepLink) return;
-                Linking.openURL(testDeepLink).catch(() => {
-                  Toast.show({
-                    type: "error",
-                    text1: "Failed",
-                    text2: "Could not open this URL.",
-                  });
-                });
-              }}>
-              <ArrowRight size={14} color="#FFF" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <NearbyStores navigation={navigation} />
+        {localResults.length !== 0 && <View style={{ left: RFValue(-16), width: width }}><NearbyStores navigation={navigation} /></View>}
 
         {homeBanners && homeBanners.length > 0 && (
                 <View style={{ left: RFValue(-16), width: width }}>
@@ -452,7 +357,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
                     borderColor: colors.border,
                   },
                 ]}
-                onPress={() => navigation.navigate("PriceCheck")}>
+                onPress={() => {}}>
                 <Image
                   source={{ uri: item.image }}
                   style={[

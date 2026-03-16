@@ -31,7 +31,7 @@ export const navigationRef = createNavigationContainerRef();
  * Maps URL patterns to screen names so the library can parse incoming deep links.
  */
 const linking = {
-  prefixes: ["buylist://", "https://getbagg.com", "https://www.getbagg.com"],
+  prefixes: ["bagg://", "https://getbagg.com", "https://www.getbagg.com"],
   config: {
     screens: {
       AppNavigator: {

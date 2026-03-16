@@ -6,13 +6,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Linking } from "react-native";
 
 // Constants
-const PENDING_INVITE_KEY = "@buylist_pending_invite";
+const PENDING_INVITE_KEY = "@bagg_pending_invite";
 const INVITE_URL_PATTERN = /\/invite\/([A-Za-z0-9-_]+)/;
 
 /**
  * Parse invite code from deep link URL.
  * Supports:
- *   buylist://invite/ABC123
+ *   bagg://invite/ABC123
  *   https://getbagg.com/invite/ABC123
  *   https://www.getbagg.com/invite/ABC123
  */

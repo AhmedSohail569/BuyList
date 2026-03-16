@@ -48,7 +48,7 @@ const GetStartedScreen = ({ navigation }) => {
       const idToken = userInfo.data?.idToken || userInfo.idToken;
       const user = userInfo.data?.user || userInfo.user;
       
-      if (!idToken) throw new Error("No ID token returned from Google");
+      if (!idToken) throw new Error("No profile fetched from Google");
       
       await dispatch(googleLogin({ token: idToken, user })).unwrap();
     } catch (error) {
@@ -185,7 +185,7 @@ const GetStartedScreen = ({ navigation }) => {
           style={[styles.content, { paddingBottom: insets.bottom + RFValue(24) }]}>
           {/* Title */}
           <Text variant="sectionTitle" style={[styles.title, { color: "#1B1A1F" }]}>
-            Let's get your shopping{"\n"}done with BuyList!
+            Let's get your shopping{"\n"}done with Bagg!
           </Text>
 
           {/* Phone input — ref used to measure position for scroll */}

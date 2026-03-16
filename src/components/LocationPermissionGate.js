@@ -246,7 +246,7 @@ const LocationPermissionGate = ({ enabled = true }) => {
                             {/* Message */}
                             <Text
                                 style={[styles.message, { color: colors.textSecondary }]}>
-                                Allow BuyList to access your location to find nearby stores,
+                                Allow Bagg to access your location to find nearby stores,
                                 discover the best deals in your area, and get personalized
                                 recommendations.
                             </Text>

@@ -134,10 +134,10 @@ const LoginScreen = ({ navigation }) => {
         automaticallyAdjustKeyboardInsets
         keyboardDismissMode="interactive">
       <Image
-        source={Images.buyListIconBlue}
+        source={Images.baggIconBlue}
         style={{
-          width: RFValue(50),
-          height: RFValue(50),
+          width: RFValue(60),
+          height: RFValue(60),
           alignSelf: "center",
           marginTop: RFPercentage(15),
           position: "absolute",
@@ -159,7 +159,7 @@ const LoginScreen = ({ navigation }) => {
 
           <TextInput
             label="Email"
-            placeholder="buylist@example.com"
+            placeholder="bagg@example.com"
             value={email}
             onChangeText={handleEmailChange}
             leftIcon="mail"

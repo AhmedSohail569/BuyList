@@ -1,5 +1,4 @@
 <resources>
     <color name="bootsplash_background">#1e9df1</color>
-    <!-- FCM notification accent color (used for notification icon tint and LED) -->
     <color name="notification_color">#1e9df1</color>
 </resources>

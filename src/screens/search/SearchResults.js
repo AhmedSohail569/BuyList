@@ -66,6 +66,7 @@ const SearchResultsScreen = ({ navigation, route }) => {
     searchBanners,
     bannersLoading,
   } = useSelector((state) => state.search);
+  const { distanceUnit } = useSelector((state) => state.settings);
 
   const { latitude, longitude } = useSelector((state) => state.location);
 
@@ -80,6 +81,8 @@ const SearchResultsScreen = ({ navigation, route }) => {
   const loadingMore = isOnlineTab ? onlineLoadingMore : localLoadingMore;
   const error = isOnlineTab ? onlineError : localError;
   const hasMore = isOnlineTab ? onlineHasMore : localHasMore;
+
+  console.log('localResults', localResults)
 
   /**
    * Perform search based on active tab
@@ -295,7 +298,7 @@ const SearchResultsScreen = ({ navigation, route }) => {
         storeLng != null
         ? calculateDistance(latitude, longitude, storeLat, storeLng)
         : null;
-    const distanceText = distanceKm != null ? formatDistance(distanceKm) : "";
+    const distanceText = distanceKm != null ? formatDistance(distanceKm, distanceUnit) : "";
 
     return (
       <View

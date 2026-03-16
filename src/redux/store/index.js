@@ -11,6 +11,7 @@ import profileReducer from "../reducers/profileReducer";
 import searchReducer from "../reducers/searchReducer";
 import sessionReducer from "../reducers/sessionReducer";
 import themeReducer from "../reducers/themeReducer";
+import settingsReducer from "../reducers/settingsReducer";
 
 // ─── Combined slice reducer ────────────────────────────────────────────────────
 const combinedReducer = combineReducers({
@@ -23,6 +24,7 @@ const combinedReducer = combineReducers({
   search: searchReducer,
   session: sessionReducer,
   theme: themeReducer,
+  settings: settingsReducer,
 });
 
 // ─── Root reducer — full state reset on logout ─────────────────────────────────
@@ -44,7 +46,7 @@ const sanitizeLoadingState = (inboundState, originalState, reducedState) => {
   const sanitized = { ...reducedState };
 
   // Only sanitize slices that are actually persisted (in whitelist)
-  const persistedKeys = ["auth", "circles", "lists", "location", "profile", "theme"];
+  const persistedKeys = ["auth", "circles", "lists", "location", "profile", "theme", "settings"];
 
   for (const sliceKey of persistedKeys) {
     const inbound = inboundState?.[sliceKey];
@@ -72,7 +74,7 @@ const sanitizeLoadingState = (inboundState, originalState, reducedState) => {
 const persistConfig = {
   key: "root",
   storage: AsyncStorage,
-  whitelist: ["auth", "circles", "lists", "location", "profile", "theme"],
+  whitelist: ["auth", "circles", "lists", "location", "profile", "theme", "settings"],
   stateReconciler: sanitizeLoadingState,
 };
 

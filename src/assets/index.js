@@ -1,7 +1,7 @@
 export const Images = {
   onboarding: require("./images/onboarding/background.png"),
-  buyListIcon: require("./images/onboarding/buyListIcon.png"),
-  buyListIconBlue: require("./images/onboarding/buyListIconBlue.png"),
+  baggIcon: require("./images/onboarding/baggIcon.png"),
+  baggIconBlue: require("./images/onboarding/baggIconBlue.png"),
   onboardingBgLayout: require("./images/onboarding/onboardingBgLayout.png"),
   getStartedBg: require("./images/onboarding/getStartedBackground.png"),
   location: require("./images/onboarding/location.png"),

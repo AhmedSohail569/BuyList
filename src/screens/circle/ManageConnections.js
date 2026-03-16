@@ -169,7 +169,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
     try {
       const circleName = ownedCircle?.name || "our circle";
       await Share.share({
-        message: `Join ${circleName} on BuyList! ${inviteLink}`,
+        message: `Join ${circleName} on Bagg! ${inviteLink}`,
         url: inviteLink,
         title: `Join ${circleName}`,
       });
@@ -192,7 +192,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
     }
 
     const circleName = ownedCircle?.name || "our circle";
-    const message = `Join ${circleName} on BuyList! ${inviteLink}`;
+    const message = `Join ${circleName} on Bagg! ${inviteLink}`;
     // Use ?body= for both iOS and Android in modern RN, but &body= is safer for some older iOS
     const separator = Platform.OS === "ios" ? "&" : "?";
     const url = `sms:${separator}body=${encodeURIComponent(message)}`;

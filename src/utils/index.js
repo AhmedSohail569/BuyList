@@ -151,10 +151,18 @@ export const calculateDistance = (lat1, lon1, lat2, lon2) => {
 /**
  * Format distance for display
  * @param {number} distanceKm - Distance in kilometers
- * @returns {string} e.g. "800 m" or "1.2 km"
+ * @param {string} unit - 'Kilometers' or 'Miles'
+ * @returns {string} e.g. "800 m", "1.2 km", or "0.7 mi"
  */
-export const formatDistance = (distanceKm) => {
+export const formatDistance = (distanceKm, unit = "Kilometers") => {
   if (distanceKm == null) return "";
+
+  if (unit === "Miles") {
+    const miles = distanceKm * 0.621371;
+    return `${miles.toFixed(1)} mi`;
+  }
+
+  // Kilometers (default)
   if (distanceKm < 1) return `${(distanceKm * 1000).toFixed(0)} m`;
   return `${distanceKm.toFixed(1)} km`;
 };

@@ -31,7 +31,7 @@ export const requestNotificationPermission = async () => {
           {
             title: "Notification Permission",
             message:
-              "BuyList needs permission to send you notifications about your lists and circle activity.",
+              "Bagg needs permission to send you notifications about your lists and circle activity.",
             buttonPositive: "Allow",
             buttonNegative: "Deny",
           },
@@ -111,7 +111,7 @@ export const setupTokenRefreshListener = (onRefresh) => {
  */
 export const setupForegroundMessageHandler = () => {
   return messaging().onMessage(async (remoteMessage) => {
-    const title = remoteMessage?.notification?.title || "BuyList";
+    const title = remoteMessage?.notification?.title || "Bagg";
     const body = remoteMessage?.notification?.body || "You have a new notification";
     showInfo(title, body);
   });

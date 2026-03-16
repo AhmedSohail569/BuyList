@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>BuyList</string>
+	<string>Bagg</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -36,21 +36,21 @@
 	<key>NSAppleMusicUsageDescription</key>
 	<string>This app does not directly access Apple Music. This permission may be required by a third-party library used in the app.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>BuyList needs access to your camera to take profile photos and capture receipts.</string>
+	<string>Bagg needs access to your camera to take profile photos and capture receipts.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>BuyList needs access to your microphone to search products by voice.</string>
+	<string>Bagg needs access to your microphone to search products by voice.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>BuyList needs speech recognition to convert your voice to text for searching products.</string>
+	<string>Bagg needs speech recognition to convert your voice to text for searching products.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>BuyList needs your location to show nearby stores and deals.</string>
+	<string>Bagg needs your location to show nearby stores and deals.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>BuyList needs your location to provide enhanced search and personalized notifications about nearby stores and deals.</string>
+	<string>Bagg needs your location to provide enhanced search and personalized notifications about nearby stores and deals.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>BuyList needs permission to save photos to your library.</string>
+	<string>Bagg needs permission to save photos to your library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>BuyList needs access to your photo library to select profile photos and images.</string>
+	<string>Bagg needs access to your photo library to select profile photos and images.</string>
 	<key>NSUserNotificationsUsageDescription</key>
-	<string>BuyList uses notifications to keep you updated on your shopping lists and circle activity.</string>
+	<string>Bagg uses notifications to keep you updated on your shopping lists and circle activity.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIAppFonts</key>
@@ -73,32 +73,16 @@
 		<string>SimpleLineIcons.ttf</string>
 		<string>Octicons.ttf</string>
 		<string>Zocial.ttf</string>
-		<string>NeueHaasDisplayBlack.ttf</string>
-		<string>NeueHaasDisplayBlackItalic.ttf</string>
-		<string>NeueHaasDisplayBold.ttf</string>
-		<string>NeueHaasDisplayBoldItalic.ttf</string>
-		<string>NeueHaasDisplayLight.ttf</string>
-		<string>NeueHaasDisplayLightItalic.ttf</string>
-		<string>NeueHaasDisplayMediu.ttf</string>
-		<string>NeueHaasDisplayMediumItalic.ttf</string>
-		<string>NeueHaasDisplayRoman.ttf</string>
-		<string>NeueHaasDisplayRomanItalic.ttf</string>
-		<string>NeueHaasDisplayThin.ttf</string>
-		<string>NeueHaasDisplayThinItalic.ttf</string>
-		<string>NeueHaasDisplayXThin.ttf</string>
-		<string>NeueHaasDisplayXThinItalic.ttf</string>
-		<string>NeueHaasDisplayXXThin.ttf</string>
-		<string>NeueHaasDisplayXXThinItalic.ttf</string>
 	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>buylist</string>
+				<string>bagg</string>
 			</array>
 			<key>CFBundleURLName</key>
-			<string>com.buylist</string>
+			<string>com.bagg</string>
 		</dict>
 		<dict>
 			<key>CFBundleTypeRole</key>

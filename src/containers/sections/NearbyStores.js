@@ -1,4 +1,4 @@
-import React, { useState, useCallback, memo } from "react";
+import React, { useCallback, memo } from "react";
 import {
   View,
   TouchableOpacity,
@@ -6,90 +6,119 @@ import {
   StyleSheet,
   FlatList,
 } from "react-native";
-import { MapPin, ArrowRight } from "lucide-react-native";
+import { MapPin, ArrowRight, Star, Clock } from "lucide-react-native";
 import { Text } from "~components/Common";
-import { Images } from "~assets";
 import { useTheme } from "~context/ThemeContext";
 import { RFValue } from "react-native-responsive-fontsize";
 import { FontFamily } from "~theme/fonts";
+import { useSelector } from "react-redux";
+import { calculateDistance, formatDistance } from "~utils";
 
-const StoreCard = ({ item, onPress, colors }) => (
-  <TouchableOpacity
-    style={[styles.storeCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}
-    onPress={() => onPress(item.id)}
-    activeOpacity={0.7}>
-    <View style={[styles.storeImageContainer, { backgroundColor: colors.surfaceSecondary }]}>
-      <Image source={item.image} style={styles.storeImage} />
-      <View style={[styles.badge, { backgroundColor: item.badgeColor }]}>
-        <Text style={styles.badgeText}>{item.badge}</Text>
-      </View>
-    </View>
-    <View style={styles.storeInfo}>
-      <Text style={[styles.storeName, { color: colors.textPrimary }]}>{item.name}</Text>
-      <View style={styles.storeDetails}>
-        <MapPin size={14} color={colors.iconMuted} />
-        <Text style={[styles.storeDistance, { color: colors.textMuted }]}>{item.distance}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: item.statusColor }]}>
-          <Text style={styles.statusText}>{item.status}</Text>
+const StoreCard = ({ item, onPress, colors, userLat, userLng, distanceUnit }) => {
+  const rating = item.rating ?? 0;
+  
+  // Rating color logic: Green for high (>= 4.0), Red for low (< 3.0), Amber for middle
+  const getRatingColor = (r) => {
+    if (r >= 4.0) return colors.success;
+    if (r < 3.0) return colors.error;
+    return "#F59E0B"; // Amber
+  };
+
+  const getRatingBg = (r) => {
+    if (r >= 4.0) return colors.badgeBackground;
+    if (r < 3.0) return colors.errorLight;
+    return "#FEF3C7"; // Amber light
+  };
+
+  const ratingColor = getRatingColor(rating);
+  const ratingBg = getRatingBg(rating);
+
+  // Calculate distance
+  const storeLat = item.location?.lat;
+  const storeLng = item.location?.lng;
+  const distanceKm =
+    userLat != null &&
+    userLng != null &&
+    storeLat != null &&
+    storeLng != null
+      ? calculateDistance(userLat, userLng, storeLat, storeLng)
+      : null;
+  const distanceText = distanceKm != null ? formatDistance(distanceKm, distanceUnit) : "";
+
+  return (
+    <TouchableOpacity
+      style={[styles.storeCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}
+      onPress={() => onPress(item.placeId)}
+      activeOpacity={0.7}>
+      <View style={[styles.storeImageContainer, { backgroundColor: colors.surfaceSecondary }]}>
+        {item.photo ? (
+          <Image source={{ uri: item.photo }} style={styles.storeImage} />
+        ) : (
+          <View style={styles.placeholderContainer}>
+            <MapPin size={32} color={colors.iconMuted} />
+          </View>
+        )}
+        <View style={[styles.badge, { backgroundColor: ratingBg }]}>
+          <Star size={10} color={ratingColor} fill={ratingColor} style={{ marginRight: 4 }} />
+          <Text style={[styles.badgeText, { color: ratingColor }]}>{rating}</Text>
         </View>
       </View>
-    </View>
-  </TouchableOpacity>
-);
+      <View style={styles.storeInfo}>
+        <Text style={[styles.storeName, { color: colors.textPrimary }]} numberOfLines={1}>{item.name}</Text>
+        <View style={styles.storeDetails}>
+          <MapPin size={12} color={colors.iconMuted} />
+          <Text style={[styles.storeDistance, { color: colors.textMuted }]}>{distanceText || "Nearby"}</Text>
+          
+          <View style={[styles.statusBadge, { backgroundColor: item.isOpen ? colors.badgeBackground : colors.errorLight }]}>
+            <Clock size={10} color={item.isOpen ? colors.success : colors.error} style={{ marginRight: 2 }} />
+            <Text style={[styles.statusText, { color: item.isOpen ? colors.success : colors.error }]}>
+              {item.isOpen ? "Open" : "Closed"}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 const MemoStoreCard = memo(StoreCard);
 
 const NearbyStores = ({ navigation }) => {
   const { colors } = useTheme();
-  const [stores] = useState([
-    {
-      id: 1,
-      name: "Whole Foods",
-      image: Images.storesPlaceholder,
-      distance: "0.8 km",
-      status: "Open",
-      statusColor: "#10B981",
-      badge: "High Stock",
-      badgeColor: "#EF4444",
-    },
-    {
-      id: 2,
-      name: "Trader Joe's",
-      image: Images.storesPlaceholder,
-      distance: "1.2 km",
-      status: "Closing soon",
-      statusColor: "#F97316",
-      badge: "Low Traffic",
-      badgeColor: "#10B981",
-    },
-    {
-      id: 3,
-      name: "Good Market",
-      image: Images.storesPlaceholder,
-      distance: "2.5 km",
-      status: "Open",
-      statusColor: "#10B981",
-      badge: "New",
-      badgeColor: "#3B82F6",
-    },
-  ]);
+  const { localResults } = useSelector((state) => state.search);
+  const { latitude, longitude } = useSelector((state) => state.location);
+  const { distanceUnit } = useSelector((state) => state.settings);
 
   const handleMapPress = () => {
-    // navigation.navigate("NearbyStoresMap");
+    navigation.navigate("SearchResults", {
+     activeTab: "Local Stores",
+     query: 'Store'
+    });
   };
 
-  const handleStorePress = storeId => {
-    // navigation.navigate("StoreDetail", {storeId});
+  const handleStorePress = (placeId) => {
+    // navigation.navigate("StoreDetail", { placeId });
   };
 
   const renderStoreItem = useCallback(
     ({ item }) => (
-      <MemoStoreCard item={item} onPress={handleStorePress} colors={colors} />
+      <MemoStoreCard 
+        item={item} 
+        onPress={handleStorePress} 
+        colors={colors} 
+        userLat={latitude} 
+        userLng={longitude} 
+        distanceUnit={distanceUnit}
+      />
     ),
-    [handleStorePress, colors],
+    [handleStorePress, colors, latitude, longitude],
   );
 
-  const storeKeyExtractor = useCallback(item => item.id.toString(), []);
+  const storeKeyExtractor = useCallback((item, index) => item.placeId || index.toString(), []);
+
+  if (!localResults || localResults.length === 0) {
+    return null;
+  }
 
   return (
     <View style={styles.section}>
@@ -97,21 +126,21 @@ const NearbyStores = ({ navigation }) => {
         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Nearby Stores</Text>
         <TouchableOpacity onPress={handleMapPress} activeOpacity={0.6}>
           <View style={styles.mapLink}>
-            <Text style={[styles.mapText, { color: colors.primary }]}>Map </Text>
+            <Text style={[styles.mapText, { color: colors.primary }]}>See all </Text>
             <ArrowRight size={14} color={colors.primary} />
           </View>
         </TouchableOpacity>
       </View>
 
       <FlatList
-        data={stores}
+        data={localResults.slice(0, 5)}
         renderItem={renderStoreItem}
         keyExtractor={storeKeyExtractor}
         horizontal
         showsHorizontalScrollIndicator={false}
         scrollEventThrottle={16}
         contentContainerStyle={styles.storesList}
-        initialNumToRender={3}
+        initialNumToRender={5}
       />
     </View>
   );
@@ -126,6 +155,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 15,
+    paddingHorizontal: 16,
   },
   sectionTitle: {
     fontSize: RFValue(13),
@@ -142,7 +172,7 @@ const styles = StyleSheet.create({
   storesList: {
     paddingRight: 20,
     paddingBottom: 10,
-    paddingLeft: 2,
+    paddingLeft: 16,
   },
   storeCard: {
     width: 180,
@@ -164,17 +194,25 @@ const styles = StyleSheet.create({
     height: "100%",
     resizeMode: "cover",
   },
+  placeholderContainer: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   badge: {
     position: "absolute",
     top: 8,
     left: 8,
     paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
   },
   badgeText: {
     fontSize: 10,
     fontFamily: FontFamily.bold,
-    color: "#ffffff",
   },
   storeInfo: {
     padding: 12,
@@ -195,13 +233,15 @@ const styles = StyleSheet.create({
   },
   statusBadge: {
     paddingHorizontal: 8,
+    paddingVertical: 2,
     borderRadius: 6,
     marginLeft: "auto",
+    flexDirection: "row",
+    alignItems: "center",
   },
   statusText: {
     fontSize: 10,
     fontWeight: "600",
-    color: "#ffffff",
   },
 });
 

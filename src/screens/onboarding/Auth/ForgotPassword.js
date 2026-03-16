@@ -341,7 +341,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
       {/* Logo */}
       <Image
-        source={Images.buyListIconBlue}
+        source={Images.baggIconBlue}
         style={styles.logo}
         resizeMode="contain"
       />
@@ -361,7 +361,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
               </Text>
               <TextInput
                 label="Email"
-                placeholder="buylist@example.com"
+                placeholder="bagg@example.com"
                 value={email}
                 onChangeText={handleEmailChange}
                 leftIcon="mail"

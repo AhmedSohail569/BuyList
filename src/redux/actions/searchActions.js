@@ -90,7 +90,6 @@ export const fetchBanners = createAsyncThunk(
         return rejectWithValue("Placement is required");
       }
 
-
       const response = await axios.get(`/banners/get-banners/?placement=${placement}`);
       console.log(`response fetchBanners (${placement})`, response);
       

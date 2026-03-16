@@ -1,5 +1,5 @@
 import { View, TouchableOpacity, StyleSheet, Switch, ActivityIndicator } from "react-native";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 
 import {
   User,
@@ -25,6 +25,7 @@ import { DISTANCE_OPTIONS, LANGUAGE_OPTIONS } from "~constants";
 import { logoutAndPurge } from "~redux/store";
 import { useAlert } from "~context/AlertContext";
 import { useTheme } from "~context/ThemeContext";
+import { setDistanceUnit } from "~redux/reducers/settingsReducer";
 
 /**
  * Reusable component for a single setting row
@@ -97,14 +98,15 @@ const SettingsSection = ({ title, children }) => {
 const SettingsTab = ({ onQuickAction, navigation }) => {
   const { showAlert, showError } = useAlert();
   const { colors, isDark, toggleTheme } = useTheme();
+  const dispatch = useDispatch();
   const logoutCurrentLoading = useSelector(state => state.session.logoutCurrentLoading);
+  const { distanceUnit } = useSelector(state => state.settings);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState(null); // 'language' | 'distance'
 
   // Value State
   const [language, setLanguage] = useState("English");
-  const [distance, setDistance] = useState("Miles");
 
   // Helper to open specific modal
   const openModal = type => {
@@ -114,7 +116,7 @@ const SettingsTab = ({ onQuickAction, navigation }) => {
 
   const handleSave = newValue => {
     if (modalType === "language") setLanguage(newValue);
-    if (modalType === "distance") setDistance(newValue);
+    if (modalType === "distance") dispatch(setDistanceUnit(newValue));
   };
 
   const handleLogout = () => {
@@ -203,8 +205,8 @@ const SettingsTab = ({ onQuickAction, navigation }) => {
           />
         </SettingsSection>
 
-        {/* BUYLIST FEATURES */}
-        <SettingsSection title="BUYLIST FEATURES">
+        {/* BAGG FEATURES */}
+        <SettingsSection title="BAGG FEATURES">
           <SettingsOption
             icon={Users}
             color="#EC4899"
@@ -239,7 +241,7 @@ const SettingsTab = ({ onQuickAction, navigation }) => {
             icon={MapPin}
             color="#6B7280"
             label="Distance"
-            value={distance}
+            value={distanceUnit}
             onPress={() => openModal("distance")}
             isLast
           />
@@ -301,7 +303,7 @@ const SettingsTab = ({ onQuickAction, navigation }) => {
         title={
           modalType === "language" ? "Select Language" : "Select Distance"
         }
-        initialValue={modalType === "language" ? language : distance}
+        initialValue={modalType === "language" ? language : distanceUnit}
         options={modalType === "language" ? LANGUAGE_OPTIONS : DISTANCE_OPTIONS}
       />
     </View>

@@ -149,7 +149,7 @@ const SignupScreen = ({ navigation, route }) => {
         automaticallyAdjustKeyboardInsets
         keyboardDismissMode="interactive">
       <Image
-        source={Images.buyListIconBlue}
+        source={Images.baggIconBlue}
         style={{
           width: RFValue(60),
           height: RFValue(60),
@@ -173,7 +173,7 @@ const SignupScreen = ({ navigation, route }) => {
 
         <TextInput
           label="Username"
-          placeholder="BuyList User"
+          placeholder="Bagg User"
           value={username}
           onChangeText={handleUsernameChange}
           type={2}
@@ -184,7 +184,7 @@ const SignupScreen = ({ navigation, route }) => {
 
         <TextInput
           label="Email"
-          placeholder="buylist@example.com"
+          placeholder="bagg@example.com"
           value={email}
           onChangeText={handleEmailChange}
           type={2}

@@ -32,7 +32,7 @@ const OnboardingScreen = ({ navigation }) => {
           {/* Icon */}
           <View style={styles.iconWrapper}>
             <Image
-              source={Images.buyListIcon}
+              source={Images.baggIcon}
               style={{ width: 80, height: 80 }}
               resizeMode="contain"
             />
@@ -45,7 +45,7 @@ const OnboardingScreen = ({ navigation }) => {
 
           {/* Subtitle */}
           <Text variant="bodySmall" style={[styles.subtitle, { color: "#9CA3AF" }]}>
-            Shop smarter together with BuyList
+            Shop smarter together with Bagg
           </Text>
 
           {/* Button */}

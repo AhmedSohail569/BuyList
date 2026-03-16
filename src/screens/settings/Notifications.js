@@ -327,7 +327,7 @@ const NotificationsScreen = ({ navigation }) => {
         >
           <Info size={RFValue(18)} color={colors.primary} style={styles.infoIcon} />
           <Text style={[styles.infoText, { color: colors.primary }]}>
-            You can also manage system-level notifications for BuyList in your
+            You can also manage system-level notifications for Bagg in your
             device settings.
           </Text>
         </View>
