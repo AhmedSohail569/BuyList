@@ -147,7 +147,7 @@ const ListCard = React.memo(
           </View>
 
           <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-            {item.category} • {formatDate(item.createdAt)}
+            {item.category} • {formatDate(item.updatedAt || item.createdAt)}
           </Text>
 
           <View style={styles.progressSection}>
@@ -602,7 +602,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
             />
           }>
           {/* Smart Suggestions */}
-          <View style={styles.smartSuggestionContainer}>
+          {/* <View style={styles.smartSuggestionContainer}>
             <View style={styles.smartHeader}>
               <Sparkles size={16} color={colors.primary} fill={colors.primary} />
               <Text style={[styles.smartTitle, { color: colors.textMuted }]}>SMART SUGGESTIONS</Text>
@@ -623,7 +623,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
                 <Plus size={20} color="#10b981" />
               </TouchableOpacity>
             </View>
-          </View>
+          </View> */}
 
           {/* Section Header */}
           <View style={styles.sectionHeader}>

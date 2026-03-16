@@ -18,17 +18,22 @@ import { getInitials, hasProfilePicture } from "~utils/display";
 import { Text } from "~components/Common";
 
 const Avatar = ({ image, name, size = 40, style, colors }) => {
+  const containerStyle = [
+    {
+      width: size,
+      height: size,
+      borderRadius: size / 2,
+    },
+    style,
+  ];
+
   if (hasProfilePicture(image)) {
     return (
-      <View
-        style={[
-          { width: size, height: size, borderRadius: size / 2 },
-          style,
-        ]}
-      >
+      <View style={containerStyle}>
         <Image
           source={{ uri: image }}
-          style={{ width: size, height: size, borderRadius: size / 2 }}
+          style={{ width: "100%", height: "100%",  borderRadius: size / 2 }}
+          resizeMode="cover"
         />
       </View>
     );
@@ -37,21 +42,19 @@ const Avatar = ({ image, name, size = 40, style, colors }) => {
   return (
     <View
       style={[
+        containerStyle,
         {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
           backgroundColor: colors?.badgeBackground || "#e0f2fe",
           justifyContent: "center",
           alignItems: "center",
         },
-        style,
       ]}
     >
       <Text
         style={{
           fontSize: RFValue(size * 0.33),
           color: colors?.primary || "#0ea5e9",
+          textAlign: "center",
         }}
       >
         {getInitials(name || "User")}

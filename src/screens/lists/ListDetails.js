@@ -280,19 +280,21 @@ const ListDetailsScreen = ({ navigation, route }) => {
 
       return (
         <View style={styles.itemRow}>
-          <TouchableOpacity
-            style={styles.checkCircleContainer}
-            onPress={() => toggleItemStatus(itemId)}
-            activeOpacity={0.8}
-            disabled={isPending}>
-            {item.status === "purchased" ? (
-              <View style={[styles.checkedCircle, { backgroundColor: colors.success }]}>
-                <Check size={12} color="#fff" strokeWidth={3} />
-              </View>
-            ) : (
-              <View style={[styles.uncheckedCircle, { borderColor: colors.border }]} />
-            )}
-          </TouchableOpacity>
+          {!isViewer && (
+            <TouchableOpacity
+              style={styles.checkCircleContainer}
+              onPress={() => toggleItemStatus(itemId)}
+              activeOpacity={0.8}
+              disabled={isPending}>
+              {item.status === "purchased" ? (
+                <View style={[styles.checkedCircle, { backgroundColor: colors.success }]}>
+                  <Check size={12} color="#fff" strokeWidth={3} />
+                </View>
+              ) : (
+                <View style={[styles.uncheckedCircle, { borderColor: colors.border }]} />
+              )}
+            </TouchableOpacity>
+          )}
 
           <View style={styles.itemContent}>
             <Text
@@ -316,35 +318,37 @@ const ListDetailsScreen = ({ navigation, route }) => {
             </View>
           </View>
 
-          <Menu
-            visible={isMenuOpen}
-            onDismiss={() => setActiveItemMenuId(null)}
-            anchor={
-              <TouchableOpacity
-                onPress={() => setActiveItemMenuId(itemId)}
-                hitSlop={10}
-                disabled={isPending}>
-                <MoreHorizontal size={20} color={colors.iconMuted} />
-              </TouchableOpacity>
-            }
-            contentStyle={[styles.menuContent, { backgroundColor: colors.card }]}>
-            <Menu.Item
-              onPress={() => {
-                setActiveItemMenuId(null);
-                toggleItemStatus(itemId);
-              }}
-              title={item.status === "purchased" ? "Pending" : "Purchased"}
-              titleStyle={[styles.menuItemTitle, { color: colors.textPrimary }]}
-            />
-            <Menu.Item
-              onPress={() => {
-                setActiveItemMenuId(null);
-                handleDeleteItem(itemId);
-              }}
-              title="Delete"
-              titleStyle={styles.menuItemTitleDelete}
-            />
-          </Menu>
+          {!isViewer && (
+            <Menu
+              visible={isMenuOpen}
+              onDismiss={() => setActiveItemMenuId(null)}
+              anchor={
+                <TouchableOpacity
+                  onPress={() => setActiveItemMenuId(itemId)}
+                  hitSlop={10}
+                  disabled={isPending}>
+                  <MoreHorizontal size={20} color={colors.iconMuted} />
+                </TouchableOpacity>
+              }
+              contentStyle={[styles.menuContent, { backgroundColor: colors.card }]}>
+              <Menu.Item
+                onPress={() => {
+                  setActiveItemMenuId(null);
+                  toggleItemStatus(itemId);
+                }}
+                title={item.status === "purchased" ? "Pending" : "Purchased"}
+                titleStyle={[styles.menuItemTitle, { color: colors.textPrimary }]}
+              />
+              <Menu.Item
+                onPress={() => {
+                  setActiveItemMenuId(null);
+                  handleDeleteItem(itemId);
+                }}
+                title="Delete"
+                titleStyle={styles.menuItemTitleDelete}
+              />
+            </Menu>
+          )}
         </View>
       );
     },
@@ -354,6 +358,7 @@ const ListDetailsScreen = ({ navigation, route }) => {
       handleDeleteItem,
       isActionPending,
       colors,
+      isViewer,
     ],
   );
 
@@ -390,48 +395,50 @@ const ListDetailsScreen = ({ navigation, route }) => {
         title={list?.name || "List"}
         onBack={() => navigation.goBack()}
         rightAction={
-          <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.iconButton}>
-              <Share2 size={22} color={colors.icon} />
-            </TouchableOpacity>
-            <Menu
-              visible={showHeaderMenu}
-              onDismiss={() => {
-                isHeaderMenuDismissingRef.current = true;
-                setShowHeaderMenu(false);
-                setTimeout(() => {
-                  isHeaderMenuDismissingRef.current = false;
-                }, 100);
-              }}
-              anchor={
-                <TouchableOpacity
-                  style={styles.iconButton}
-                  onPress={handleHeaderMenuToggle}>
-                  <MoreVertical size={22} color={colors.icon} />
-                </TouchableOpacity>
-              }
-              contentStyle={[styles.menuContent, { backgroundColor: colors.card }]}>
-              <Menu.Item
-                onPress={() => {
-                  setShowHeaderMenu(false);
-                  // Handle edit action
-                }}
-                title="Edit"
-                titleStyle={[styles.menuItemTitle, { color: colors.textPrimary }]}
-              />
-              <Menu.Item
-                onPress={() => {
+          !isViewer ? (
+            <View style={styles.headerActions}>
+              <TouchableOpacity style={styles.iconButton}>
+                <Share2 size={22} color={colors.icon} />
+              </TouchableOpacity>
+              <Menu
+                visible={showHeaderMenu}
+                onDismiss={() => {
                   isHeaderMenuDismissingRef.current = true;
-                  confirmDeleteThisList();
+                  setShowHeaderMenu(false);
                   setTimeout(() => {
                     isHeaderMenuDismissingRef.current = false;
                   }, 100);
                 }}
-                title="Delete"
-                titleStyle={styles.menuItemTitleDelete}
-              />
-            </Menu>
-          </View>
+                anchor={
+                  <TouchableOpacity
+                    style={styles.iconButton}
+                    onPress={handleHeaderMenuToggle}>
+                    <MoreVertical size={22} color={colors.icon} />
+                  </TouchableOpacity>
+                }
+                contentStyle={[styles.menuContent, { backgroundColor: colors.card }]}>
+                <Menu.Item
+                  onPress={() => {
+                    setShowHeaderMenu(false);
+                    // Handle edit action
+                  }}
+                  title="Edit"
+                  titleStyle={[styles.menuItemTitle, { color: colors.textPrimary }]}
+                />
+                <Menu.Item
+                  onPress={() => {
+                    isHeaderMenuDismissingRef.current = true;
+                    confirmDeleteThisList();
+                    setTimeout(() => {
+                      isHeaderMenuDismissingRef.current = false;
+                    }, 100);
+                  }}
+                  title="Delete"
+                  titleStyle={styles.menuItemTitleDelete}
+                />
+              </Menu>
+            </View>
+          ) : null
         }
       />
 
