@@ -593,6 +593,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
       ) : (
         <ScrollView
           contentContainerStyle={styles.scrollContent}
+          keyboardVerticalOffset={0}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl

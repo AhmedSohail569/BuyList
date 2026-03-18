@@ -9,7 +9,6 @@ export const THEME_OPTIONS = [
 export const LANGUAGE_OPTIONS = [
   { label: "English", value: "English" },
   { label: "Dutch", value: "Dutch" },
-  { label: "Netherlands", value: "Netherlands" },
 ];
 
 export const DISTANCE_OPTIONS = [
@@ -21,7 +20,6 @@ export const DEFAULT_ROLES = [
   { label: "Editor", value: "Editor" },
   { label: "Viewer", value: "Viewer" },
 ];
-
 
 export const AD_OFFERS_DATA = [
   {

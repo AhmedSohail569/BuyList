@@ -17,6 +17,7 @@ const CustomScrollView = React.forwardRef(
       includeAvoidingView = true,
       children,
       contentContainerStyle,
+      keyboardVerticalOffset = 80,
       style,
       ...props
     },
@@ -26,7 +27,7 @@ const CustomScrollView = React.forwardRef(
       <KeyboardAvoidingView
         style={[styles.flex, style]}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0} // adjust if you have headers
+        keyboardVerticalOffset={Platform.OS === "ios" ? keyboardVerticalOffset : 0} // adjust if you have headers
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView

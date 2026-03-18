@@ -2,12 +2,14 @@
  * ImagePickerModal - Reusable modal for camera/gallery selection
  * Provides clean UI for selecting image source
  */
+import { useState } from "react";
 import {
   View,
   StyleSheet,
   Modal,
   TouchableOpacity,
   TouchableWithoutFeedback,
+  Platform,
 } from "react-native";
 import { Camera, Image as ImageIcon, X } from "lucide-react-native";
 import { Text } from "~components/Common";
@@ -23,20 +25,37 @@ const ImagePickerModal = ({
   title = "Select Photo",
 }) => {
   const { colors } = useTheme();
+  const [pendingSelection, setPendingSelection] = useState(null); // 'camera' | 'gallery' | null
+
+  // This handles the actual call after modal dismissal
+  const handleDismiss = () => {
+    if (pendingSelection === "camera") {
+      onSelectCamera();
+    } else if (pendingSelection === "gallery") {
+      onSelectGallery();
+    }
+    setPendingSelection(null);
+  };
 
   const handleCameraPress = () => {
+    setPendingSelection("camera");
     onClose();
-    // Small delay to ensure modal closes before picker opens
-    setTimeout(() => {
-      onSelectCamera();
-    }, 300);
+    // Android doesn't always trigger onDismiss, so we use a fallback timeout
+    if (Platform.OS === "android") {
+      setTimeout(() => {
+        handleDismiss();
+      }, 300);
+    }
   };
 
   const handleGalleryPress = () => {
+    setPendingSelection("gallery");
     onClose();
-    setTimeout(() => {
-      onSelectGallery();
-    }, 300);
+    if (Platform.OS === "android") {
+      setTimeout(() => {
+        handleDismiss();
+      }, 300);
+    }
   };
 
   return (
@@ -44,7 +63,8 @@ const ImagePickerModal = ({
       transparent
       visible={isVisible}
       animationType="fade"
-      onRequestClose={onClose}>
+      onRequestClose={onClose}
+      onDismiss={Platform.OS === "ios" ? handleDismiss : undefined}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={[styles.overlay, { backgroundColor: colors.modalOverlay }]}>
           <TouchableWithoutFeedback>

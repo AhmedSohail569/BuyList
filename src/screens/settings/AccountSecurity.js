@@ -276,7 +276,7 @@ const SecurityScreen = ({ navigation }) => {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* LOGIN & RECOVERY */}
-        <Text style={[styles.sectionHeader, { color: colors.textMuted }]}>LOGIN & RECOVERY</Text>
+        {/* <Text style={[styles.sectionHeader, { color: colors.textMuted }]}>LOGIN & RECOVERY</Text>
         <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
           <SecurityRow
             icon={Lock}
@@ -304,7 +304,7 @@ const SecurityScreen = ({ navigation }) => {
               />
             }
           />
-        </View>
+        </View> */}
 
         {/* ACTIVE SESSIONS */}
         <Text style={[styles.sectionHeader, { color: colors.textMuted }]}>ACTIVE SESSIONS</Text>
