@@ -21,11 +21,18 @@ import { RFValue } from "react-native-responsive-fontsize";
 import { FontFamily } from "~theme/fonts";
 import { useState } from "react";
 import SelectionModal from "~containers/modals/SelectionModal";
-import { DISTANCE_OPTIONS, LANGUAGE_OPTIONS } from "~constants";
+import { DISTANCE_OPTIONS } from "~constants";
 import { logoutAndPurge } from "~redux/store";
 import { useAlert } from "~context/AlertContext";
 import { useTheme } from "~context/ThemeContext";
-import { setDistanceUnit } from "~redux/reducers/settingsReducer";
+import { setDistanceUnit, setLanguage } from "~redux/reducers/settingsReducer";
+import useTranslation from "~hooks/useTranslation";
+
+// Language options for the selector modal — labels are fixed (always in their native language)
+const LANGUAGE_OPTIONS = [
+  { label: "English", value: "en" },
+  { label: "Dutch", value: "nl" },
+];
 
 /**
  * Reusable component for a single setting row
@@ -96,17 +103,15 @@ const SettingsSection = ({ title, children }) => {
 };
 
 const SettingsTab = ({ onQuickAction, navigation }) => {
+  const { t } = useTranslation();
   const { showAlert, showError } = useAlert();
   const { colors, isDark, toggleTheme } = useTheme();
   const dispatch = useDispatch();
   const logoutCurrentLoading = useSelector(state => state.session.logoutCurrentLoading);
-  const { distanceUnit } = useSelector(state => state.settings);
+  const { distanceUnit, language } = useSelector(state => state.settings);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState(null); // 'language' | 'distance'
-
-  // Value State
-  const [language, setLanguage] = useState("English");
 
   // Helper to open specific modal
   const openModal = type => {
@@ -115,28 +120,35 @@ const SettingsTab = ({ onQuickAction, navigation }) => {
   };
 
   const handleSave = newValue => {
-    if (modalType === "language") setLanguage(newValue);
-    if (modalType === "distance") dispatch(setDistanceUnit(newValue));
+    if (modalType === "language") {
+      dispatch(setLanguage(newValue));
+    }
+    if (modalType === "distance") {
+      dispatch(setDistanceUnit(newValue));
+    }
   };
+
+  // Get display label for current language
+  const languageLabel = LANGUAGE_OPTIONS.find(l => l.value === language)?.label || "English";
 
   const handleLogout = () => {
     showAlert({
-      title: "Logout",
-      message: "Are you sure you want to logout?",
+      title: t("settings_logout_confirm_title"),
+      message: t("settings_logout_confirm_message"),
       type: "confirm",
       buttons: [
         {
-          text: "Cancel",
+          text: t("settings_cancel"),
           style: "cancel",
         },
         {
-          text: "Logout",
+          text: t("settings_logout"),
           style: "destructive",
           onPress: async () => {
             try {
               await logoutAndPurge();
             } catch (err) {
-              showError("Logout Failed", err?.message || "Could not logout. Please try again.");
+              showError(t("settings_logout_failed"), err?.message || t("common_unexpected_error"));
             }
           },
         },
@@ -148,7 +160,7 @@ const SettingsTab = ({ onQuickAction, navigation }) => {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header
         variant="screen"
-        title="Settings"
+        title={t("settings_title")}
         showProfile
       />
 
@@ -156,34 +168,34 @@ const SettingsTab = ({ onQuickAction, navigation }) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
         {/* ACCOUNT */}
-        <SettingsSection title="ACCOUNT">
+        <SettingsSection title={t("settings_section_account")}>
           <SettingsOption
             icon={User}
             color="#3B82F6"
-            label="Profile Settings"
+            label={t("settings_profile")}
             onPress={() => navigation.navigate("EditProfile")}
           />
           <SettingsOption
             icon={ShieldCheck}
             color="#22C55E"
-            label="Security"
+            label={t("settings_security")}
             onPress={() => navigation.navigate("AccountSecurity")}
             isLast
           />
         </SettingsSection>
 
         {/* PREFERENCES */}
-        <SettingsSection title="PREFERENCES">
+        <SettingsSection title={t("settings_section_preferences")}>
           <SettingsOption
             icon={Bell}
             color="#F97316"
-            label="Notifications"
+            label={t("settings_notifications")}
             onPress={() => navigation.navigate("Notifications")}
           />
           <SettingsOption
             icon={Moon}
             color="#A855F7"
-            label="Dark Mode"
+            label={t("settings_dark_mode")}
             rightComponent={
               <Switch
                 trackColor={{ false: colors.border, true: colors.primary }}
@@ -198,25 +210,25 @@ const SettingsTab = ({ onQuickAction, navigation }) => {
           <SettingsOption
             icon={Globe}
             color="#6366F1"
-            label="Language"
-            value={language}
+            label={t("settings_language")}
+            value={languageLabel}
             onPress={() => openModal("language")}
             isLast
           />
         </SettingsSection>
 
         {/* BAGG FEATURES */}
-        <SettingsSection title="BAGG FEATURES">
+        <SettingsSection title={t("settings_section_bagg_features")}>
           <SettingsOption
             icon={Users}
             color="#EC4899"
-            label="Manage Circle"
+            label={t("settings_manage_circle")}
             onPress={() => navigation.navigate("CircleSettings")}
           />
           <SettingsOption
             icon={List}
             color="#14B8A6"
-            label="Shared Lists"
+            label={t("settings_shared_lists")}
             onPress={() => {
               const tabNav = navigation.getParent?.();
               if (tabNav?.navigate) {
@@ -236,11 +248,11 @@ const SettingsTab = ({ onQuickAction, navigation }) => {
         </SettingsSection>
 
         {/* LOCATION */}
-        <SettingsSection title="LOCATION">
+        <SettingsSection title={t("settings_section_location")}>
           <SettingsOption
             icon={MapPin}
             color="#6B7280"
-            label="Distance"
+            label={t("settings_distance")}
             value={distanceUnit}
             onPress={() => openModal("distance")}
             isLast
@@ -248,16 +260,16 @@ const SettingsTab = ({ onQuickAction, navigation }) => {
         </SettingsSection>
 
         {/* SUPPORT */}
-        <SettingsSection title="SUPPORT">
+        <SettingsSection title={t("settings_section_support")}>
           <SettingsOption
             icon={HelpCircle}
             color="#EAB308"
-            label="Help & Support"
+            label={t("settings_help")}
           />
           <SettingsOption
             icon={FileText}
             color="#60A5FA"
-            label="Legal"
+            label={t("settings_legal")}
             onPress={() => navigation.navigate("Legal")}
             isLast
           />
@@ -289,7 +301,7 @@ const SettingsTab = ({ onQuickAction, navigation }) => {
             />
           )}
           <Text style={[styles.logoutText, { color: colors.logoutText }]}>
-            {logoutCurrentLoading ? "Logging out..." : "Log Out"}
+            {logoutCurrentLoading ? t("settings_logging_out") : t("settings_logout")}
           </Text>
         </TouchableOpacity>
 
@@ -301,7 +313,7 @@ const SettingsTab = ({ onQuickAction, navigation }) => {
         onClose={() => setModalVisible(false)}
         onSave={handleSave}
         title={
-          modalType === "language" ? "Select Language" : "Select Distance"
+          modalType === "language" ? t("settings_select_language") : t("settings_select_distance")
         }
         initialValue={modalType === "language" ? language : distanceUnit}
         options={modalType === "language" ? LANGUAGE_OPTIONS : DISTANCE_OPTIONS}

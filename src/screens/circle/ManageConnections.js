@@ -38,6 +38,7 @@ import useOnReconnect from "~hooks/useOnReconnect";
 import useScreenFetch from "~hooks/useScreenFetch";
 import Avatar from "~components/Avatar";
 import QRCodeModal from "~components/QRCodeModal";
+import useTranslation from "~hooks/useTranslation";
 
 // Helper function to format role for display (ManageConnections-specific)
 const formatRole = (role) => {
@@ -93,6 +94,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
   } = useSelector(state => state.circles);
   const { showAlert, showError } = useAlert();
   const { tab } = route.params || {};
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(tab || "Connections");
   const [activeMenuId, setActiveMenuId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -150,18 +152,18 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
     Clipboard.setString(inviteLink);
     Toast.show({
       type: "success",
-      text1: "Link Copied!",
-      text2: "Invite link copied to clipboard",
+      text1: t("manage_link_copied_title"),
+      text2: t("manage_link_copied_desc"),
     });
-  }, [inviteLink]);
+  }, [inviteLink, t]);
 
   // Share invite link via native share sheet
   const handleShareLink = useCallback(async () => {
     if (!inviteLink) {
       Toast.show({
         type: "error",
-        text1: "No Invite Link",
-        text2: "Please wait while we generate your invite link",
+        text1: t("manage_no_link_title"),
+        text2: t("manage_no_link_desc"),
       });
       return;
     }
@@ -181,12 +183,11 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
 
   // Share invite link via SMS (From Contacts)
   const handleShareViaSMS = useCallback(async () => {
-    console.log("handleShareViaSMS");
     if (!inviteLink) {
       Toast.show({
         type: "error",
-        text1: "No Invite Link",
-        text2: "Please wait while we generate your invite link",
+        text1: t("manage_no_link_title"),
+        text2: t("manage_no_link_desc"),
       });
       return;
     }
@@ -266,8 +267,8 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
 
         Toast.show({
           type: "success",
-          text1: "Role Updated",
-          text2: `Member role updated to ${newRole}`,
+          text1: t("manage_role_updated_title"),
+          text2: `${t("manage_role_updated_desc")} ${newRole}`,
         });
 
         // Refetch owned circle to update UI
@@ -290,13 +291,13 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
       handleMenuDismiss();
 
       showAlert({
-        title: "Remove Member",
-        message: `Are you sure you want to remove "${memberName}" from the circle?`,
+        title: t("manage_remove_title"),
+        message: `${t("manage_remove_message")} "${memberName}" ${t("manage_remove_from_circle")}`,
         type: "confirm",
         buttons: [
-          { text: "Cancel", style: "cancel" },
+          { text: t("common_cancel"), style: "cancel" },
           {
-            text: "Remove",
+            text: t("manage_action_remove"),
             style: "destructive",
             onPress: async () => {
               try {
@@ -309,8 +310,8 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
 
                 Toast.show({
                   type: "success",
-                  text1: "Member Removed",
-                  text2: `${memberName} has been removed from the circle`,
+                  text1: t("manage_remove_success_title"),
+                  text2: `${memberName} ${t("manage_remove_success_desc")}`,
                 });
 
                 // Refetch owned circle to update UI
@@ -372,7 +373,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
           {item.role.toLowerCase() !== "editor" && (
             <Menu.Item
               onPress={() => handleUpdateRole(item.id, "Editor")}
-              title="Editor"
+              title={t("manage_role_editor")}
               titleStyle={[styles.menuItemTitle, { color: colors.textPrimary }]}
             />
           )}
@@ -380,14 +381,14 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
           {item.role.toLowerCase() !== "viewer" && (
             <Menu.Item
               onPress={() => handleUpdateRole(item.id, "Viewer")}
-              title="Viewer"
+              title={t("manage_role_viewer")}
               titleStyle={[styles.menuItemTitle, { color: colors.textPrimary }]}
             />
           )}
           {/* Always show Remove option */}
           <Menu.Item
             onPress={() => handleRemoveMember(item.id, item.name)}
-            title="Remove"
+            title={t("manage_action_remove")}
             titleStyle={styles.menuItemTitleDelete}
           />
         </Menu>
@@ -399,7 +400,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header
         variant="screen"
-        title={"Manage Connections"}
+        title={t("manage_title")}
         onBack={() => navigation.goBack()}
       />
 
@@ -414,7 +415,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
               { color: colors.textMuted },
               activeTab === "Connections" && [styles.activeTabText, { color: colors.primary }],
             ]}>
-            Connections ({connections.length})
+            {t("manage_tab_connections")} ({connections.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -426,7 +427,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
               { color: colors.textMuted },
               activeTab === "Invite" && [styles.activeTabText, { color: colors.primary }],
             ]}>
-            Invite People
+            {t("manage_tab_invite")}
           </Text>
         </TouchableOpacity>
       </View>
@@ -440,7 +441,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
             <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Search size={18} color={colors.iconMuted} style={{ marginRight: 8 }} />
               <TextInput
-                placeholder="Search connections..."
+                placeholder={t("manage_search_placeholder")}
                 placeholderTextColor={colors.inputPlaceholder}
                 style={[styles.searchInput, { color: colors.textPrimary }]}
                 value={searchQuery}
@@ -451,9 +452,9 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
             <View style={[styles.listCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
               {filteredConnections.length === 0 ? (
                 <Text style={[styles.emptyConnectionsText, { color: colors.textMuted }]}>
-                  {searchQuery.trim() 
-                    ? `No results found for "${searchQuery}"`
-                    : "No connections yet. Invite members to get started."}
+                  {searchQuery.trim()
+                    ? `${t("manage_no_results")} "${searchQuery}"`
+                    : t("manage_no_connections")}
                 </Text>
               ) : (
                 filteredConnections.map((item, index) =>
@@ -466,7 +467,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
             </View>
 
             <Text style={[styles.footerNote, { color: colors.textMuted }]}>
-              Only Owners can remove connections or change roles.
+              {t("manage_footer")}
             </Text>
           </>
         )}
@@ -480,10 +481,11 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
                 <UserPlus size={24} color={colors.primary} />
               </View>
 
-              <Text style={[styles.inviteTitle, { color: colors.textPrimary }]}>Invite to {ownedCircle?.name || "Circle"}</Text>
+              <Text style={[styles.inviteTitle, { color: colors.textPrimary }]}>
+                {t("manage_tab_invite")} {ownedCircle?.name ? `${ownedCircle.name}` : ""}
+              </Text>
               <Text style={[styles.inviteDesc, { color: colors.textSecondary }]}>
-                Share the link below to let others join your shopping circle.
-                The app will automatically open if they have it installed.
+                {t("manage_invite_desc")}
               </Text>
 
               {/* Copy Link Box */}
@@ -496,13 +498,13 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
                 ) : (
                   <>
                     <Text style={[styles.linkText, { color: colors.textSecondary }]} numberOfLines={1}>
-                      {inviteLink || "Generating link..."}
+                      {inviteLink || t("manage_generating_link")}
                     </Text>
                     <TouchableOpacity 
                       style={[styles.copyButton, { backgroundColor: colors.primary }]}
                       onPress={handleCopyLink}
                       disabled={!inviteLink}>
-                      <Text style={styles.copyButtonText}>Copy</Text>
+                      <Text style={styles.copyButtonText}>{t("manage_copy")}</Text>
                     </TouchableOpacity>
                   </>
                 )}
@@ -513,7 +515,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
                 <TouchableOpacity 
                   style={[styles.shareButton, { backgroundColor: colors.primary }]}
                   onPress={handleShareLink}>
-                  <Text style={styles.shareButtonText}>Share Invite Link</Text>
+                  <Text style={styles.shareButtonText}>{t("manage_share_link")}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -525,7 +527,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
                 onPress={handleShowQR}
               >
                 <QrCode size={24} color={colors.textPrimary} style={{ marginBottom: 8 }} />
-                <Text style={[styles.actionText, { color: colors.textPrimary }]}>Show QR Code</Text>
+                <Text style={[styles.actionText, { color: colors.textPrimary }]}>{t("manage_show_qr")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}
@@ -536,7 +538,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
                   color={colors.textPrimary}
                   style={{ marginBottom: 8 }}
                 />
-                <Text style={[styles.actionText, { color: colors.textPrimary }]}>From Contacts</Text>
+                <Text style={[styles.actionText, { color: colors.textPrimary }]}>{t("manage_contacts")}</Text>
               </TouchableOpacity>
             </View>
           </>

@@ -22,6 +22,7 @@ import Toast from "react-native-toast-message";
 
 import { Text } from "~components/Common";
 import { useTheme } from "~context/ThemeContext";
+import useTranslation from "~hooks/useTranslation";
 import useLocation from "~hooks/useLocation";
 import {
     setLocation,
@@ -33,6 +34,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const LocationPermissionGate = ({ enabled = true }) => {
     const { colors, isDark } = useTheme();
+    const { t } = useTranslation();
     const dispatch = useDispatch();
 
     const { permissionGranted, promptDismissed, isLocationSet } = useSelector(
@@ -164,8 +166,8 @@ const LocationPermissionGate = ({ enabled = true }) => {
 
             Toast.show({
                 type: "success",
-                text1: "Location Enabled",
-                text2: "Finding nearby stores for you...",
+                text1: t("location_title"),
+                text2: t("location_success"),
             });
 
             // Fetch and store location in background
@@ -174,8 +176,8 @@ const LocationPermissionGate = ({ enabled = true }) => {
             // Permission denied or blocked — modal stays for user to try again or dismiss
             Toast.show({
                 type: "info",
-                text1: "Location Permission",
-                text2: "You can enable it later from Settings.",
+                text1: t("location_denied_title"),
+                text2: t("location_denied_desc"),
             });
         }
 
@@ -240,15 +242,13 @@ const LocationPermissionGate = ({ enabled = true }) => {
                             {/* Title */}
                             <Text
                                 style={[styles.title, { color: colors.textPrimary }]}>
-                                Enable Location
+                                {t("location_title")}
                             </Text>
 
                             {/* Message */}
                             <Text
                                 style={[styles.message, { color: colors.textSecondary }]}>
-                                Allow Bagg to access your location to find nearby stores,
-                                discover the best deals in your area, and get personalized
-                                recommendations.
+                                {t("location_subtitle")}
                             </Text>
 
                             {/* Features list */}
@@ -295,7 +295,7 @@ const LocationPermissionGate = ({ enabled = true }) => {
                                             styles.buttonText,
                                             { color: colors.textPrimary },
                                         ]}>
-                                        Not Now
+                                        {t("location_skip")}
                                     </Text>
                                 </TouchableOpacity>
 
@@ -317,7 +317,7 @@ const LocationPermissionGate = ({ enabled = true }) => {
                                         style={{ marginRight: 6 }}
                                     />
                                     <Text style={[styles.buttonText, { color: "#FFFFFF" }]}>
-                                        {checking ? "Checking..." : "Enable"}
+                                        {checking ? t("location_detecting") : t("location_allow")}
                                     </Text>
                                 </TouchableOpacity>
                             </View>

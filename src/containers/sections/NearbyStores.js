@@ -1,4 +1,4 @@
-import React, { useCallback, memo } from "react";
+import React, { useCallback, memo, useMemo } from "react";
 import {
   View,
   TouchableOpacity,
@@ -13,6 +13,7 @@ import { RFValue } from "react-native-responsive-fontsize";
 import { FontFamily } from "~theme/fonts";
 import { useSelector } from "react-redux";
 import { calculateDistance, formatDistance } from "~utils";
+import useTranslation from "~hooks/useTranslation";
 
 const StoreCard = ({ item, onPress, colors, userLat, userLng, distanceUnit }) => {
   const rating = item.rating ?? 0;
@@ -85,6 +86,7 @@ const MemoStoreCard = memo(StoreCard);
 
 const NearbyStores = ({ navigation }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { localResults } = useSelector((state) => state.search);
   const { latitude, longitude } = useSelector((state) => state.location);
   const { distanceUnit } = useSelector((state) => state.settings);
@@ -111,29 +113,52 @@ const NearbyStores = ({ navigation }) => {
         distanceUnit={distanceUnit}
       />
     ),
-    [handleStorePress, colors, latitude, longitude],
+    [handleStorePress, colors, latitude, longitude, distanceUnit],
   );
+
+  const sortedLocalResults = useMemo(() => {
+    if (!localResults || localResults.length === 0) return [];
+
+    return [...localResults].sort((a, b) => {
+      const aLat = a.location?.lat;
+      const aLng = a.location?.lng;
+      const bLat = b.location?.lat;
+      const bLng = b.location?.lng;
+
+      const distA =
+        latitude != null && longitude != null && aLat != null && aLng != null
+          ? calculateDistance(latitude, longitude, aLat, aLng)
+          : Infinity;
+
+      const distB =
+        latitude != null && longitude != null && bLat != null && bLng != null
+          ? calculateDistance(latitude, longitude, bLat, bLng)
+          : Infinity;
+
+      return (distA !== null ? distA : Infinity) - (distB !== null ? distB : Infinity);
+    });
+  }, [localResults, latitude, longitude]);
 
   const storeKeyExtractor = useCallback((item, index) => item.placeId || index.toString(), []);
 
-  if (!localResults || localResults.length === 0) {
+  if (!sortedLocalResults || sortedLocalResults.length === 0) {
     return null;
   }
 
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Nearby Stores</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t("home_nearby_stores")}</Text>
         <TouchableOpacity onPress={handleMapPress} activeOpacity={0.6}>
           <View style={styles.mapLink}>
-            <Text style={[styles.mapText, { color: colors.primary }]}>See all </Text>
+            <Text style={[styles.mapText, { color: colors.primary }]}>{t("home_nearby_see_all")} </Text>
             <ArrowRight size={14} color={colors.primary} />
           </View>
         </TouchableOpacity>
       </View>
 
       <FlatList
-        data={localResults.slice(0, 5)}
+        data={sortedLocalResults.slice(0, 5)}
         renderItem={renderStoreItem}
         keyExtractor={storeKeyExtractor}
         horizontal

@@ -39,6 +39,7 @@ import {
   validateEmail,
   validatePhone,
 } from "~utils/validation";
+import useTranslation from "~hooks/useTranslation";
 
 const { width } = Dimensions.get("window");
 const MIN_AGE = 13;
@@ -52,6 +53,7 @@ const GENDER_OPTIONS = [
 const EditProfileScreen = ({ navigation }) => {
   const { colors, isDark } = useTheme();
   const dispatch = useDispatch();
+  const { t } = useTranslation();
 
   // Redux state
   const {
@@ -150,7 +152,7 @@ const EditProfileScreen = ({ navigation }) => {
       setLocalImagePreview(null);
       Toast.show({
         type: "error",
-        text1: "Upload Failed",
+        text1: t("editprofile_upload_failed"),
         text2: uploadPictureError,
       });
       dispatch(clearUploadPictureError());
@@ -162,7 +164,7 @@ const EditProfileScreen = ({ navigation }) => {
     if (updateInfoError) {
       Toast.show({
         type: "error",
-        text1: "Update Failed",
+        text1: t("editprofile_update_failed"),
         text2: updateInfoError,
       });
       dispatch(clearUpdateInfoError());
@@ -174,7 +176,7 @@ const EditProfileScreen = ({ navigation }) => {
     if (pickerError) {
       Toast.show({
         type: "error",
-        text1: "Error",
+        text1: t("common_error"),
         text2: pickerError,
       });
       clearPickerError();
@@ -289,8 +291,8 @@ const EditProfileScreen = ({ navigation }) => {
     if (!validateAllFields()) {
       Toast.show({
         type: "error",
-        text1: "Validation Error",
-        text2: "Please fix the errors before saving",
+        text1: t("editprofile_validation_error"),
+        text2: t("editprofile_validation_desc"),
       });
       return;
     }
@@ -300,8 +302,8 @@ const EditProfileScreen = ({ navigation }) => {
     if (Object.keys(changes).length === 0) {
       Toast.show({
         type: "info",
-        text1: "No Changes",
-        text2: "No changes to save",
+        text1: t("editprofile_no_changes_title"),
+        text2: t("editprofile_no_changes_desc"),
       });
       return;
     }
@@ -311,8 +313,8 @@ const EditProfileScreen = ({ navigation }) => {
     if (updateUserInfo.fulfilled.match(result)) {
       Toast.show({
         type: "success",
-        text1: "Profile Updated",
-        text2: "Your profile has been updated successfully",
+        text1: t("editprofile_updated_title"),
+        text2: t("editprofile_updated_desc"),
       });
       setOriginalValues({
         name,
@@ -359,7 +361,7 @@ const EditProfileScreen = ({ navigation }) => {
       {/* Header with Save Button */}
       <Header
         variant="screen"
-        title="Edit Profile"
+        title={t("editprofile_title")}
         onBack={() => navigation.goBack()}
         rightAction={
           <TouchableOpacity
@@ -375,7 +377,7 @@ const EditProfileScreen = ({ navigation }) => {
                     color: hasChanges ? colors.primary : colors.textDisabled,
                   },
                 ]}>
-                Save
+                {t("editprofile_save")}
               </Text>
             )}
           </TouchableOpacity>
@@ -442,7 +444,7 @@ const EditProfileScreen = ({ navigation }) => {
                   styles.changePhotoText,
                   { color: isLoading ? colors.textDisabled : colors.primary },
                 ]}>
-                Change Photo
+                {t("editprofile_change_photo")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -450,7 +452,7 @@ const EditProfileScreen = ({ navigation }) => {
           {/* Form Fields */}
           <TextInput
             type={1}
-            label="FULL NAME"
+            label={t("editprofile_name")}
             value={name}
             onChangeText={(val) => handleFieldChange("name", removeEmojis(val), setName)}
             leftIcon="user"
@@ -460,7 +462,7 @@ const EditProfileScreen = ({ navigation }) => {
 
           <TextInput
             type={1}
-            label="EMAIL ADDRESS"
+            label={t("editprofile_email")}
             value={email}
             onChangeText={(val) => handleFieldChange("email", val, setEmail)}
             leftIcon="mail"
@@ -472,7 +474,7 @@ const EditProfileScreen = ({ navigation }) => {
 
           <TextInput
             type={1}
-            label="PHONE NUMBER"
+            label={t("editprofile_phone")}
             value={phone}
             onChangeText={(val) => handleFieldChange("phone", val, setPhone)}
             leftIcon="phone"
@@ -486,7 +488,7 @@ const EditProfileScreen = ({ navigation }) => {
             {/* Gender Dropdown */}
             <View style={styles.halfInput}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>
-                GENDER
+                {t("editprofile_gender")}
               </Text>
               <TouchableOpacity
                 style={[
@@ -509,7 +511,7 @@ const EditProfileScreen = ({ navigation }) => {
                           : colors.inputPlaceholder,
                     },
                   ]}>
-                  {genderLabel || "Select"}
+                  {genderLabel || t("editprofile_select")}
                 </Text>
                 <ChevronDown size={18} color={isLoading ? colors.iconDisabled : colors.iconMuted} />
               </TouchableOpacity>
@@ -523,7 +525,7 @@ const EditProfileScreen = ({ navigation }) => {
             {/* Date of Birth Picker */}
             <View style={styles.halfInput}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>
-                DATE OF BIRTH
+                {t("editprofile_dob")}
               </Text>
               <TouchableOpacity
                 style={[
@@ -546,7 +548,7 @@ const EditProfileScreen = ({ navigation }) => {
                           : colors.inputPlaceholder,
                     },
                   ]}>
-                  {dob ? formatDate(dob) : "Select"}
+                  {dob ? formatDate(dob) : t("editprofile_select")}
                 </Text>
                 <ChevronDown size={18} color={isLoading ? colors.iconDisabled : colors.iconMuted} />
               </TouchableOpacity>
@@ -560,7 +562,7 @@ const EditProfileScreen = ({ navigation }) => {
 
           {/* Footer Note */}
           <Text style={[styles.footerNote, { color: colors.textMuted }]}>
-            Your profile information is visible to your Circle members.
+            {t("editprofile_footer")}
           </Text>
 
           <View style={{ height: 40 }} />
@@ -592,7 +594,7 @@ const EditProfileScreen = ({ navigation }) => {
                 ]}>
                 <View style={styles.modalHeader}>
                   <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
-                    Select Gender
+                    {t("editprofile_select_gender")}
                   </Text>
                   <TouchableOpacity
                     onPress={() => setIsGenderModalVisible(false)}

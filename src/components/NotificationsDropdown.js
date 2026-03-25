@@ -32,6 +32,7 @@ import {
   markAllNotificationsRead,
 } from "~redux/actions/notificationActions";
 import { formatTimeAgo } from "~utils/time";
+import useTranslation from "~hooks/useTranslation";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -68,6 +69,7 @@ const NotificationsDropdown = ({ visible, onClose }) => {
   const { colors, isDark } = useTheme();
   const navigation = useNavigation();
   const dispatch = useDispatch();
+  const { t } = useTranslation();
 
   // Redux state
   const { items, loading, hasMore, page, markingAll } = useSelector(
@@ -232,11 +234,11 @@ const NotificationsDropdown = ({ visible, onClose }) => {
           color={colors.textMuted}
         />
         <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-          No notifications yet
+          {t("notifications_dropdown_empty")}
         </Text>
       </View>
     );
-  }, [loading, colors.textMuted]);
+  }, [loading, colors.textMuted, t]);
 
   // ── Key extractor ─────────────────────────────────────────────────────────
   const keyExtractor = useCallback(
@@ -286,7 +288,7 @@ const NotificationsDropdown = ({ visible, onClose }) => {
                 <Text
                   style={[styles.headerTitle, { color: colors.textPrimary }]}
                 >
-                  Notifications
+                  {t("notifications_dropdown_title")}
                 </Text>
                 <View style={styles.headerRight}>
                   <TouchableOpacity
@@ -332,7 +334,7 @@ const NotificationsDropdown = ({ visible, onClose }) => {
                       markingAll && { opacity: 0.5 },
                     ]}
                   >
-                    Mark all as read
+                    {t("notifications_dropdown_mark_all")}
                   </Text>
                 </TouchableOpacity>
               )}

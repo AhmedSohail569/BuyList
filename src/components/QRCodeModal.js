@@ -13,11 +13,13 @@ import { Text } from "~components/Common";
 import { useTheme } from "~context/ThemeContext";
 import { FontFamily } from "~theme/fonts";
 import { RFValue } from "react-native-responsive-fontsize";
+import useTranslation from "~hooks/useTranslation";
 
 const { width } = Dimensions.get("window");
 
 const QRCodeModal = ({ visible, onClose, qrCodeUrl, loading, circleName }) => {
   const { colors, isDark } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <Modal
@@ -39,7 +41,7 @@ const QRCodeModal = ({ visible, onClose, qrCodeUrl, loading, circleName }) => {
                 styles.title,
                 { color: colors.textPrimary },
               ]}>
-              Circle Invite QR
+              {t("qr_title")}
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <X size={24} color={colors.textSecondary} />
@@ -49,7 +51,7 @@ const QRCodeModal = ({ visible, onClose, qrCodeUrl, loading, circleName }) => {
           {/* Body */}
           <View style={styles.body}>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              Scan this code to join {circleName ? `"${circleName}"` : "the circle"}
+              {t("qr_subtitle")} {circleName ? `"${circleName}"` : t("qr_subtitle_default")}
             </Text>
 
             <View
@@ -70,7 +72,7 @@ const QRCodeModal = ({ visible, onClose, qrCodeUrl, loading, circleName }) => {
                 />
               ) : (
                 <Text style={{ color: colors.error, fontFamily: FontFamily.medium }}>
-                  Failed to load QR Code
+                  {t("qr_failed")}
                 </Text>
               )}
             </View>
@@ -81,7 +83,7 @@ const QRCodeModal = ({ visible, onClose, qrCodeUrl, loading, circleName }) => {
             <TouchableOpacity
               style={[styles.doneButton, { backgroundColor: colors.primary }]}
               onPress={onClose}>
-              <Text style={styles.doneButtonText}>Done</Text>
+              <Text style={styles.doneButtonText}>{t("qr_done")}</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -36,43 +36,82 @@ export const hasProfilePicture = (profilePicture) =>
 import { formatTimeAgo } from "./time";
 
 /**
- * Converts a raw action type + metadata into a readable sentence fragment.
- * e.g. "PURCHASE_ITEMS" → "marked 3 items as purchased"
+ * Converts a raw action type + metadata into a translated sentence fragment.
+ * Returns a fallback English string when t is not provided.
+ *
+ * @param {string} action
+ * @param {object} metadata
+ * @param {Function} [t] - translation function from useTranslation()
+ * @returns {string}
  */
-export const formatActivityAction = (action, metadata) => {
+export const formatActivityAction = (action, metadata, t) => {
   const itemCount = metadata?.itemCount || 1;
+
+  // Helper: safely call t() or fall back to the English default
+  const tr = (key, fallback, params) => {
+    if (!t) return fallback;
+    const raw = t(key);
+    if (!params || raw === key) return raw !== key ? raw : fallback;
+    // Simple {{placeholder}} interpolation
+    return Object.entries(params).reduce(
+      (str, [k, v]) => str.replace(new RegExp(`\\{\\{${k}\\}\\}`, "g"), v),
+      raw
+    );
+  };
+
   switch (action) {
-    case "PURCHASE_ITEMS":
-      return `marked ${itemCount} ${itemCount === 1 ? "item" : "items"} as purchased`;
-    case "ADD_ITEMS":
-      return `added ${itemCount} ${itemCount === 1 ? "item" : "items"}`;
+    case "PURCHASE_ITEMS": {
+      const noun =
+        itemCount === 1
+          ? tr("activity_item", "item")
+          : tr("activity_items", "items");
+      return tr(
+        "activity_purchase_items",
+        `marked ${itemCount} ${noun} as purchased`,
+        { count: itemCount, noun }
+      );
+    }
+    case "ADD_ITEMS": {
+      const noun =
+        itemCount === 1
+          ? tr("activity_item", "item")
+          : tr("activity_items", "items");
+      return tr("activity_add_items", `added ${itemCount} ${noun}`, {
+        count: itemCount,
+        noun,
+      });
+    }
     case "CREATE_LIST":
-      return "created a list";
+      return tr("activity_create_list", "created a list");
     case "DELETE_LIST":
-      return "deleted a list";
+      return tr("activity_delete_list", "deleted a list");
     case "JOIN_CIRCLE":
-      return "joined the circle";
+      return tr("activity_join_circle", "joined the circle");
     case "LEAVE_CIRCLE":
-      return "left the circle";
+      return tr("activity_leave_circle", "left the circle");
     default:
-      return "updated the circle";
+      return tr("activity_default", "updated the circle");
   }
 };
 
 /**
  * Normalises a raw activity record into a flat display object.
+ * Pass t() from useTranslation() to get translated action strings.
+ *
  * @param {object} activity
  * @param {number} index  - fallback key
+ * @param {Function} [t] - translation function from useTranslation()
  * @returns {{ id, userName, userAvatar, actionText, targetText, timeText }}
  */
-export const normalizeActivity = (activity, index) => {
+export const normalizeActivity = (activity, index, t) => {
   const id = activity?._id || activity?.id || String(index);
   const actor = activity?.actor || {};
-  const userName = actor?.username || activity?.username || "Someone";
+  const someone = t ? t("activity_someone") : "Someone";
+  const userName = actor?.username || activity?.username || someone;
   const userAvatar = actor?.profilePicture || actor?.avatar || "";
   const actionType = activity?.action || "";
   const metadata = activity?.metadata || {};
-  const actionText = formatActivityAction(actionType, metadata);
+  const actionText = formatActivityAction(actionType, metadata, t);
   const listObj = activity?.list || {};
   const targetText = listObj?.name || metadata?.listName || "";
   const createdAt = activity?.createdAt || activity?.updatedAt;

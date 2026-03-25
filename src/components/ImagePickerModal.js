@@ -16,6 +16,7 @@ import { Text } from "~components/Common";
 import { RFValue } from "react-native-responsive-fontsize";
 import { FontFamily } from "~theme/fonts";
 import { useTheme } from "~context/ThemeContext";
+import useTranslation from "~hooks/useTranslation";
 
 const ImagePickerModal = ({
   isVisible,
@@ -25,6 +26,7 @@ const ImagePickerModal = ({
   title = "Select Photo",
 }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [pendingSelection, setPendingSelection] = useState(null); // 'camera' | 'gallery' | null
 
   // This handles the actual call after modal dismissal
@@ -105,10 +107,10 @@ const ImagePickerModal = ({
                   </View>
                   <View style={styles.optionTextContainer}>
                     <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>
-                      Take Photo
+                      {t("imagepicker_take_photo")}
                     </Text>
                     <Text style={[styles.optionDesc, { color: colors.textMuted }]}>
-                      Use your camera
+                      {t("imagepicker_take_photo_desc")}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -130,10 +132,10 @@ const ImagePickerModal = ({
                   </View>
                   <View style={styles.optionTextContainer}>
                     <Text style={[styles.optionTitle, { color: colors.textPrimary }]}>
-                      Choose from Gallery
+                      {t("imagepicker_gallery")}
                     </Text>
                     <Text style={[styles.optionDesc, { color: colors.textMuted }]}>
-                      Select existing photo
+                      {t("imagepicker_gallery_desc")}
                     </Text>
                   </View>
                 </TouchableOpacity>

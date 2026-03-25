@@ -13,6 +13,7 @@ import { FontFamily } from "~theme/fonts";
 import { useSelector } from "react-redux";
 import { formatTimeAgo } from "~utils/time";
 import Avatar from "~components/Avatar";
+import useTranslation from "~hooks/useTranslation";
 
 const MAX_LISTS = 3;
 const MAX_COMPLETED_FILL = 2; // max completed lists allowed to fill up to MAX_LISTS
@@ -46,7 +47,7 @@ const selectHomeLists = (lists) => {
 // ListCard
 // ──────────────────────────────────────────────────────────────────────────────
 
-const ListCard = ({ item, onPress, colors }) => {
+const ListCard = ({ item, onPress, colors, t }) => {
   const progress = item.progress ?? { total: 0, purchased: 0, percentage: 0 };
   const members = item.members || item.sharedWith || [];
 
@@ -62,7 +63,7 @@ const ListCard = ({ item, onPress, colors }) => {
             {item.name}
           </Text>
           <Text variant="caption" color="muted" style={styles.listSubtitle}>
-            Updated {formatTimeAgo(item.updatedAt || item.createdAt)}
+            {t("home_list_updated")} {formatTimeAgo(item.updatedAt || item.createdAt)}
           </Text>
         </View>
         {/* Member Avatars */}
@@ -95,10 +96,10 @@ const ListCard = ({ item, onPress, colors }) => {
       {/* Stats Footer */}
       <View style={styles.statsContainer}>
         <Text variant="caption" color="muted" style={styles.statsText}>
-          {progress.purchased}/{progress.total} items
+          {progress.purchased}/{progress.total} {t("home_list_items")}
         </Text>
         <Text variant="caption" style={[styles.statsText, { color: colors.primary }]}>
-          {progress.percentage}% Done
+          {progress.percentage}% {t("home_list_done")}
         </Text>
       </View>
     </TouchableOpacity>
@@ -113,6 +114,7 @@ const MemoListCard = memo(ListCard);
 
 const YourLists = ({ navigation }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const allLists = useSelector((state) => state.lists.lists);
 
   // Smart-filtered lists — memoised to avoid recalculation on every render
@@ -135,7 +137,7 @@ const YourLists = ({ navigation }) => {
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <Text variant="sectionTitle" style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-          Your Lists
+          {t("home_your_lists")}
         </Text>
       </View>
 
@@ -145,12 +147,13 @@ const YourLists = ({ navigation }) => {
           item={item}
           onPress={handleListPress}
           colors={colors}
+          t={t}
         />
       ))}
 
       <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAll} activeOpacity={0.7}>
         <Text variant="bodySmall" color="muted" style={styles.viewAllText}>
-          View All Lists
+          {t("home_view_all_lists")}
         </Text>
       </TouchableOpacity>
     </View>

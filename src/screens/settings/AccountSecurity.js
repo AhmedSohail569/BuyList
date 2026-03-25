@@ -30,6 +30,7 @@ import {
 } from "~redux/actions/sessionActions";
 import { logoutAllAndPurge } from "~redux/store";
 import useOnReconnect from "~hooks/useOnReconnect";
+import useTranslation from "~hooks/useTranslation";
 
 // ── Reusable Rows ──────────────────────────────────────────────────────────────
 
@@ -65,6 +66,7 @@ const SecurityRow = ({
 );
 
 const SessionRow = ({
+  t,
   icon: Icon,
   device,
   location,
@@ -95,15 +97,19 @@ const SessionRow = ({
           ellipsizeMode="tail">
           {device}
         </Text>
-        {isCurrent && (
+        {/* {isCurrent && (
           <View style={[styles.currentBadge, { backgroundColor: colors.badgeBackground }]}>
-            <Text style={[styles.currentBadgeText, { color: colors.badgeText }]}>Current</Text>
+            <Text style={[styles.currentBadgeText, { color: colors.badgeText }]}>{t("security_current")}</Text>
           </View>
-        )}
+        )} */}
       </View>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{location}</Text>
     </View>
-    {!isCurrent && (
+    {isCurrent ? (
+      <View style={[styles.currentBadge, { backgroundColor: colors.badgeBackground }]}>
+        <Text style={[styles.currentBadgeText, { color: colors.badgeText }]}>{t("security_current")}</Text>
+      </View>
+    ) : (
       <TouchableOpacity
         style={[styles.logoutSmallBtn, { borderColor: colors.logoutBorder }]}
         onPress={onLogout}
@@ -111,7 +117,7 @@ const SessionRow = ({
         {loading ? (
           <ActivityIndicator size="small" color={colors.error} />
         ) : (
-          <Text style={[styles.logoutSmallText, { color: colors.error }]}>Log Out</Text>
+          <Text style={[styles.logoutSmallText, { color: colors.error }]}>{t("security_log_out")}</Text>
         )}
       </TouchableOpacity>
     )}
@@ -164,6 +170,7 @@ const formatLastActive = (lastActive) => {
 const SecurityScreen = ({ navigation }) => {
   const { colors, isDark } = useTheme();
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   const [is2FAEnabled, setIs2FAEnabled] = useState(true);
 
   // Alert state
@@ -201,13 +208,13 @@ const SecurityScreen = ({ navigation }) => {
     (sessionId, deviceName) => {
       setAlertConfig({
         visible: true,
-        title: "End Session",
-        message: `Are you sure you want to logout from ${deviceName}?`,
+        title: t("security_end_session_title"),
+        message: `${t("security_end_session_message")} ${deviceName}?`,
         type: "confirm",
         buttons: [
-          { text: "Cancel", style: "cancel", onPress: closeAlert },
+          { text: t("security_cancel"), style: "cancel", onPress: closeAlert },
           {
-            text: "Logout",
+            text: t("security_logout"),
             style: "destructive",
             onPress: () => {
               dispatch(logoutSession({ sessionId }));
@@ -226,13 +233,13 @@ const SecurityScreen = ({ navigation }) => {
 
     setAlertConfig({
       visible: true,
-      title: "Logout Other Devices",
-      message: "This will logout all other devices except this one.",
+      title: t("security_logout_other_title"),
+      message: t("security_logout_other_message"),
       type: "warning",
       buttons: [
-        { text: "Cancel", style: "cancel", onPress: closeAlert },
+        { text: t("security_cancel"), style: "cancel", onPress: closeAlert },
         {
-          text: "Logout",
+          text: t("security_logout"),
           style: "destructive",
           onPress: () => {
             dispatch(logoutAllOtherSessions());
@@ -247,14 +254,13 @@ const SecurityScreen = ({ navigation }) => {
   const handleLogoutAll = useCallback(() => {
     setAlertConfig({
       visible: true,
-      title: "Logout from All Devices",
-      message:
-        "You will be logged out from all your devices including this one. You'll need to login again.",
+      title: t("security_logout_all_title"),
+      message: t("security_logout_all_message"),
       type: "error",
       buttons: [
-        { text: "Cancel", style: "cancel", onPress: closeAlert },
+        { text: t("security_cancel"), style: "cancel", onPress: closeAlert },
         {
-          text: "Logout",
+          text: t("security_logout"),
           style: "destructive",
           onPress: async () => {
             closeAlert();
@@ -272,60 +278,30 @@ const SecurityScreen = ({ navigation }) => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header variant="screen" title="Account Security" onBack={() => navigation.goBack()} />
+      <Header variant="screen" title={t("security_title")} onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* LOGIN & RECOVERY */}
-        {/* <Text style={[styles.sectionHeader, { color: colors.textMuted }]}>LOGIN & RECOVERY</Text>
-        <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
-          <SecurityRow
-            icon={Lock}
-            color={isDark ? "rgba(14, 165, 233, 0.2)" : "#e0f2fe"}
-            title="Change Password"
-            subtitle="Last changed 3 months ago"
-            onPress={() => { }}
-            colors={colors}
-          />
-          <SecurityRow
-            icon={ShieldCheck}
-            color={isDark ? "rgba(34, 197, 94, 0.2)" : "#dcfce7"}
-            title="Two-Factor Auth"
-            subtitle="Secure your account"
-            isLast
-            colors={colors}
-            rightElement={
-              <Switch
-                trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor="#ffffff"
-                ios_backgroundColor={colors.border}
-                onValueChange={setIs2FAEnabled}
-                value={is2FAEnabled}
-                style={styles.switch}
-              />
-            }
-          />
-        </View> */}
-
         {/* ACTIVE SESSIONS */}
-        <Text style={[styles.sectionHeader, { color: colors.textMuted }]}>ACTIVE SESSIONS</Text>
+        <Text style={[styles.sectionHeader, { color: colors.textMuted }]}>{t("security_section_sessions")}</Text>
 
         {loading ? (
           <View style={[styles.loadingContainer, { backgroundColor: colors.card }]}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-              Loading sessions...
+              {t("security_loading")}
             </Text>
           </View>
         ) : sessions.length === 0 ? (
           <View style={[styles.emptyContainer, { backgroundColor: colors.card }]}>
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              No active sessions found
+              {t("security_no_sessions")}
             </Text>
           </View>
         ) : (
           <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
             {sessions.map((session, index) => (
               <SessionRow
+                t={t}
                 key={session.id}
                 icon={getDeviceIcon(session.deviceType)}
                 device={session.deviceName || session.browser || "Unknown Device"}
@@ -352,7 +328,7 @@ const SecurityScreen = ({ navigation }) => {
               <>
                 <LogOut size={RFValue(16)} color={colors.error} style={styles.actionIcon} />
                 <Text style={[styles.signOutText, { color: colors.error }]}>
-                  Logout All Other Devices
+                  {t("security_logout_other")}
                 </Text>
               </>
             )}
@@ -370,7 +346,7 @@ const SecurityScreen = ({ navigation }) => {
               <>
                 <LogOut size={RFValue(16)} color={colors.error} style={styles.actionIcon} />
                 <Text style={[styles.signOutAllText, { color: colors.error }]}>
-                  Logout from All Devices
+                  {t("security_logout_all")}
                 </Text>
               </>
             )}
@@ -476,13 +452,16 @@ const styles = StyleSheet.create({
     maxWidth: "100%",
   },
   currentBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
     marginLeft: 8,
+    minWidth: 70,
+    alignItems: "center",
+    justifyContent: "center",
   },
   currentBadgeText: {
-    fontSize: RFValue(8),
+    fontSize: RFValue(10),
     fontFamily: FontFamily.bold,
   },
   logoutSmallBtn: {

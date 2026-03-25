@@ -4,9 +4,19 @@ import Icon from "react-native-vector-icons/Ionicons";
 import { RFValue } from "react-native-responsive-fontsize";
 import { Text } from "./Common";
 import { useTheme } from "~context/ThemeContext";
+import useTranslation from "~hooks/useTranslation";
 
 const Tab = ({ state, descriptors, navigation }) => {
   const { colors, isDark } = useTheme();
+  const { t } = useTranslation();
+
+  const TAB_LABELS = {
+    Home: t("tab_home"),
+    Circle: t("tab_circle"),
+    Lists: t("tab_lists"),
+    Search: t("tab_search"),
+    Settings: t("tab_settings"),
+  };
 
   return (
     <View style={{ backgroundColor: colors.background }}>
@@ -55,7 +65,7 @@ const Tab = ({ state, descriptors, navigation }) => {
                   styles.label,
                   { color: isFocused ? colors.tabActive : colors.tabInactive },
                 ]}>
-                {route.name}
+              {TAB_LABELS[route.name] || route.name}
               </Text>
             </TouchableOpacity>
           );

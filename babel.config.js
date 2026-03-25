@@ -18,6 +18,7 @@ module.exports = {
           "~screens": "./src/screens",
           "~theme": "./src/theme",
           "~utils": "./src/utils",
+          "~translations": "./src/translations",
           "~services": "./src/services",
           "~native": "./src/native",
           "~styles": "./src/styles",

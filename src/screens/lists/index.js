@@ -34,6 +34,7 @@ import {
 import { clearListsError } from "~redux/reducers/listReducer";
 import { useAlert } from "~context/AlertContext";
 import { useTheme } from "~context/ThemeContext";
+import useTranslation from "~hooks/useTranslation";
 
 // --- Sub Components ---
 
@@ -62,7 +63,7 @@ const ProgressBar = ({ completed, total, color, label, percentage, colors }) => 
     <View style={styles.progressContainer}>
       <View style={styles.progressTextRow}>
         <Text style={[styles.progressStats, { color: colors.textSecondary }]}>
-          {label} items
+          {label}
         </Text>
         <Text style={[styles.progressPercentage, { color: color }]}>
           {percentage}%
@@ -215,6 +216,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
   const { lists, loading, error } = useSelector(state => state.lists);
   const { showAlert, showError } = useAlert();
   const { colors, isDark } = useTheme();
+  const { t } = useTranslation();
 
   const [activeTab, setActiveTab] = useState("All Lists");
   const [searchQuery, setSearchQuery] = useState("");
@@ -227,6 +229,19 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
   const [isCreatingList, setIsCreatingList] = useState(false);
   const [sortOption, setSortOption] = useState("priority");
   const [showSortMenu, setShowSortMenu] = useState(false);
+
+  const getActiveTabTitle = () => {
+    switch (activeTab) {
+      case "All Lists":
+        return t("lists_tab_all");
+      case "Personal Lists":
+        return t("lists_tab_personal");
+      case "Shared Lists":
+        return t("lists_tab_shared");
+      default:
+        return activeTab;
+    }
+  };
   const isDismissingRef = useRef(false);
   const isFetchingOnFocusRef = useRef(false);
 
@@ -301,8 +316,8 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
     if (error) {
       Toast.show({
         type: "error",
-        text1: "Error",
-        text2: typeof error === "string" ? error : "Something went wrong",
+        text1: t("lists_error_title"),
+        text2: typeof error === "string" ? error : t("lists_error_desc"),
       });
       dispatch(clearListsError());
     }
@@ -415,8 +430,8 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
         await dispatch(deleteList({ listId })).unwrap();
         Toast.show({
           type: "success",
-          text1: "List Deleted",
-          text2: "List has been deleted successfully",
+          text1: t("lists_delete_success_title"),
+          text2: t("lists_delete_success_desc"),
         });
       } catch (err) {
         // Error handled by useEffect, rollback happens automatically
@@ -430,19 +445,19 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
   const confirmDeleteList = useCallback(
     (listId, listName) => {
       showAlert({
-        title: "Delete List",
-        message: `Are you sure you want to delete "${listName || "this list"}"?`,
+        title: t("lists_delete_title"),
+        message: `${t("lists_delete_message")} "${listName || t("lists_delete_this")}"?`,
         type: "confirm",
         buttons: [
-          { text: "Cancel", style: "cancel" },
+          { text: t("common_cancel"), style: "cancel" },
           {
-            text: "Delete",
+            text: t("common_delete"),
             style: "destructive",
             onPress: async () => {
               try {
                 await handleDeleteList(listId);
               } catch (e) {
-                showError("Error", "Failed to delete list. Please try again.");
+                showError(t("common_error"), t("lists_error_desc"));
               }
             },
           },
@@ -460,8 +475,8 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
       if (!data.name?.trim()) {
         Toast.show({
           type: "error",
-          text1: "Validation Error",
-          text2: "List name is required",
+          text1: t("lists_error_title"),
+          text2: t("lists_validation_name"),
         });
         return;
       }
@@ -469,8 +484,8 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
       if (!data.items || data.items.length === 0) {
         Toast.show({
           type: "error",
-          text1: "Validation Error",
-          text2: "Please add at least one item",
+          text1: t("lists_error_title"),
+          text2: t("lists_validation_items"),
         });
         return;
       }
@@ -480,8 +495,8 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
         await dispatch(createList(data)).unwrap();
         Toast.show({
           type: "success",
-          text1: "List Created",
-          text2: "Your list has been created successfully",
+          text1: t("lists_create_success_title"),
+          text2: t("lists_create_success_desc"),
         });
         closeCreateListModal();
         // Optimistic update already handled, no refetch needed
@@ -522,7 +537,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header
         variant="title"
-        title={"Your Lists"}
+        title={t("lists_title")}
         rightAction={
           <TouchableOpacity 
             style={[styles.searchButton, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}
@@ -541,21 +556,21 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
         showTabs={
           <View style={styles.filtersRow}>
             <FilterTab
-              label="All Lists"
+              label={t("lists_tab_all")}
               isActive={activeTab === "All Lists"}
               onPress={() => setActiveTab("All Lists")}
               colors={colors}
               isDark={isDark}
             />
             <FilterTab
-              label="Personal Lists"
+              label={t("lists_tab_personal")}
               isActive={activeTab === "Personal Lists"}
               onPress={() => setActiveTab("Personal Lists")}
               colors={colors}
               isDark={isDark}
             />
             <FilterTab
-              label="Shared Lists"
+              label={t("lists_tab_shared")}
               isActive={activeTab === "Shared Lists"}
               onPress={() => setActiveTab("Shared Lists")}
               colors={colors}
@@ -571,7 +586,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
             <Search size={RFValue(16)} color={colors.iconMuted} />
             <TextInput
               style={[styles.searchInput, { color: colors.textPrimary }]}
-              placeholder="Search your lists..."
+              placeholder={t("lists_search_placeholder")}
               placeholderTextColor={colors.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -628,7 +643,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
 
           {/* Section Header */}
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{activeTab.toUpperCase()}</Text>
+            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{getActiveTabTitle().toUpperCase()}</Text>
             <Menu
               visible={showSortMenu}
               onDismiss={() => {

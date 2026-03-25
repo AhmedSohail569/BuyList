@@ -16,6 +16,7 @@ import {RFValue} from "react-native-responsive-fontsize";
 import {Text} from "~components/Common";
 import {FontFamily} from "~theme/fonts";
 import {useTheme} from "~context/ThemeContext";
+import useTranslation from "~hooks/useTranslation";
 
 const {width, height} = Dimensions.get("window");
 
@@ -27,6 +28,7 @@ export const BottomModal = ({
   loading = false,
 }) => {
   const {colors, isDark} = useTheme();
+  const { t } = useTranslation();
   // --- STATE: Filter Mode ---
   const [selectedSort, setSelectedSort] = useState("Relevance");
   const [minPrice, setMinPrice] = useState("0");
@@ -121,7 +123,7 @@ export const BottomModal = ({
 
     // Validate required fields
     if (!listName.trim()) {
-      setListNameError("Please enter a list name");
+      setListNameError(t("lists_validation_name"));
       hasError = true;
       
       // Auto-scroll to top so the list name error is visible
@@ -129,7 +131,7 @@ export const BottomModal = ({
     }
 
     if (items.length === 0) {
-      setItemsError("Please add at least one item");
+      setItemsError(t("lists_validation_items"));
       hasError = true;
     }
 
@@ -159,7 +161,7 @@ export const BottomModal = ({
   const renderFilterContent = () => (
     <>
       <View style={styles.modalHeader}>
-        <Text style={[styles.modalTitle, {color: colors.textPrimary}]}>Filters & Sort</Text>
+        <Text style={[styles.modalTitle, {color: colors.textPrimary}]}>{t("modal_filters_title")}</Text>
         <TouchableOpacity onPress={onClose} hitSlop={10}>
           <X size={24} color={colors.iconMuted} />
         </TouchableOpacity>
@@ -167,7 +169,7 @@ export const BottomModal = ({
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Sort Section */}
-        <Text style={[styles.sectionLabel, {color: colors.textMuted}]}>SORT BY</Text>
+        <Text style={[styles.sectionLabel, {color: colors.textMuted}]}>{t("modal_sort_label")}</Text>
         <View style={styles.chipsContainer}>
           {sortOptions.map(option => {
             const isActive = selectedSort === option;
@@ -195,7 +197,7 @@ export const BottomModal = ({
         </View>
 
         {/* Price Range Section */}
-        <Text style={[styles.sectionLabel, {color: colors.textMuted}]}>PRICE RANGE</Text>
+        <Text style={[styles.sectionLabel, {color: colors.textMuted}]}>{t("modal_price_label")}</Text>
         <View style={styles.priceRow}>
           <View style={[styles.priceInputContainer, {backgroundColor: colors.surfaceSecondary, borderColor: colors.border}]}>
             <Text style={[styles.currencyPrefix, {color: colors.textMuted}]}>$</Text>
@@ -225,7 +227,7 @@ export const BottomModal = ({
         <TouchableOpacity
           style={[styles.resetButton, {backgroundColor: colors.surfaceSecondary}]}
           onPress={handleResetFilter}>
-          <Text style={[styles.resetButtonText, {color: colors.textPrimary}]}>Reset</Text>
+          <Text style={[styles.resetButtonText, {color: colors.textPrimary}]}>{t("modal_reset")}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.applyButton, {backgroundColor: colors.primary}]}
@@ -233,7 +235,7 @@ export const BottomModal = ({
             onApply({sort: selectedSort, minPrice, maxPrice});
             onClose();
           }}>
-          <Text style={styles.applyButtonText}>Show Results</Text>
+          <Text style={styles.applyButtonText}>{t("modal_show_results")}</Text>
         </TouchableOpacity>
       </View>
     </>
@@ -242,7 +244,7 @@ export const BottomModal = ({
   const renderCreateListContent = () => (
     <>
       <View style={styles.modalHeader}>
-        <Text style={[styles.modalTitle, {color: colors.textPrimary}]}>New List</Text>
+        <Text style={[styles.modalTitle, {color: colors.textPrimary}]}>{t("modal_new_list")}</Text>
         <TouchableOpacity onPress={onClose} hitSlop={10}>
           <X size={24} color={colors.iconMuted} />
         </TouchableOpacity>
@@ -253,11 +255,11 @@ export const BottomModal = ({
         showsVerticalScrollIndicator={false} 
         keyboardShouldPersistTaps="handled">
         {/* List Name */}
-        <Text style={[styles.inputLabel, {color: colors.textMuted}]}>LIST NAME <Text style={{color: "#ef4444"}}>*</Text></Text>
+        <Text style={[styles.inputLabel, {color: colors.textMuted}]}>{t("modal_list_name")} <Text style={{color: "#ef4444"}}>*</Text></Text>
         <View style={[styles.inputContainer, {backgroundColor: colors.surfaceSecondary, borderColor: listNameError ? "#ef4444" : colors.border, marginBottom: listNameError ? 4 : 20}]}>
           <TextInput
             style={[styles.textInput, {color: colors.textPrimary}]}
-            placeholder="e.g., Weekly Groceries"
+            placeholder={t("modal_list_name_placeholder")}
             placeholderTextColor={colors.inputPlaceholder}
             value={listName}
             onChangeText={(text) => {
@@ -271,7 +273,7 @@ export const BottomModal = ({
         ) : null}
 
         {/* Category */}
-        <Text style={[styles.inputLabel, {color: colors.textMuted}]}>CATEGORY</Text>
+        <Text style={[styles.inputLabel, {color: colors.textMuted}]}>{t("modal_category")}</Text>
         <View style={styles.chipsContainer}>
           {categoryOptions.map(cat => {
             const isActive = selectedCategory === cat;
@@ -299,11 +301,11 @@ export const BottomModal = ({
         </View>
 
         {/* Add Items */}
-        <Text style={[styles.inputLabel, {color: colors.textMuted}]}>ADD ITEMS <Text style={{color: "#ef4444"}}>*</Text></Text>
+        <Text style={[styles.inputLabel, {color: colors.textMuted}]}>{t("modal_add_items")} <Text style={{color: "#ef4444"}}>*</Text></Text>
         <View style={[styles.inputContainer, {backgroundColor: colors.surfaceSecondary, borderColor: itemsError ? "#ef4444" : colors.border, marginBottom: 12}]}>
           <TextInput
             style={[styles.textInput, {color: colors.textPrimary}]}
-            placeholder="Add an item..."
+            placeholder={t("modal_add_item_placeholder")}
             placeholderTextColor={colors.inputPlaceholder}
             value={newItem}
             onChangeText={setNewItem}
@@ -348,14 +350,13 @@ export const BottomModal = ({
         )}
 
         {/* Set Priority */}
-        <Text style={[styles.inputLabel, {color: colors.textMuted}]}>SET PRIORITY</Text>
+        <Text style={[styles.inputLabel, {color: colors.textMuted}]}>{t("modal_set_priority")}</Text>
         <View style={styles.dropdownContainer}>
           <TouchableOpacity
             style={[styles.dropdownInput, {backgroundColor: colors.surfaceSecondary, borderColor: colors.border}]}
             onPress={() => setShowPriorityDropdown(!showPriorityDropdown)}>
             <Text style={[styles.inputText, {color: colors.textSecondary}]}>
-              {priorityOptions.find(opt => opt.value === priority)?.label ||
-                "Medium"}
+              {t("modal_priority_" + (priorityOptions.find(opt => opt.value === priority)?.value || "medium"))}
             </Text>
             <ChevronDown
               size={20}
@@ -390,7 +391,7 @@ export const BottomModal = ({
                         styles.dropdownOptionText,
                         {color: priority === option.value ? colors.primary : colors.textMuted},
                       ]}>
-                      {option.label}
+                      {t("modal_priority_" + option.value)}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -407,7 +408,7 @@ export const BottomModal = ({
               <Users size={20} color={colors.primary} />
             </View>
             <View>
-              <Text style={[styles.toggleTitle, {color: colors.textPrimary}]}>Share with Circle</Text>
+              <Text style={[styles.toggleTitle, {color: colors.textPrimary}]}>{t("modal_share")}</Text>
               <Text style={[styles.toggleSubtitle, {color: colors.textMuted}]}>Family Home</Text>
             </View>
           </View>
@@ -433,7 +434,7 @@ export const BottomModal = ({
           onPress={handleCreateList}
           disabled={loading || isSubmitting}>
           <Text style={styles.createButtonText}>
-            {loading || isSubmitting ? "Creating..." : "Create List"}
+            {loading || isSubmitting ? t("modal_creating_list") : t("modal_create_list")}
           </Text>
         </TouchableOpacity>
       </View>

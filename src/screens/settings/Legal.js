@@ -5,6 +5,7 @@ import { ScrollView, Text } from "~components/Common";
 import { RFValue } from "react-native-responsive-fontsize";
 import { FontFamily } from "~theme/fonts";
 import { useTheme } from "~context/ThemeContext";
+import useTranslation from "~hooks/useTranslation";
 
 const { width } = Dimensions.get("window");
 
@@ -17,13 +18,14 @@ const LegalSection = ({ title, content, colors, isBold = false }) => (
 
 const LegalScreen = ({ navigation }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("terms"); // 'terms' | 'privacy'
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header
         variant="screen"
-        title={"Legal"}
+        title={t("legal_title")}
         onBack={() => navigation.goBack()}
       />
 
@@ -38,7 +40,7 @@ const LegalScreen = ({ navigation }) => {
               { color: colors.textMuted },
               activeTab === "terms" && [styles.activeTabText, { color: colors.primary }],
             ]}>
-            Terms & Conditions
+            {t("legal_tab_terms")}
           </Text>
         </TouchableOpacity>
 
@@ -51,7 +53,7 @@ const LegalScreen = ({ navigation }) => {
               { color: colors.textMuted },
               activeTab === "privacy" && [styles.activeTabText, { color: colors.primary }],
             ]}>
-            Privacy Policy
+            {t("legal_tab_privacy")}
           </Text>
         </TouchableOpacity>
       </View>
@@ -140,7 +142,7 @@ const LegalScreen = ({ navigation }) => {
           </>
         )}
 
-        <Text style={[styles.lastUpdated, { color: colors.textMuted }]}>Last updated: March 2026</Text>
+        <Text style={[styles.lastUpdated, { color: colors.textMuted }]}>{t("legal_last_updated")}</Text>
         <View style={{ height: 40 }} />
       </ScrollView>
     </View>

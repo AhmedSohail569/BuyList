@@ -29,6 +29,7 @@ import {
 } from "~redux/actions/notificationActions";
 import useOnReconnect from "~hooks/useOnReconnect";
 import useScreenFetch from "~hooks/useScreenFetch";
+import useTranslation from "~hooks/useTranslation";
 
 
 
@@ -97,7 +98,7 @@ const NotificationRow = ({
   </View>
 );
 
-const MasterToggle = ({ isEnabled, onToggle, colors, updating }) => (
+const MasterToggle = ({ isEnabled, onToggle, colors, updating, title, description }) => (
   <View
     style={[
       styles.masterRow,
@@ -119,12 +120,10 @@ const MasterToggle = ({ isEnabled, onToggle, colors, updating }) => (
 
     <View style={styles.masterText}>
       <Text style={[styles.masterTitle, { color: colors.textPrimary }]}>
-        Push Notifications
+        {title}
       </Text>
       <Text style={[styles.masterDescription, { color: colors.textSecondary }]}>
-        {isEnabled
-          ? "You will receive notifications"
-          : "All notifications are paused"}
+        {description}
       </Text>
     </View>
 
@@ -148,60 +147,25 @@ const MasterToggle = ({ isEnabled, onToggle, colors, updating }) => (
   </View>
 );
 
-const NOTIFICATION_ITEMS = [
-  {
-    key: "sharedListUpdates",
-    icon: Users,
-    color: "#a855f7",
-    title: "Shared List Updates",
-    description: "When members add or check items",
-    isApi: true,
-  },
-  {
-    key: "itemAddedAlerts",
-    icon: ShoppingCart,
-    color: "#f97316",
-    title: "New Items Added",
-    description: "Alerts when someone adds to your lists",
-    isApi: true,
-  },
-  {
-    key: "priceDrop",
-    icon: Tag,
-    color: "#22c55e",
-    title: "Price Drop Alerts",
-    description: "Notify when watched items go on sale",
-    isApi: false,
-  },
-  {
-    key: "weeklyReminders",
-    icon: Calendar,
-    color: "#3b82f6",
-    title: "Weekly Reminders",
-    description: "Remind me to shop on weekends",
-    isApi: true,
-  },
-  {
-    key: "promotions",
-    icon: Megaphone,
-    color: "#ec4899",
-    title: "Promotions",
-    description: "Deals, discounts, and special offers",
-    isApi: true,
-  },
-  {
-    key: "tips",
-    icon: Lightbulb,
-    color: "#eab308",
-    title: "Tips & Updates",
-    description: "Shopping tips, news, and app updates",
-    isApi: true,
-  },
+const NOTIFICATION_KEYS = [
+  { key: "sharedListUpdates", icon: Users, color: "#a855f7", titleKey: "notifications_item_shared_list_title", descKey: "notifications_item_shared_list_desc", isApi: true },
+  { key: "itemAddedAlerts", icon: ShoppingCart, color: "#f97316", titleKey: "notifications_item_new_items_title", descKey: "notifications_item_new_items_desc", isApi: true },
+  { key: "priceDrop", icon: Tag, color: "#22c55e", titleKey: "notifications_item_price_drop_title", descKey: "notifications_item_price_drop_desc", isApi: false },
+  { key: "weeklyReminders", icon: Calendar, color: "#3b82f6", titleKey: "notifications_item_reminders_title", descKey: "notifications_item_reminders_desc", isApi: true },
+  { key: "promotions", icon: Megaphone, color: "#ec4899", titleKey: "notifications_item_promotions_title", descKey: "notifications_item_promotions_desc", isApi: true },
+  { key: "tips", icon: Lightbulb, color: "#eab308", titleKey: "notifications_item_tips_title", descKey: "notifications_item_tips_desc", isApi: true },
 ];
 
 const NotificationsScreen = ({ navigation }) => {
   const { colors, isDark } = useTheme();
   const dispatch = useDispatch();
+  const { t } = useTranslation();
+
+  const NOTIFICATION_ITEMS = NOTIFICATION_KEYS.map(item => ({
+    ...item,
+    title: t(item.titleKey),
+    description: t(item.descKey),
+  }));
 
   const { settings, settingsLoading, updatingKeys } = useSelector(
     (state) => state.notifications,
@@ -245,13 +209,13 @@ const NotificationsScreen = ({ navigation }) => {
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <Header
           variant="screen"
-          title="Notifications"
+          title={t("notifications_title")}
           onBack={() => navigation.goBack()}
         />
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loaderText, { color: colors.textSecondary }]}>
-            Loading settings...
+            {t("notifications_loading")}
           </Text>
         </View>
       </View>
@@ -262,7 +226,7 @@ const NotificationsScreen = ({ navigation }) => {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header
         variant="screen"
-        title="Notifications"
+        title={t("notifications_title")}
         onBack={() => navigation.goBack()}
       />
 
@@ -275,6 +239,8 @@ const NotificationsScreen = ({ navigation }) => {
           onToggle={handleMasterToggle}
           colors={colors}
           updating={!!updatingKeys.pushEnabled}
+          title={t("notifications_push_title")}
+          description={settings.pushEnabled ? t("notifications_push_enabled") : t("notifications_push_disabled")}
         />
 
         {pushDisabled && (
@@ -286,14 +252,13 @@ const NotificationsScreen = ({ navigation }) => {
           >
             <BellOff size={RFValue(16)} color="#eab308" style={styles.pausedIcon} />
             <Text style={[styles.pausedText, { color: isDark ? "#fbbf24" : "#a16207" }]}>
-              Push notifications are turned off. Individual preferences below
-              will take effect when you re-enable them.
+              {t("notifications_paused_banner")}
             </Text>
           </View>
         )}
 
         <Text style={[styles.sectionHeader, { color: colors.textMuted }]}>
-          NOTIFICATION TYPES
+          {t("notifications_types_section")}
         </Text>
 
         <View
@@ -327,8 +292,7 @@ const NotificationsScreen = ({ navigation }) => {
         >
           <Info size={RFValue(18)} color={colors.primary} style={styles.infoIcon} />
           <Text style={[styles.infoText, { color: colors.primary }]}>
-            You can also manage system-level notifications for Bagg in your
-            device settings.
+            {t("notifications_manage_system")}
           </Text>
         </View>
 

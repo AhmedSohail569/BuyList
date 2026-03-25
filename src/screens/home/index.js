@@ -35,6 +35,7 @@ import { fetchBanners, searchLocalStores } from "~redux/actions/searchActions";
 import useScreenFetch from "~hooks/useScreenFetch";
 import Avatar from "~components/Avatar";
 import { normalizeActivity } from "~utils/display";
+import useTranslation from "~hooks/useTranslation";
 
 const { width } = Dimensions.get("window");
 
@@ -78,6 +79,7 @@ const FOR_YOU = [
 
 const HomeTab = ({ onQuickAction, navigation }) => {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
 
   const { colors, isDark } = useTheme();
   const { user } = useSelector(state => state.auth);
@@ -154,8 +156,8 @@ const HomeTab = ({ onQuickAction, navigation }) => {
   // Normalize activities for display (limit to 2 for home screen)
   const circleUpdates = useMemo(() => {
     const activities = Array.isArray(recentActivities) ? recentActivities : [];
-    return activities.slice(0, 2).map(normalizeActivity);
-  }, [recentActivities]);
+    return activities.slice(0, 2).map((activity, index) => normalizeActivity(activity, index, t));
+  }, [recentActivities, t]);
 
   const navigateToTab = tabName => {
     const tabNav = navigation.getParent?.();
@@ -200,7 +202,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header
         variant="home"
-        greeting="Good Morning,"
+        greeting={t("home_good_morning")}
         userName={profile?.username || user?.username || "User"}
         avatar={profile?.profilePicture ? { uri: profile.profilePicture } : null}
         rightIcon="notifications-outline"
@@ -209,7 +211,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
       />
 
       <SearchBar
-        placeholder="Search products, categories..."
+        placeholder={t("home_search_placeholder")}
         value={searchQuery}
         onChangeText={setSearchQuery}
         showSearchButton={true}
@@ -223,7 +225,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
           <ActionIcon
             id="create"
             icon={Plus}
-            label="Create"
+            label={t("home_quick_create")}
             color={quickActionColors.create.bg}
             iconColor={quickActionColors.create.icon}
             labelColor={colors.textSecondary}
@@ -232,7 +234,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
           <ActionIcon
             id="lists"
             icon={List}
-            label="Lists"
+            label={t("home_quick_lists")}
             color={quickActionColors.lists.bg}
             iconColor={quickActionColors.lists.icon}
             labelColor={colors.textSecondary}
@@ -241,7 +243,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
           <ActionIcon
             id="circle"
             icon={Users}
-            label="Circle"
+            label={t("home_quick_circle")}
             color={quickActionColors.circle.bg}
             iconColor={quickActionColors.circle.icon}
             labelColor={colors.textSecondary}
@@ -250,7 +252,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
           <ActionIcon
             id="search"
             icon={Search}
-            label="Search"
+            label={t("home_quick_search")}
             color={quickActionColors.compare.bg}
             iconColor={quickActionColors.compare.icon}
             labelColor={colors.textSecondary}
@@ -271,7 +273,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
                         image: b.imageUrl,
                         url: b.link,
                       }))}
-                      title="Ads & Offers"
+                      title={t("home_ads_offers")}
                       onAdPress={(item) => {
                         if (item.url) {
                           // Assuming you have Linking imported. If not we should just pass
@@ -286,7 +288,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
 
         {/* --- SECTION: Circle Updates --- */}
         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-          Circle Updates
+          {t("home_circle_updates")}
         </Text>
         <View
           style={[
@@ -298,7 +300,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
           ]}>
           {circleUpdates.length === 0 ? (
             <Text style={[styles.emptyUpdateText, { color: colors.textMuted }]}>
-              No recent updates yet.
+              {t("home_no_updates")}
             </Text>
           ) : (
             circleUpdates.map((item, index) => (
@@ -343,7 +345,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
 
         {/* --- SECTION: Best Online Prices --- */}
         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-          Best Online Prices
+          {t("home_best_prices")}
         </Text>
         <View style={styles.horizontalScrollContainer}>
           <ReactScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -389,7 +391,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
                 styles.sectionTitle,
                 { marginBottom: 0, color: colors.textPrimary },
               ]}>
-              For You
+              {t("home_for_you")}
             </Text>
             <Sparkles
               size={16}
@@ -402,7 +404,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
             style={styles.seeAllBtn}
             onPress={() => navigation.navigate("AIRecommendations")}>
             <Text style={[styles.seeAllText, { color: colors.primary }]}>
-              See All
+              {t("home_see_all")}
             </Text>
             <ArrowRight size={14} color={colors.primary} />
           </TouchableOpacity>
@@ -459,7 +461,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
                       styles.addListText,
                       { color: isDark ? colors.primary : "#FFF" },
                     ]}>
-                    + Add to List
+                    {t("home_add_to_list")}
                   </Text>
                 </TouchableOpacity>
               </View>

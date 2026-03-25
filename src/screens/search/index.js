@@ -26,6 +26,7 @@ import { useTheme } from "~context/ThemeContext";
 import { RFValue } from "react-native-responsive-fontsize";
 import { fetchRecentSearches, fetchTrendingSearches, clearRecentSearches } from "~redux/actions/searchActions";
 import useScreenFetch from "~hooks/useScreenFetch";
+import useTranslation from "~hooks/useTranslation";
 
 // Category configurations for UI mapping
 const CATEGORY_UI_MAP = {
@@ -80,6 +81,7 @@ const SUGGESTED = [
 const SearchTab = ({ onQuickAction, navigation }) => {
   const { colors, isDark } = useTheme();
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   
   const { 
     recentSearches, 
@@ -112,11 +114,11 @@ const SearchTab = ({ onQuickAction, navigation }) => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header variant="screen" title={"Search"} />
+      <Header variant="screen" title={t("search_tab_title")} />
 
       <SearchBar
         type={2}
-        placeholder="Search products, categories..."
+        placeholder={t("search_tab_placeholder")}
         editable={false}
         onPress={() => navigation.navigate("SearchResults")}
       />
@@ -130,12 +132,12 @@ const SearchTab = ({ onQuickAction, navigation }) => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitleSmall, { color: colors.textMuted }]}>
-                RECENT
+                {t("search_recent_label")}
               </Text>
               {recentSearches?.length > 0 && !recentLoading && (
                 <TouchableOpacity onPress={handleClearSearches}>
                   <Text style={[styles.clearAllText, { color: colors.error }]}>
-                    Clear All
+                    {t("search_clear_all")}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -175,7 +177,7 @@ const SearchTab = ({ onQuickAction, navigation }) => {
           <View style={styles.headerWithIcon}>
             <TrendingUp size={20} color={colors.primary} />
             <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-              Trending Now
+              {t("search_trending_now")}
             </Text>
           </View>
           <View style={styles.trendingRow}>
@@ -226,7 +228,7 @@ const SearchTab = ({ onQuickAction, navigation }) => {
                       {displayName}
                     </Text>
                     <Text style={[styles.trendingCategory, { color: colors.textMuted }]} numberOfLines={1}>
-                      {item.category || "Popular"}
+                      {item.category || t("search_popular")}
                     </Text>
                   </TouchableOpacity>
                 )
@@ -238,7 +240,7 @@ const SearchTab = ({ onQuickAction, navigation }) => {
         {/* Browse Categories */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginBottom: 12 }]}>
-            Browse Categories
+            {t("search_browse_categories")}
           </Text>
           <View style={styles.categoriesGrid}>
             {CATEGORIES.map(cat => (
@@ -263,7 +265,7 @@ const SearchTab = ({ onQuickAction, navigation }) => {
           <View style={styles.headerWithIcon}>
             <Sparkles size={20} color={colors.primary} fill={colors.primary} />
             <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-              Suggested for You
+              {t("search_suggested")}
             </Text>
           </View>
 
@@ -310,7 +312,7 @@ const SearchTab = ({ onQuickAction, navigation }) => {
                       { backgroundColor: isDark ? colors.primary : "#111827" },
                     ]}>
                     <Plus size={16} color="#fff" />
-                    <Text style={styles.addButtonText}>Add</Text>
+                    <Text style={styles.addButtonText}>{t("search_add")}</Text>
                   </TouchableOpacity>
                 </View>
               </View>

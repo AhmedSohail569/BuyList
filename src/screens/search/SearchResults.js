@@ -34,6 +34,7 @@ import {
 import { clearSearchResults } from "~redux/reducers/searchReducer";
 import { calculateDistance, formatDistance } from "~utils";
 import AdsOffersCarousel from "~components/AdsOffersCarousel";
+import useTranslation from "~hooks/useTranslation";
 
 const { width } = Dimensions.get("window");
 
@@ -41,6 +42,7 @@ const SearchResultsScreen = ({ navigation, route }) => {
   const { colors } = useTheme();
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   // Get initial query from route params (if navigated with a query)
   const initialQuery = route?.params?.query || "";
@@ -81,8 +83,6 @@ const SearchResultsScreen = ({ navigation, route }) => {
   const loadingMore = isOnlineTab ? onlineLoadingMore : localLoadingMore;
   const error = isOnlineTab ? onlineError : localError;
   const hasMore = isOnlineTab ? onlineHasMore : localHasMore;
-
-  console.log('localResults', localResults)
 
   /**
    * Perform search based on active tab
@@ -394,7 +394,7 @@ const SearchResultsScreen = ({ navigation, route }) => {
                         color: isOpen ? colors.badgeText : colors.error,
                       },
                     ]}>
-                    {isOpen ? "Open" : "Closed"}
+                    {isOpen ? t("search_open") : t("search_closed")}
                   </Text>
                 </View>
               )}
@@ -428,13 +428,13 @@ const SearchResultsScreen = ({ navigation, route }) => {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header
         variant="screen"
-        title="Search Results"
+        title={t("search_results_title")}
         onBack={() => navigation.goBack()}
       />
 
       <SearchBar
         type={2}
-        placeholder="Search products..."
+        placeholder={t("search_placeholder")}
         value={searchQuery}
         onChangeText={setSearchQuery}
         onSubmitEditing={() => performSearch(searchQuery)}
@@ -481,7 +481,7 @@ const SearchResultsScreen = ({ navigation, route }) => {
                 { color: colors.textMuted },
                 activeTab === "Local Stores" && { color: colors.textPrimary },
               ]}>
-              Local Stores
+              {t("search_tab_local")}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -510,7 +510,7 @@ const SearchResultsScreen = ({ navigation, route }) => {
                 { color: colors.textMuted },
                 activeTab === "Online Stores" && { color: colors.textPrimary },
               ]}>
-              Online Stores
+              {t("search_tab_online")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -518,7 +518,7 @@ const SearchResultsScreen = ({ navigation, route }) => {
         {/* Filter Row */}
         <View style={styles.filterRow}>
           <Text style={[styles.resultsCount, { color: colors.textSecondary }]}>
-            {resultsCount} results found
+            {resultsCount} {t("search_results_count")}
           </Text>
           <View style={styles.filterButtons}>
             <TouchableOpacity
@@ -533,7 +533,7 @@ const SearchResultsScreen = ({ navigation, route }) => {
                   styles.filterButtonText,
                   { color: colors.textSecondary },
                 ]}>
-                Filters
+                {t("search_filters")}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -547,7 +547,7 @@ const SearchResultsScreen = ({ navigation, route }) => {
                   styles.filterButtonText,
                   { color: colors.textSecondary },
                 ]}>
-                Sort
+                {t("search_sort")}
               </Text>
               <ChevronDown size={14} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -565,29 +565,29 @@ const SearchResultsScreen = ({ navigation, route }) => {
           <View style={styles.noResultsContainer}>
             <Text
               style={[styles.noResultsText, { color: colors.textPrimary }]}>
-              Something went wrong
+              {t("common_error")}
             </Text>
             <Text
               style={[styles.noResultsSubText, { color: colors.textSecondary }]}>
-              {typeof error === "string" ? error : "Please try again."}
+              {typeof error === "string" ? error : t("search_try_again")}
             </Text>
           </View>
         ) : results.length === 0 && searchQuery.trim() ? (
           <View style={styles.noResultsContainer}>
             <Text
               style={[styles.noResultsText, { color: colors.textPrimary }]}>
-              No results found for &quot;{searchQuery}&quot;
+              {t("search_no_results")} "{searchQuery}"
             </Text>
             <Text
               style={[styles.noResultsSubText, { color: colors.textSecondary }]}>
-              Try adjusting your search terms.
+              {t("search_no_results_desc")}
             </Text>
           </View>
         ) : !searchQuery.trim() ? (
           <View style={styles.noResultsContainer}>
             <Text
               style={[styles.noResultsSubText, { color: colors.textSecondary }]}>
-              Search for products to see results
+              {t("search_prompt")}
             </Text>
           </View>
         ) : (
@@ -615,7 +615,7 @@ const SearchResultsScreen = ({ navigation, route }) => {
                       styles.loadMoreText,
                       { color: colors.textPrimary },
                     ]}>
-                    Load More
+                    {t("search_load_more")}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -633,7 +633,7 @@ const SearchResultsScreen = ({ navigation, route }) => {
                 image: b.imageUrl,
                 url: b.link,
               }))}
-              title="Ads & Offers"
+              title={t("home_ads_offers")}
               onAdPress={(item) => {
                 if (item.url) {
                   Linking.openURL(item.url).catch(() => {});

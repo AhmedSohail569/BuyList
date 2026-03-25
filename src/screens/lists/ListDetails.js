@@ -34,12 +34,14 @@ import {
 import { clearListsError } from "~redux/reducers/listReducer";
 import { useAlert } from "~context/AlertContext";
 import { useTheme } from "~context/ThemeContext";
+import useTranslation from "~hooks/useTranslation";
 
 const ListDetailsScreen = ({ navigation, route }) => {
   const dispatch = useDispatch();
   const { listById, loading, error } = useSelector(state => state.lists);
   const { showAlert, showError } = useAlert();
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   const listId = route?.params?.listId;
   const list = listId ? listById[listId] : null;
@@ -76,8 +78,8 @@ const ListDetailsScreen = ({ navigation, route }) => {
     if (error) {
       Toast.show({
         type: "error",
-        text1: "Error",
-        text2: typeof error === "string" ? error : "Something went wrong",
+        text1: t("listdetails_error"),
+        text2: typeof error === "string" ? error : t("listdetails_error_desc"),
       });
       dispatch(clearListsError());
     }
@@ -120,8 +122,8 @@ const ListDetailsScreen = ({ navigation, route }) => {
       await dispatch(deleteList({ listId })).unwrap();
       Toast.show({
         type: "success",
-        text1: "List Deleted",
-        text2: "List has been deleted successfully",
+        text1: t("listdetails_deleted_title"),
+        text2: t("listdetails_deleted_desc"),
       });
       navigation.goBack();
     } catch (e) {
@@ -135,13 +137,13 @@ const ListDetailsScreen = ({ navigation, route }) => {
     setShowHeaderMenu(false);
 
     showAlert({
-      title: "Delete List",
-      message: `Are you sure you want to delete "${list?.name || "this list"}"?`,
+      title: t("listdetails_delete_title"),
+      message: `${t("listdetails_delete_message")} "${list?.name || t("lists_delete_this")}"?`,
       type: "confirm",
       buttons: [
-        { text: "Cancel", style: "cancel" },
+        { text: t("listdetails_cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("listdetails_delete"),
           style: "destructive",
           onPress: handleDeleteThisList,
         },

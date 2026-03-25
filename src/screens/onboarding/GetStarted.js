@@ -24,12 +24,14 @@ import { appleLogin } from "~redux/actions/appleAuthActions";
 import Toast from "react-native-toast-message";
 import { ActivityIndicator } from "react-native";
 import { checkPhoneExists } from "~redux/actions/authActions";
+import useTranslation from "~hooks/useTranslation";
 import { checkConnectivity, showNoInternetToast } from "~utils/network";
 
 const GetStartedScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef(null);
   const inputRef   = useRef(null);
+  const { t } = useTranslation();
 
   const [phone, setPhone] = useState("");
   const dispatch = useDispatch();
@@ -55,8 +57,8 @@ const GetStartedScreen = ({ navigation }) => {
       if (error.message !== "User cancelled the login flow.") {
         Toast.show({
           type: "error",
-          text1: "Google Login Failed",
-          text2: error.message || "An unexpected error occurred",
+          text1: t("getstarted_google_failed"),
+          text2: error.message || t("common_unexpected_error"),
         });
       }
     }
@@ -81,8 +83,8 @@ const GetStartedScreen = ({ navigation }) => {
       if (error.message !== "User cancelled the login flow.") {
         Toast.show({
           type: "error",
-          text1: "Apple Login Failed",
-          text2: error.message || "An unexpected error occurred",
+          text1: t("getstarted_apple_failed"),
+          text2: error.message || t("common_unexpected_error"),
         });
       }
     }
@@ -101,8 +103,8 @@ const GetStartedScreen = ({ navigation }) => {
       if (!phoneData || phoneData.fullPhone.trim().length < 5) {
         Toast.show({
           type: "error",
-          text1: "Invalid Phone",
-          text2: "Please enter a valid phone number",
+          text1: t("getstarted_invalid_phone"),
+          text2: t("getstarted_invalid_phone_desc"),
         });
         return;
       }
@@ -113,8 +115,8 @@ const GetStartedScreen = ({ navigation }) => {
         if (result?.exists) {
           Toast.show({
             type: "error",
-            text1: "Phone Number Exists",
-            text2: "This phone number is already registered. Please login instead.",
+            text1: t("getstarted_phone_exists"),
+            text2: t("getstarted_phone_exists_desc"),
           });
           return;
         }
@@ -123,8 +125,8 @@ const GetStartedScreen = ({ navigation }) => {
       } catch (err) {
         Toast.show({
           type: "error",
-          text1: "Error",
-          text2: err || "Something went wrong",
+          text1: t("getstarted_error"),
+          text2: err || t("getstarted_error_desc"),
         });
       }
     },
@@ -185,7 +187,7 @@ const GetStartedScreen = ({ navigation }) => {
           style={[styles.content, { paddingBottom: insets.bottom + RFValue(24) }]}>
           {/* Title */}
           <Text variant="sectionTitle" style={[styles.title, { color: "#1B1A1F" }]}>
-            Let's get your shopping{"\n"}done with Bagg!
+            {t("getstarted_title")}
           </Text>
 
           {/* Phone input — ref used to measure position for scroll */}
@@ -209,7 +211,7 @@ const GetStartedScreen = ({ navigation }) => {
             variant="bodySmall"
             align="center"
             style={[styles.subtitle, { color: "#9CA3AF" }]}>
-            Or connect with social media
+            {t("getstarted_subtitle")}
           </Text>
 
           <TouchableOpacity 
@@ -223,7 +225,7 @@ const GetStartedScreen = ({ navigation }) => {
               <>
                 <Icon name="google" size={30} color={"#FFFFFF"} />
                 <Text variant="bodySmall" style={[styles.textStyle, { color: "#FFFFFF" }]}>
-                  Continue with Google
+                  {t("getstarted_google")}
                 </Text>
               </>
             )}
@@ -240,7 +242,7 @@ const GetStartedScreen = ({ navigation }) => {
               <>
                 <Icon name="apple" size={30} color={"#FFFFFF"} />
                 <Text variant="bodySmall" style={[styles.textStyle, { color: "#FFFFFF" }]}>
-                  Continue with Apple
+                  {t("getstarted_apple")}
                 </Text>
               </>
             )}
@@ -248,13 +250,13 @@ const GetStartedScreen = ({ navigation }) => {
 
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
             <Text variant="bodySmall" style={[styles.textStyle, { color: "#9CA3AF" }]}>
-              Already have an Account?{" "}
+              {t("getstarted_have_account")}
             </Text>
             <Text
               variant="link"
               onPress={() => navigation.replace("Login")}
               style={[styles.textStyle, { color: "#1E9DF1", fontFamily: FontFamily.regular }]}>
-              Login
+              {t("getstarted_login")}
             </Text>
           </View>
         </View>

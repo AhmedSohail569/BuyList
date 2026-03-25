@@ -236,6 +236,7 @@ export const fetchRecentActivities = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get("/activities/recent");
+      console.log("response", response);
       // Handle nested data structure: response.data.data.data (array)
       const activities = response.data?.data?.data || response.data?.data || response.data;
       return Array.isArray(activities) ? activities : [];
