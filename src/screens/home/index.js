@@ -26,6 +26,7 @@ import { RFValue } from "react-native-responsive-fontsize";
 import { FontFamily } from "~theme/fonts";
 import { useSelector, useDispatch } from "react-redux";
 import { fetchRecentActivities, fetchAllLists } from "~redux/actions/listActions";
+import { fetchPersonalizedRecommendations } from "~redux/actions/recommendationsActions";
 import { getProfile } from "~redux/actions/profileActions";
 import { useTheme } from "~context/ThemeContext";
 import AdsOffersCarousel from "~components/AdsOffersCarousel";
@@ -58,24 +59,6 @@ const BEST_PRICES = [
   },
 ];
 
-const FOR_YOU = [
-  {
-    id: 1,
-    name: "Smart Air Fryer",
-    tag: "Kitchen Appliance",
-    desc: "Prepare healthier meals with less oil, controllable remotely via your smartphone.",
-    image:
-      "https://images.unsplash.com/photo-1585670149967-b4f4cb280d49?auto=format&fit=crop&w=100&q=80",
-  },
-  {
-    id: 2,
-    name: "Smart Air Fryer",
-    tag: "Kitchen Appliance",
-    desc: "Prepare healthier meals with less oil, controllable remotely via your smartphone.",
-    image:
-      "https://images.unsplash.com/photo-1585670149967-b4f4cb280d49?auto=format&fit=crop&w=100&q=80",
-  },
-];
 
 const HomeTab = ({ onQuickAction, navigation }) => {
   const dispatch = useDispatch();
@@ -87,6 +70,9 @@ const HomeTab = ({ onQuickAction, navigation }) => {
   const { recentActivities } = useSelector(state => state.lists);
   const { homeBanners, localResults } = useSelector((state) => state.search);
   const { latitude, longitude } = useSelector((state) => state.location);
+  const { homeItems: forYouItems, loading: recsLoading } = useSelector(
+    (state) => state.recommendations,
+  );
 
   // Notification dropdown state
   const [showNotifications, setShowNotifications] = useState(false);
@@ -119,6 +105,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
       dispatch(getProfile()),
       dispatch(fetchRecentActivities()),
       dispatch(fetchAllLists()),
+      dispatch(fetchPersonalizedRecommendations({ page: 1, limit: 2 })),
     ];
 
     if (latitude && longitude) {
@@ -411,62 +398,67 @@ const HomeTab = ({ onQuickAction, navigation }) => {
         </View>
 
         <View style={styles.forYouContainer}>
-          {FOR_YOU.map((item, index) => (
-            <View
-              key={index}
-              style={[
-                styles.forYouCard,
-                {
-                  backgroundColor: colors.card,
-                  shadowColor: colors.shadowColor,
-                },
-              ]}>
-              <Image
-                source={{ uri: item.image }}
+          {recsLoading && forYouItems.length === 0 ? (
+            // Loading skeleton — 2 placeholder cards
+            [0, 1].map((i) => (
+              <View
+                key={i}
                 style={[
-                  styles.forYouImage,
-                  { backgroundColor: colors.surfaceSecondary },
+                  styles.forYouCard,
+                  { backgroundColor: colors.card, shadowColor: colors.shadowColor, opacity: 0.5 },
                 ]}
               />
-              <View style={styles.forYouContent}>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                  }}>
-                  <Text
-                    style={[styles.forYouTitle, { color: colors.textPrimary }]}>
-                    {item.name}
-                  </Text>
-                  <View
-                    style={[
-                      styles.tagBadge,
-                      { backgroundColor: colors.surfaceSecondary },
-                    ]}>
-                    <Text style={[styles.tagText, { color: colors.textMuted }]}>
-                      {item.tag}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={[styles.forYouDesc, { color: colors.primary }]}>
-                  {item.desc}
-                </Text>
-                <TouchableOpacity
+            ))
+          ) : (
+            forYouItems.map((item, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.forYouCard,
+                  { backgroundColor: colors.card, shadowColor: colors.shadowColor },
+                ]}>
+                <Image
+                  source={{ uri: item.image }}
                   style={[
-                    styles.addListBtn,
-                    { backgroundColor: isDark ? colors.surface : "#111827" },
-                  ]}>
-                  <Text
-                    style={[
-                      styles.addListText,
-                      { color: isDark ? colors.primary : "#FFF" },
-                    ]}>
-                    {t("home_add_to_list")}
+                    styles.forYouImage,
+                    { backgroundColor: colors.surfaceSecondary },
+                  ]}
+                />
+                <View style={styles.forYouContent}>
+                  <View style={styles.forYouTitleRow}>
+                    <Text
+                      style={[styles.forYouTitle, { color: colors.textPrimary }]}
+                      numberOfLines={2}>
+                      {item.name}
+                    </Text>
+                    {item.priceRange && (
+                      <View
+                        style={[
+                          styles.tagBadge,
+                          { backgroundColor: colors.surfaceSecondary },
+                        ]}>
+                        <Text style={[styles.tagText, { color: colors.textMuted }]}>
+                          {item.priceRange}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={[styles.forYouDesc, { color: colors.primary }]} numberOfLines={2}>
+                    {item.description}
                   </Text>
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.addListBtn,
+                      { backgroundColor: isDark ? colors.surface : "#111827" },
+                    ]}>
+                    <Text style={[styles.addListText, { color: isDark ? colors.primary : "#FFF" }]}>
+                      {t("home_add_to_list")}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          ))}
+            ))
+          )}
         </View>
 
         <View style={{ height: 100 }} />
@@ -707,10 +699,16 @@ const styles = StyleSheet.create({
     fontSize: RFValue(7),
     fontFamily: FontFamily.medium,
   },
+  forYouTitleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    marginBottom: 4,
+  },
   forYouTitle: {
+    flex: 1,
     fontSize: RFValue(11),
     fontFamily: FontFamily.bold,
-    marginBottom: 4,
   },
   forYouDesc: {
     fontSize: RFValue(9),

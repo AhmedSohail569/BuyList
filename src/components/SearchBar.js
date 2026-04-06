@@ -24,6 +24,7 @@ const SearchBar = ({
   value,
   onChangeText,
   onSubmitEditing,
+  onFocus,
   onPress,
   filterIcon = false,
   style,
@@ -167,6 +168,7 @@ const SearchBar = ({
             editable={editable}
             value={value}
             onChangeText={onChangeText}
+            onFocus={onFocus}
             pointerEvents={editable ? "auto" : "none"}
           />
           {filterIcon && (
@@ -217,6 +219,7 @@ const SearchBar = ({
               value={value}
               onChangeText={onChangeText}
               onSubmitEditing={onSubmitEditing}
+              onFocus={onFocus}
               pointerEvents={editable ? "auto" : "none"}
               returnKeyType="search"
             />

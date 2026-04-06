@@ -127,7 +127,7 @@ const ListCard = React.memo(
                 </View>
               )}
             </View>
-            <Menu
+            {item.userRole !== "viewer" && <Menu
               visible={menuVisible}
               onDismiss={onCloseMenu}
               anchor={
@@ -144,7 +144,7 @@ const ListCard = React.memo(
                   onRequestDelete();
                 }}
               />
-            </Menu>
+            </Menu>}
           </View>
 
           <Text style={[styles.subtitle, { color: colors.textMuted }]}>
@@ -755,7 +755,6 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
               />
             </Menu>
           </View>
-
           {/* Lists Cards */}
           <View style={styles.cardsContainer}>
             {filteredData.map(item => (

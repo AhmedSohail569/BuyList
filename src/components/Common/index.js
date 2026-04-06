@@ -4,6 +4,7 @@ import Input from "./Input";
 import CustomScrollView from "./Scrollview";
 import {BottomModal} from "./Modal";
 import CustomAlert from "./CustomAlert";
+import AddToListModal from "./AddToListModal";
 
 export {
   AppText as Text,
@@ -12,4 +13,5 @@ export {
   CustomScrollView as ScrollView,
   BottomModal as Modal,
   CustomAlert as Alert,
+  AddToListModal,
 };

@@ -308,14 +308,20 @@ const ForgotPasswordScreen = ({ navigation }) => {
   };
 
   const goBack = () => {
-    if (step > 0 && step < 3) {
+    if (step > 0) {
       setStep(step - 1);
       dispatch(clearError());
-      // Clear errors for the step we're going back to
-      if (step === 1) {
-        setErrors(prev => ({ ...prev, otp: null }));
+      
+      // Clear Redux state to prevent auto-forwarding useEffects from triggering
+      // when we enter a previous step where cached success flags might still exist.
+      if (step === 3) {
+        dispatch(clearResetPasswordState()); // Clears resetPasswordMessage
       } else if (step === 2) {
+        dispatch(clearResetPasswordState()); // Clears resetTokenValid
         setErrors(prev => ({ ...prev, newPassword: null, confirmPassword: null }));
+      } else if (step === 1) {
+        dispatch(clearForgotPassword());
+        setErrors(prev => ({ ...prev, otp: null }));
       }
     } else {
       navigation.goBack();

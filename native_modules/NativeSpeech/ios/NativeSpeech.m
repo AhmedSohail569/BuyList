@@ -67,7 +67,13 @@ RCT_EXPORT_METHOD(stopListening:(RCTPromiseResolveBlock)resolve rejecter:(RCTPro
     }
     
     dispatch_async(dispatch_get_main_queue(), ^{
-        [self.audioEngine stop];
+        if (self.audioEngine.isRunning) {
+            [self.audioEngine stop];
+        }
+        // FIX: Remove the tap so the node is always in a clean state.
+        // Without this, the next call to startRecording would crash because
+        // installTapOnBus raises an NSException on an already-tapped node.
+        [self.audioEngine.inputNode removeTapOnBus:0];
         [self.recognitionRequest endAudio];
         self.isListening = NO;
         resolve(@(YES));
@@ -102,11 +108,11 @@ RCT_EXPORT_METHOD(stopListening:(RCTPromiseResolveBlock)resolve rejecter:(RCTPro
 
     AVAudioInputNode *inputNode = self.audioEngine.inputNode;
     __weak typeof(self) weakSelf = self;
-    
+
     self.recognitionTask = [self.speechRecognizer recognitionTaskWithRequest:self.recognitionRequest resultHandler:^(SFSpeechRecognitionResult * _Nullable result, NSError * _Nullable error) {
         __strong typeof(weakSelf) strongSelf = weakSelf;
         BOOL isFinal = NO;
-        
+
         if (result) {
             isFinal = result.isFinal;
             [strongSelf sendEventWithName:@"onSpeechResults" body:@{
@@ -114,14 +120,14 @@ RCT_EXPORT_METHOD(stopListening:(RCTPromiseResolveBlock)resolve rejecter:(RCTPro
                 @"isFinal": @(isFinal)
             }];
         }
-        
+
         if (error != nil || isFinal) {
             [strongSelf.audioEngine stop];
             [inputNode removeTapOnBus:0];
             strongSelf.recognitionRequest = nil;
             strongSelf.recognitionTask = nil;
             strongSelf.isListening = NO;
-            
+
             if (error) {
                 [strongSelf sendEventWithName:@"onSpeechError" body:@{@"error": error.localizedDescription}];
             } else {
@@ -130,17 +136,28 @@ RCT_EXPORT_METHOD(stopListening:(RCTPromiseResolveBlock)resolve rejecter:(RCTPro
         }
     }];
 
+    // --- FIX: Always remove any existing tap before installing a new one.
+    // AVAudio throws a fatal NSException if you call installTapOnBus on a
+    // node that already has a tap — which was the root cause of the SIGABRT crash.
+    [inputNode removeTapOnBus:0];
+
     AVAudioFormat *recordingFormat = [inputNode outputFormatForBus:0];
-    [inputNode installTapOnBus:0 bufferSize:1024 format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
-        __strong typeof(weakSelf) strongSelf = weakSelf;
-        if (strongSelf.recognitionRequest) {
-            [strongSelf.recognitionRequest appendAudioPCMBuffer:buffer];
-        }
-    }];
+    @try {
+        [inputNode installTapOnBus:0 bufferSize:1024 format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
+            __strong typeof(weakSelf) strongSelf = weakSelf;
+            if (strongSelf.recognitionRequest) {
+                [strongSelf.recognitionRequest appendAudioPCMBuffer:buffer];
+            }
+        }];
+    } @catch (NSException *exception) {
+        reject(@"E_TAP_FAILED", [NSString stringWithFormat:@"Failed to install audio tap: %@", exception.reason], nil);
+        return;
+    }
 
     [self.audioEngine prepare];
     [self.audioEngine startAndReturnError:&error];
     if (error) {
+        [inputNode removeTapOnBus:0];
         reject(@"E_AUDIO_ENGINE", @"Audio engine failed to start", error);
         return;
     }

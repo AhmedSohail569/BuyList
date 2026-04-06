@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Linking,
   Dimensions,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -18,11 +19,12 @@ import {
   Star,
   Share,
   Clock,
+  Sparkles,
 } from "lucide-react-native";
 import { useDispatch, useSelector } from "react-redux";
 import Header from "~components/Header";
 import SearchBar from "~components/SearchBar";
-import { Modal, ScrollView, Text } from "~components/Common";
+import { Modal, ScrollView, Text, AddToListModal } from "~components/Common";
 import { RFPercentage, RFValue } from "react-native-responsive-fontsize";
 import { FontFamily } from "~theme/fonts";
 import { useTheme } from "~context/ThemeContext";
@@ -32,9 +34,15 @@ import {
   fetchBanners,
 } from "~redux/actions/searchActions";
 import { clearSearchResults } from "~redux/reducers/searchReducer";
+import { setLocation, setPermissionGranted, dismissLocationPrompt } from "~redux/reducers/locationReducer";
 import { calculateDistance, formatDistance } from "~utils";
 import AdsOffersCarousel from "~components/AdsOffersCarousel";
 import useTranslation from "~hooks/useTranslation";
+import useLocation from "~hooks/useLocation";
+import { check, PERMISSIONS, RESULTS } from "react-native-permissions";
+import { useAlert } from "~context/AlertContext";
+import { addItemsToList } from "~redux/actions/listActions";
+import Toast from "react-native-toast-message";
 
 const { width } = Dimensions.get("window");
 
@@ -43,6 +51,7 @@ const SearchResultsScreen = ({ navigation, route }) => {
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const { showAlert } = useAlert();
 
   // Get initial query from route params (if navigated with a query)
   const initialQuery = route?.params?.query || "";
@@ -50,6 +59,7 @@ const SearchResultsScreen = ({ navigation, route }) => {
   const [activeTab, setActiveTab] = useState("Local Stores");
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [isFilterModalVisible, setFilterModalVisible] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null); // { name } for AddToListModal
 
   // Redux state
   const {
@@ -69,8 +79,117 @@ const SearchResultsScreen = ({ navigation, route }) => {
     bannersLoading,
   } = useSelector((state) => state.search);
   const { distanceUnit } = useSelector((state) => state.settings);
+  const { latitude, longitude, permissionGranted, promptDismissed } = useSelector(
+    (state) => state.location,
+  );
 
-  const { latitude, longitude } = useSelector((state) => state.location);
+  console.log("permissionGranted", permissionGranted);
+  console.log("promptDismissed", promptDismissed);
+
+  // Track if we've shown the prompt this component lifecycle (prevents double-show)
+  const hasPromptedRef = useRef(false);
+  // Keep a ref to the current search query so async callbacks always see the latest value
+  const searchQueryRef = useRef("");
+
+  // useLocation gives us detectLocation() which requests permission + acquires location
+  const { detectLocation } = useLocation();
+
+  /**
+   * Check current permission status (read-only, no dialog).
+   * Returns true if already granted, false otherwise.
+   */
+  const checkCurrentPermission = useCallback(async () => {
+    const permission = Platform.select({
+      ios: PERMISSIONS.IOS.LOCATION_WHEN_IN_USE,
+      android: PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
+    });
+    if (!permission) return false;
+    try {
+      const status = await check(permission);
+      return status === RESULTS.GRANTED || status === RESULTS.LIMITED;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  /**
+   * Show custom in-app location permission prompt.
+   * "Allow" triggers the OS dialog via detectLocation().
+   * "Not Now" dismisses and search continues without location.
+   */
+  const showLocationPrompt = useCallback(() => {
+    showAlert({
+      title: "Enable Location",
+      message:
+        "Allow BuyList to use your location to find nearby stores and show distances. You can skip this and still search normally.",
+      type: "confirm",
+      buttons: [
+        {
+          text: "Not Now",
+          style: "cancel",
+          onPress: () => dispatch(dismissLocationPrompt()),
+        },
+        {
+          text: "Allow",
+          onPress: async () => {
+            const result = await detectLocation();
+            if (result) {
+              // 1. Persist location to Redux so the whole app has lat/lng
+              dispatch(setLocation({
+                latitude: result.latitude,
+                longitude: result.longitude,
+                city: result.city || "",
+                area: result.area || "",
+              }));
+              dispatch(setPermissionGranted(true));
+
+              // 2. Immediately re-run any pending search with the fresh coordinates.
+              //    We cannot rely on the Redux state re-render here because the
+              //    performSearch closure captured null lat/lng at prompt creation time.
+              const currentQuery = searchQueryRef.current;
+              if (currentQuery?.trim()) {
+                dispatch(
+                  searchLocalStores({
+                    query: currentQuery,
+                    lat: result.latitude,
+                    lng: result.longitude,
+                    page: 1,
+                    limit: 10,
+                  }),
+                );
+              }
+            } else {
+              // OS-level denial or blocked — detectLocation already handles UI
+              dispatch(dismissLocationPrompt());
+            }
+          },
+        },
+      ],
+    });
+  }, [showAlert, dispatch, detectLocation]);
+
+  /**
+   * On mount: check location permission and prompt once if not granted.
+   * Fires immediately when the screen is entered — does not require
+   * the user to tap the search bar.
+   */
+  useEffect(() => {
+    if (permissionGranted || hasPromptedRef.current) return;
+
+    const checkAndPrompt = async () => {
+      // Silent read-only check first — avoids showing prompt if already granted
+      const alreadyGranted = await checkCurrentPermission();
+      if (alreadyGranted) {
+        dispatch(setPermissionGranted(true));
+        return;
+      }
+      hasPromptedRef.current = true;
+      showLocationPrompt();
+    };
+
+    checkAndPrompt();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Debounce timer ref
   const debounceRef = useRef(null);
@@ -134,6 +253,9 @@ const SearchResultsScreen = ({ navigation, route }) => {
    * Debounced search on query change
    */
   useEffect(() => {
+    // Keep ref in sync so async callbacks (e.g. Allow button) always read current query
+    searchQueryRef.current = searchQuery;
+
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
@@ -161,9 +283,26 @@ const SearchResultsScreen = ({ navigation, route }) => {
     }
   }, [dispatch, searchBanners.length]);
 
-  /**
-   * Clean up on unmount
-   */
+  /** Add a search result item to a chosen list */
+  const handleAddToList = useCallback(
+    async (listId) => {
+      if (!selectedItem || !listId) return;
+      const name = selectedItem.name;
+      setSelectedItem(null);
+      try {
+        await dispatch(addItemsToList({ listId, items: [{ name: `${searchQuery} - (${selectedItem?.name})` }] })).unwrap();
+        Toast.show({ type: "success", text1: "Added", text2: `${name} added to your list` });
+      } catch (err) {
+        Toast.show({
+          type: "error",
+          text1: "Failed to add",
+          text2: typeof err === "string" ? err : "Something went wrong",
+        });
+      }
+    },
+    [dispatch, selectedItem],
+  );
+
   useEffect(() => {
     return () => dispatch(clearSearchResults());
   }, [dispatch]);
@@ -269,7 +408,8 @@ const SearchResultsScreen = ({ navigation, route }) => {
                 style={[
                   styles.addButton,
                   { backgroundColor: colors.textPrimary },
-                ]}>
+                ]}
+                onPress={() => setSelectedItem({ name: item.title || item.product_link })}>
                 <Plus size={20} color={colors.textInverse} />
               </TouchableOpacity>
             </View>
@@ -405,7 +545,8 @@ const SearchResultsScreen = ({ navigation, route }) => {
                 style={[
                   styles.addButton,
                   { backgroundColor: colors.textPrimary },
-                ]}>
+                ]}
+                onPress={() => setSelectedItem({ name: item.name })}>
                 <Plus size={20} color={colors.textInverse} />
               </TouchableOpacity>
             </View>
@@ -585,8 +726,7 @@ const SearchResultsScreen = ({ navigation, route }) => {
           </View>
         ) : !searchQuery.trim() ? (
           <View style={styles.noResultsContainer}>
-            <Text
-              style={[styles.noResultsSubText, { color: colors.textSecondary }]}>
+            <Text style={[styles.noResultsSubText, { color: colors.textSecondary }]}>
               {t("search_prompt")}
             </Text>
           </View>
@@ -645,12 +785,19 @@ const SearchResultsScreen = ({ navigation, route }) => {
         </View>
       </ScrollView>
 
-
       {/* Filter Modal */}
       <Modal
         isVisible={isFilterModalVisible}
         onClose={() => setFilterModalVisible(false)}
         onApply={(data) => console.log("Filters Applied:", data)}
+      />
+
+      {/* Add to List Modal */}
+      <AddToListModal
+        isVisible={!!selectedItem}
+        itemName={`${searchQuery} - (${selectedItem?.name})`}
+        onClose={() => setSelectedItem(null)}
+        onSelect={handleAddToList}
       />
     </View>
   );

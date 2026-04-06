@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import AppLayout from "~containers/layouts/AppLayout";
 import LocationPermissionGate from "~components/LocationPermissionGate";
 import { usePermissionsContext } from "~context/PermissionsContext";
+import usePermissionSync from "~hooks/usePermissionSync";
 
 import TabNavigator from "./TabNavigator";
 import SearchResultsScreen from "~screens/search/SearchResults";
@@ -23,6 +24,9 @@ const Stack = createNativeStackNavigator();
 export default () => {
   // Gate: only activate location permission AFTER notification flow completes
   const { locationReady } = usePermissionsContext();
+
+  // Sync permissions on every app launch + foreground restore
+  usePermissionSync();
 
   return (
     <AppLayout>
