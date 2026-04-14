@@ -270,6 +270,8 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 8,
     fontSize: RFValue(13),
+    letterSpacing: 0,
+    paddingVertical: 0,
   },
   searchActions: {
     flexDirection: "row",

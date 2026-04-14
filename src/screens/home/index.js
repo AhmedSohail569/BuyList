@@ -26,7 +26,7 @@ import { RFValue } from "react-native-responsive-fontsize";
 import { FontFamily } from "~theme/fonts";
 import { useSelector, useDispatch } from "react-redux";
 import { fetchRecentActivities, fetchAllLists } from "~redux/actions/listActions";
-import { fetchPersonalizedRecommendations } from "~redux/actions/recommendationsActions";
+// import { fetchPersonalizedRecommendations } from "~redux/actions/recommendationsActions";
 import { getProfile } from "~redux/actions/profileActions";
 import { useTheme } from "~context/ThemeContext";
 import AdsOffersCarousel from "~components/AdsOffersCarousel";
@@ -105,7 +105,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
       dispatch(getProfile()),
       dispatch(fetchRecentActivities()),
       dispatch(fetchAllLists()),
-      dispatch(fetchPersonalizedRecommendations({ page: 1, limit: 2 })),
+      // dispatch(fetchPersonalizedRecommendations({ page: 1, limit: 2 })),
     ];
 
     if (latitude && longitude) {
@@ -126,18 +126,18 @@ const HomeTab = ({ onQuickAction, navigation }) => {
   useScreenFetch(fetchHomeData, true); // always quiet — home already shows stale data fine
 
   // Banners: fetch once, background-refresh on return
-  const fetchHomeBanners = useCallback(
-    () => dispatch(fetchBanners({ placement: "home" })),
-    [dispatch],
-  );
-  useScreenFetch(fetchHomeBanners, homeBanners.length > 0);
+  // const fetchHomeBanners = useCallback(
+  //   () => dispatch(fetchBanners({ placement: "home" })),
+  //   [dispatch],
+  // );
+  // useScreenFetch(fetchHomeBanners, homeBanners.length > 0);
 
   // Re-fetch everything on reconnect
   useOnReconnect(() => {
     dispatch(getProfile());
     dispatch(fetchRecentActivities());
     dispatch(fetchAllLists());
-    dispatch(fetchBanners({ placement: "home" }));
+    // dispatch(fetchBanners({ placement: "home" }));
   });
 
   // Normalize activities for display (limit to 2 for home screen)
@@ -248,32 +248,9 @@ const HomeTab = ({ onQuickAction, navigation }) => {
         </View>
 
 
-        {localResults.length !== 0 && <View style={{ left: RFValue(-16), width: width }}><NearbyStores navigation={navigation} /></View>}
-
-        {homeBanners && homeBanners.length > 0 && (
-                <View style={{ left: RFValue(-16), width: width }}>
-                    <AdsOffersCarousel
-                      data={homeBanners.map(b => ({
-                        id: b._id,
-                        title: b.title,
-                        subtitle: b.description,
-                        image: b.imageUrl,
-                        url: b.link,
-                      }))}
-                      title={t("home_ads_offers")}
-                      onAdPress={(item) => {
-                        if (item.url) {
-                          // Assuming you have Linking imported. If not we should just pass
-                        }
-                      }}
-                      autoPlay={true}
-                    />
-                  </View>
-                )}
-
         <YourLists navigation={navigation} />
 
-        {/* --- SECTION: Circle Updates --- */}
+          {/* --- SECTION: Circle Updates --- */}
         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
           {t("home_circle_updates")}
         </Text>
@@ -330,8 +307,35 @@ const HomeTab = ({ onQuickAction, navigation }) => {
           )}
         </View>
 
+
+        {localResults.length !== 0 && <View style={{ left: RFValue(-16), width: width }}><NearbyStores navigation={navigation} /></View>}
+
+        {/* {homeBanners && homeBanners.length > 0 && (
+                <View style={{ left: RFValue(-16), width: width }}>
+                    <AdsOffersCarousel
+                      data={homeBanners.map(b => ({
+                        id: b._id,
+                        title: b.title,
+                        subtitle: b.description,
+                        image: b.imageUrl,
+                        url: b.link,
+                      }))}
+                      title={t("home_ads_offers")}
+                      onAdPress={(item) => {
+                        if (item.url) {
+                          // Assuming you have Linking imported. If not we should just pass
+                        }
+                      }}
+                      autoPlay={true}
+                    />
+                  </View>
+                )} */}
+
+
+      
+
         {/* --- SECTION: Best Online Prices --- */}
-        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+        {/* <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
           {t("home_best_prices")}
         </Text>
         <View style={styles.horizontalScrollContainer}>
@@ -368,10 +372,10 @@ const HomeTab = ({ onQuickAction, navigation }) => {
               </TouchableOpacity>
             ))}
           </ReactScrollView>
-        </View>
+        </View> */}
 
         {/* --- SECTION: For You --- */}
-        <View style={styles.sectionHeaderRow}>
+        {/* <View style={styles.sectionHeaderRow}>
           <View style={styles.sectionTitleRow}>
             <Text
               style={[
@@ -459,9 +463,9 @@ const HomeTab = ({ onQuickAction, navigation }) => {
               </View>
             ))
           )}
-        </View>
+        </View> */}
 
-        <View style={{ height: 100 }} />
+        {/* <View style={{ height: 100 }} /> */}
       </ScrollView>
 
       {/* Notification dropdown modal */}

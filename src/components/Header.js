@@ -5,7 +5,6 @@ import { Pencil } from "lucide-react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 import { Text } from "~components/Common";
 import { FontFamily } from "~theme/fonts";
-import { useNavigation } from "@react-navigation/native";
 import { useSelector } from "react-redux";
 import { useTheme } from "~context/ThemeContext";
 import { getInitials } from "~utils/display";
@@ -38,10 +37,10 @@ const Header = ({
   showTabs,
 }) => {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
   const { colors, isDark } = useTheme();
   const { user } = useSelector(state => state.auth);
   const { profile } = useSelector(state => state.profile);
+
 
   return (
     <View

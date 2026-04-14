@@ -173,7 +173,7 @@ const NearbyStores = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   section: {
-    marginTop: 15,
+    marginBottom: 15,
   },
   sectionHeader: {
     flexDirection: "row",

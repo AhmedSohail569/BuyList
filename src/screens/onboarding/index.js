@@ -40,12 +40,12 @@ const OnboardingScreen = ({ navigation }) => {
 
           {/* Title */}
           <Text variant="screenTitle" style={[styles.title, { color: "#FFFFFF" }]}>
-            Welcome to your{"\n"}shopping hub
+            Welcome to Bagg
           </Text>
 
           {/* Subtitle */}
           <Text variant="bodySmall" style={[styles.subtitle, { color: "#9CA3AF" }]}>
-            Shop smarter together with Bagg
+            Your smart list to help you through{'\n'} your day.
           </Text>
 
           {/* Button */}

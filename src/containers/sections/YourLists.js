@@ -166,7 +166,7 @@ const YourLists = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   section: {
-    marginTop: 15,
+    marginTop: 0,
   },
   sectionHeader: {
     flexDirection: "row",

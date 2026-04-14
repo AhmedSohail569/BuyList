@@ -3,7 +3,7 @@
  */
 const nl = {
   // ── GetStarted ──────────────────────────────────────────────────────────────
-  getstarted_title: "Laten we je boodschappen\nregelen met Bagg!",
+  getstarted_title: "Laten we je wereld\norganiseren met Bagg.",
   getstarted_subtitle: "Of verbind met sociale media",
   getstarted_google: "Doorgaan met Google",
   getstarted_apple: "Doorgaan met Apple",

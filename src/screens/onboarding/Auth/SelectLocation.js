@@ -61,7 +61,7 @@ const SelectLocationScreen = ({ navigation, route }) => {
     console.log("result", result);
     if (result) {
       setCity(result.city);
-      setArea(result.area);
+      // setArea(result.area);
       setCoords({ latitude: result.latitude, longitude: result.longitude });
       setDetected(true);
 
@@ -80,7 +80,7 @@ const SelectLocationScreen = ({ navigation, route }) => {
    * Handle submit: save location to Redux and navigate to Signup
    */
   const handleSubmit = useCallback(() => {
-    if (!city.trim() && !area.trim() && !coords) {
+    if (!city.trim() && /*!area.trim() &&*/ !coords) {
       Toast.show({
         type: "error",
         text1: "Location Required",
@@ -95,14 +95,14 @@ const SelectLocationScreen = ({ navigation, route }) => {
         latitude: coords?.latitude ?? null,
         longitude: coords?.longitude ?? null,
         city: city.trim(),
-        area: area.trim(),
+        area: "", // area.trim(),
       }),
     );
 
     navigation.navigate("Signup", {
       phone,
       zone: city.trim(),
-      area: area.trim(),
+      area: "", // area.trim(),
     });
   }, [city, area, coords, dispatch, navigation, phone]);
 
@@ -131,26 +131,27 @@ const SelectLocationScreen = ({ navigation, route }) => {
 
         <View
           style={[styles.content, { paddingBottom: insets.bottom + RFValue(24) }]}>
-          {/* Header */}
-          <View style={{ paddingHorizontal: RFValue(18) }}>
-            <Text
-              variant="sectionTitle"
-              align="center"
-              style={[styles.title, { color: "#1B1A1F" }]}>
-              Select Your Location
-            </Text>
-
-            <Text
-              variant="bodySmall"
-              align="center"
-              style={[styles.subtitle, { color: "#9CA3AF" }]}>
-              Switch on your location to stay in tune with what's happening in
-              your area
-            </Text>
-          </View>
-
-          {/* Form */}
           <View>
+            {/* Header */}
+            <View style={{ paddingHorizontal: RFValue(18) }}>
+              <Text
+                variant="sectionTitle"
+                align="center"
+                style={[styles.title, { color: "#1B1A1F" }]}>
+                Select Your Location
+              </Text>
+
+              <Text
+                variant="bodySmall"
+                align="center"
+                style={[styles.subtitle, { color: "#9CA3AF" }]}>
+                Switch on your location to stay in tune with what's happening in
+                your area
+              </Text>
+            </View>
+
+            {/* Form Fields */}
+            <View style={{ marginTop: RFValue(12) }}>
             {/* Detect Location Button */}
             <TouchableOpacity
               activeOpacity={0.7}
@@ -184,7 +185,7 @@ const SelectLocationScreen = ({ navigation, route }) => {
               editable={!isLoading}
             />
 
-            <TextInput
+            {/* <TextInput
               label="Your Area"
               placeholder="e.g. Gulberg, DHA"
               value={area}
@@ -193,7 +194,7 @@ const SelectLocationScreen = ({ navigation, route }) => {
               type={2}
               forceLight
               editable={!isLoading}
-            />
+            /> */}
 
             {/* Coordinates indicator */}
             {coords && (
@@ -205,7 +206,11 @@ const SelectLocationScreen = ({ navigation, route }) => {
               </View>
             )}
 
-            {/* Submit Button */}
+            </View>
+          </View>
+
+          {/* Submit Button */}
+          <View style={{ marginBottom: RFValue(20) }}>
             <Button
               title="Submit"
               onPress={handleSubmit}

@@ -4,7 +4,7 @@
  */
 const en = {
   // ── GetStarted ──────────────────────────────────────────────────────────────
-  getstarted_title: "Let's get your shopping\ndone with Bagg!",
+  getstarted_title: "Let's get your world\norganised with bagg.",
   getstarted_subtitle: "Or connect with social media",
   getstarted_google: "Continue with Google",
   getstarted_apple: "Continue with Apple",

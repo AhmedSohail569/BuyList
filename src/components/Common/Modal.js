@@ -330,11 +330,17 @@ export const BottomModal = ({
 
         {/* Display Added Items */}
         {items.length > 0 && (
-          <View style={styles.itemsContainer}>
+          <View style={[styles.itemsContainerList, { borderColor: colors.divider, backgroundColor: colors.surfaceSecondary }]}>
             {items.map((item, index) => (
-              <View key={index} style={[styles.itemChip, {backgroundColor: isDark ? "rgba(14, 165, 233, 0.2)" : "#eff6ff"}]}>
+              <View 
+                key={index} 
+                style={[
+                  styles.itemListItem, 
+                  { borderBottomColor: colors.divider },
+                  index === items.length - 1 && { borderBottomWidth: 0 }
+                ]}>
                 <Text 
-                  style={[styles.itemChipText, {color: colors.primary}]}
+                  style={[styles.itemListItemText, {color: colors.textPrimary}]}
                   numberOfLines={1}
                   ellipsizeMode="tail">
                   {item}
@@ -342,7 +348,7 @@ export const BottomModal = ({
                 <TouchableOpacity
                   onPress={() => handleRemoveItem(item)}
                   hitSlop={8}>
-                  <X size={14} color={colors.iconMuted} />
+                  <X size={18} color={colors.textMuted} />
                 </TouchableOpacity>
               </View>
             ))}
@@ -614,26 +620,27 @@ const styles = StyleSheet.create({
   plusIconBadgeActive: {
     backgroundColor: "#0ea5e9", // Blue when active
   },
-  itemsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
+  itemsContainerList: {
+    flexDirection: "column",
+    marginTop: -4,
     marginBottom: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: "hidden",
   },
-  itemChip: {
+  itemListItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#eff6ff",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 6,
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
   },
-  itemChipText: {
-    fontSize: RFValue(11),
+  itemListItemText: {
+    flex: 1,
+    fontSize: RFValue(12),
     fontFamily: FontFamily.medium,
-    color: "#0ea5e9",
-    maxWidth: width * 0.4, // Limit width to prevent overflow
+    marginRight: 10,
   },
   dropdownContainer: {
     marginBottom: 20,
