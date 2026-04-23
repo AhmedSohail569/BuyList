@@ -18,7 +18,7 @@ import { Menu } from "react-native-paper";
 import { useDispatch, useSelector } from "react-redux";
 import { useFocusEffect } from "@react-navigation/native";
 import Toast from "react-native-toast-message";
-import { ScrollView, Text } from "~components/Common";
+import { ScrollView, Text, ItemPriorityModal } from "~components/Common";
 import Header from "~components/Header";
 import { RFValue } from "react-native-responsive-fontsize";
 import { FontFamily } from "~theme/fonts";
@@ -30,6 +30,7 @@ import {
   markItemAsUnpurchased,
   deleteItemFromList,
   deleteList,
+  updateItemPriority,
 } from "~redux/actions/listActions";
 import { clearListsError } from "~redux/reducers/listReducer";
 import { useAlert } from "~context/AlertContext";
@@ -56,6 +57,9 @@ const ListDetailsScreen = ({ navigation, route }) => {
   const [activeItemMenuId, setActiveItemMenuId] = useState(null);
   const [newItemText, setNewItemText] = useState("");
   const [pendingActions, setPendingActions] = useState(new Set());
+
+  // Priority modal state
+  const [priorityModal, setPriorityModal] = useState({ visible: false, itemId: null, current: "medium" });
 
   // Always fetch list by ID when screen is focused to get latest data
   // This ensures we have the most up-to-date list data from the API
@@ -110,6 +114,17 @@ const ListDetailsScreen = ({ navigation, route }) => {
     if (isHeaderMenuDismissingRef.current) return;
     setShowHeaderMenu(prev => !prev);
   }, []);
+
+  const handleSetPriority = useCallback(async (selectedPriority) => {
+    const { itemId } = priorityModal;
+    setPriorityModal(prev => ({ ...prev, visible: false }));
+    if (!listId || !itemId) return;
+    try {
+      await dispatch(updateItemPriority({ listId, itemId, priority: selectedPriority })).unwrap();
+    } catch {
+      Toast.show({ type: "error", text1: "Error", text2: "Failed to update priority." });
+    }
+  }, [priorityModal, listId, dispatch]);
 
   const handleDeleteThisList = useCallback(async () => {
     if (!listId) return;
@@ -171,6 +186,13 @@ const ListDetailsScreen = ({ navigation, route }) => {
       doneItems: items.filter(i => i.status === "purchased"),
     };
   }, [list?.items]);
+
+  const { allItems } = useMemo(() => {
+    const items = list?.progress?.total || 0;
+    return {
+      allItems: items,
+    };
+  }, [list?.progress]);
 
   // Display items based on active tab
   // "All Items" shows only pending items, purchased items appear in separate section below
@@ -313,10 +335,33 @@ const ListDetailsScreen = ({ navigation, route }) => {
               <Text style={[styles.itemMetaText, { color: colors.textMuted }]}>
                 {item.status === "purchased"
                   ? item.purchasedBy?.username
-                    ? `Purchased by ${item.purchasedBy.username}`
-                    : "Purchased"
+                    ? `Completed by ${item.purchasedBy.username}`
+                    : "Completed"
                   : "Pending"}
               </Text>
+              {item.priority && item.priority !== "none" && (
+                <View style={[
+                  styles.priorityTag,
+                  {
+                    backgroundColor:
+                      item.priority === "high" ? "#fef2f2"
+                      : item.priority === "medium" ? "#eff6ff"
+                      : "#f0fdf4",
+                  },
+                ]}>
+                  <Text style={[
+                    styles.priorityTagText,
+                    {
+                      color:
+                        item.priority === "high" ? "#ef4444"
+                        : item.priority === "medium" ? "#0ea5e9"
+                        : "#16a34a",
+                    },
+                  ]}>
+                    {item.priority.charAt(0).toUpperCase() + item.priority.slice(1)}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
 
@@ -335,10 +380,19 @@ const ListDetailsScreen = ({ navigation, route }) => {
               contentStyle={[styles.menuContent, { backgroundColor: colors.card }]}>
               <Menu.Item
                 onPress={() => {
+                  const item = list?.items?.find(i => (i.id || i._id) === itemId);
+                  setActiveItemMenuId(null);
+                  setPriorityModal({ visible: true, itemId, current: item?.priority || "medium" });
+                }}
+                title={"Set Priority"}
+                titleStyle={[styles.menuItemTitle, { color: colors.textPrimary }]}
+              />
+              <Menu.Item
+                onPress={() => {
                   setActiveItemMenuId(null);
                   toggleItemStatus(itemId);
                 }}
-                title={item.status === "purchased" ? "Pending" : "Purchased"}
+                title={item.status === "purchased" ? "Pending" : "Completed"}
                 titleStyle={[styles.menuItemTitle, { color: colors.textPrimary }]}
               />
               <Menu.Item
@@ -390,7 +444,9 @@ const ListDetailsScreen = ({ navigation, route }) => {
     );
   }
 
+
   return (
+    <>
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header
         variant="screen"
@@ -399,9 +455,9 @@ const ListDetailsScreen = ({ navigation, route }) => {
         rightAction={
           !isViewer ? (
             <View style={styles.headerActions}>
-              <TouchableOpacity style={styles.iconButton}>
+              {/* <TouchableOpacity style={styles.iconButton}>
                 <Share2 size={22} color={colors.icon} />
-              </TouchableOpacity>
+              </TouchableOpacity> */}
               <Menu
                 visible={showHeaderMenu}
                 onDismiss={() => {
@@ -419,14 +475,14 @@ const ListDetailsScreen = ({ navigation, route }) => {
                   </TouchableOpacity>
                 }
                 contentStyle={[styles.menuContent, { backgroundColor: colors.card }]}>
-                <Menu.Item
+                {/* <Menu.Item
                   onPress={() => {
                     setShowHeaderMenu(false);
                     // Handle edit action
                   }}
                   title="Edit"
                   titleStyle={[styles.menuItemTitle, { color: colors.textPrimary }]}
-                />
+                /> */}
                 <Menu.Item
                   onPress={() => {
                     isHeaderMenuDismissingRef.current = true;
@@ -451,7 +507,7 @@ const ListDetailsScreen = ({ navigation, route }) => {
         <View style={styles.progressContainer}>
           <View style={styles.progressLabels}>
             <Text style={[styles.progressText, { color: colors.textSecondary }]}>
-              {purchasedItems}/{totalItems} purchased
+              {purchasedItems}/{totalItems} completed
             </Text>
             <Text style={[styles.progressPercentText, { color: colors.primary }]}>
               {Math.round(progressPercent)}%
@@ -505,27 +561,40 @@ const ListDetailsScreen = ({ navigation, route }) => {
                 { color: colors.textMuted },
                 activeTab === "All Items" && [styles.activeTabText, { color: colors.textPrimary }],
               ]}>
-              All Items
+              All Items ({allItems})
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.tab, activeTab === "To Buy" && [styles.activeTab, { borderBottomColor: colors.textPrimary }]]}
-            onPress={() => setActiveTab("To Buy")}>
+            style={[styles.tab, activeTab === "To Do" && [styles.activeTab, { borderBottomColor: colors.textPrimary }]]}
+            onPress={() => setActiveTab("To Do")}>
             <Text
               style={[
                 styles.tabText,
                 { color: colors.textMuted },
-                activeTab === "To Buy" && [styles.activeTabText, { color: colors.textPrimary }],
+                activeTab === "To Do" && [styles.activeTabText, { color: colors.textPrimary }],
               ]}>
-              To Buy ({pendingItems.length})
+              To Do ({pendingItems.length})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tab, activeTab === "Completed" && [styles.activeTab, { borderBottomColor: colors.textPrimary }]]}
+            onPress={() => setActiveTab("Completed")}>
+            <Text
+              style={[
+                styles.tabText,
+                { color: colors.textMuted },
+                activeTab === "Completed" && [styles.activeTabText, { color: colors.textPrimary }],
+              ]}>
+              Completed ({doneItems.length})
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Item List */}
         <View style={styles.listContainer}>
-          {activeTab === "To Buy" ? (
+          {activeTab === "To Do" ? (
             displayItems.length > 0 ? (
               <FlatList
                 data={displayItems}
@@ -536,9 +605,22 @@ const ListDetailsScreen = ({ navigation, route }) => {
                 maxToRenderPerBatch={10}
                 windowSize={5}
               />
-
             ) : (
-              <Text style={[styles.emptyText, { color: colors.textMuted }]}>All caught up! Nothing to buy.</Text>
+              <Text style={[styles.emptyText, { color: colors.textMuted }]}>All caught up! Nothing to do.</Text>
+            )
+          ) : activeTab === "Completed" ? (
+            doneItems.length > 0 ? (
+              <FlatList
+                data={doneItems}
+                renderItem={renderItem}
+                keyExtractor={item => String(item.id || item._id)}
+                scrollEnabled={false}
+                initialNumToRender={10}
+                maxToRenderPerBatch={10}
+                windowSize={5}
+              />
+            ) : (
+              <Text style={[styles.emptyText, { color: colors.textMuted }]}>No completed items yet.</Text>
             )
           ) : (
             <>
@@ -556,11 +638,11 @@ const ListDetailsScreen = ({ navigation, route }) => {
 
               ) : null}
 
-              {/* Purchased items should always render when present (even if all items are purchased) */}
+              {/* Completed items should always render when present (even if all items are completed) */}
               {doneItems.length > 0 ? (
                 <>
                   <View style={[styles.sectionHeader, { backgroundColor: colors.backgroundSecondary }]}>
-                    <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>PURCHASED</Text>
+                    <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>COMPLETED</Text>
                   </View>
                   <FlatList
                     data={doneItems}
@@ -586,6 +668,14 @@ const ListDetailsScreen = ({ navigation, route }) => {
         <View style={{ height: 100 }} />
       </ScrollView>
     </View>
+
+      <ItemPriorityModal
+        isVisible={priorityModal.visible}
+        currentPriority={priorityModal.current}
+        onClose={() => setPriorityModal(prev => ({ ...prev, visible: false }))}
+        onSave={(newPriority) => handleSetPriority(newPriority)}
+      />
+    </>
   );
 };
 
@@ -674,7 +764,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.medium,
   },
   activeTabText: {
-    fontFamily: FontFamily.bold,
+    fontFamily: FontFamily.medium,
   },
   listContainer: {
     gap: 20,
@@ -758,6 +848,16 @@ const styles = StyleSheet.create({
     fontSize: RFValue(12),
     fontFamily: FontFamily.medium,
     color: "#ef4444",
+  },
+  priorityTag: {
+    marginLeft: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  priorityTagText: {
+    fontSize: RFValue(8),
+    fontFamily: FontFamily.bold,
   },
 });
 

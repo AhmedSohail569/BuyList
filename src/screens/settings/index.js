@@ -19,7 +19,7 @@ import Header from "~components/Header";
 import { ScrollView, Text } from "~components/Common";
 import { RFValue } from "react-native-responsive-fontsize";
 import { FontFamily } from "~theme/fonts";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import SelectionModal from "~containers/modals/SelectionModal";
 import { DISTANCE_OPTIONS } from "~constants";
 import { logoutAndPurge } from "~redux/store";
@@ -109,6 +109,15 @@ const SettingsTab = ({ onQuickAction, navigation }) => {
   const dispatch = useDispatch();
   const logoutCurrentLoading = useSelector(state => state.session.logoutCurrentLoading);
   const { distanceUnit, language } = useSelector(state => state.settings);
+  const { allCircles } = useSelector(state => state.circles);
+  const { user } = useSelector(state => state.auth);
+
+  // Find the default owned circle for navigation
+  const defaultCircle = useMemo(() => {
+    if (!Array.isArray(allCircles)) return null;
+    return allCircles.find(c => c.isDefault && c.owner?._id === user?._id) || 
+           allCircles.find(c => c.owner?._id === user?._id);
+  }, [allCircles, user]);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState(null); // 'language' | 'distance'
@@ -223,7 +232,16 @@ const SettingsTab = ({ onQuickAction, navigation }) => {
             icon={Users}
             color="#EC4899"
             label={t("settings_manage_circle")}
-            onPress={() => navigation.navigate("CircleSettings")}
+            onPress={() => {
+              if (defaultCircle) {
+                navigation.navigate("CircleSettings", {
+                  circleId: defaultCircle.id || defaultCircle._id,
+                  currentCircle: defaultCircle,
+                });
+              } else {
+                navigation.navigate("CircleTab");
+              }
+            }}
           />
           <SettingsOption
             icon={List}

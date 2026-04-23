@@ -88,6 +88,9 @@ const en = {
   modal_priority_medium: "Medium",
   modal_priority_high: "High",
   modal_share: "Share with Circle",
+  modal_share_circle_subtitle: "Select a circle to share with",
+  modal_share_loading: "Loading circles...",
+  modal_share_no_circles: "No circles available",
   modal_create_list: "Create List",
   modal_creating_list: "Creating...",
   
@@ -172,11 +175,27 @@ const en = {
   circle_owner: "Owner",
   circle_no_shared_lists: "No shared lists yet. Create a list and share it with your circle.",
   circle_view_list: "View List",
+  circle_no_circles: "No circles yet. Create a circle and invite members to get started.",
+  circle_default_note: "Note: This is your default circle and cannot be deleted.",
+  circle_default_badge: "Default",
+  circle_set_default_title: "Set as Default",
+  circle_set_default_confirm: "Are you sure you want to set this circle as your default?",
+  circle_set_default_success: "Default Circle Updated",
+  circle_set_default_success_desc: "This circle is now your default hub.",
+  circle_create_title: "New Circle",
+  circle_create_name_label: "CIRCLE NAME",
+  circle_create_name_placeholder: "e.g., Family Home",
+  circle_create_color_label: "CIRCLE COLOR",
+  circle_create_btn: "Create Circle",
+  circle_create_btn_loading: "Creating Circle...",
+  circle_create_success: "Circle Created",
+  circle_create_success_desc: "Your new circle has been created successfully.",
 
   // ── Manage Connections ───────────────────────────────────────────────────────
   manage_title: "Manage Connections",
   manage_tab_connections: "Connections",
   manage_tab_invite: "Invite People",
+  all_connections_title: "All Connections",
   manage_search_placeholder: "Search connections...",
   manage_no_connections: "No connections yet. Invite members to get started.",
   manage_no_results: "No results found for",
@@ -388,6 +407,25 @@ const en = {
   common_unexpected_error: "An unexpected error occurred",
   common_recently: "Recently",
   common_just_now: "Just now",
+
+  // ── Activity Feed ──────────────────────────────────────────────────────────────
+  activity_purchase_items: "marked {{count}} {{noun}} as purchased in",
+  activity_add_items: "added {{count}} {{noun}} to",
+  activity_create_list: "created a list named",
+  activity_delete_list: "deleted a list named",
+  activity_join_circle: "joined the circle",
+  activity_leave_circle: "left the circle",
+  activity_default: "updated the circle",
+  activity_item: "item",
+  activity_items: "items",
+  activity_someone: "Someone",
+
+  // ── Leave Circle ──────────────────────────────────────────────────────────────
+  circle_leave_btn: "Leave",
+  circle_leave_confirm_title: "Leave Circle",
+  circle_leave_confirm_desc: "Leaving this circle will remove you from all shared lists. Do you want to continue?",
+  circle_leave_success_title: "Circle Left",
+  circle_leave_success_desc: "You have successfully left the circle.",
 };
 
 export default en;

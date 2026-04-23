@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -14,20 +14,27 @@ import {
   Share2,
   QrCode,
   ChevronRight,
+  Shield,
+  Plus,
+  MoreVertical
 } from "lucide-react-native";
+import { Menu } from "react-native-paper";
 import { ScrollView, Text } from "~components/Common";
 import { RFValue } from "react-native-responsive-fontsize";
 import { FontFamily } from "~theme/fonts";
 import Header from "~components/Header";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchOwnedCircle } from "~redux/actions/circleActions";
+import Toast from "react-native-toast-message";
+import { fetchAllCircles, createCircle, fetchAllConnections, leaveCircle } from "~redux/actions/circleActions";
+import SelectionModal from "~containers/modals/SelectionModal";
+import { BottomModal } from "~components/Common/Modal";
 import { fetchRecentActivities, fetchAllLists } from "~redux/actions/listActions";
 import { useTheme } from "~context/ThemeContext";
 import useOnReconnect from "~hooks/useOnReconnect";
 import useScreenFetch from "~hooks/useScreenFetch";
 import useLocation from "~hooks/useLocation";
 import Avatar from "~components/Avatar";
-import { normalizeActivity, getInitials, hasProfilePicture } from "~utils/display";
+import { normalizeActivity } from "~utils/display";
 import { formatListTimeAgo } from "~utils/time";
 import useTranslation from "~hooks/useTranslation";
 
@@ -37,39 +44,60 @@ const formatRole = (role) => {
   return role.charAt(0).toUpperCase() + role.slice(1);
 };
 
-// Build connections list from ownedCircle data (circle-specific, not shared)
-const buildConnections = (ownedCircle) => {
-  if (!ownedCircle) return [];
+// Build connections list from allCircles data (circle-specific, not shared)
+const buildConnections = (allCircles) => {
+  if (!allCircles || !Array.isArray(allCircles)) return [];
   const connections = [];
-  if (ownedCircle.owner) {
-    connections.push({
-      id: ownedCircle.owner._id || ownedCircle.owner.id,
-      name: ownedCircle.owner.username || ownedCircle.owner.email || "Owner",
-      role: "Owner",
-      image: ownedCircle.owner.profilePicture,
-      isOwner: true,
-    });
-  }
-  if (ownedCircle.members && Array.isArray(ownedCircle.members)) {
-    ownedCircle.members.forEach((member) => {
-      if (member.userId) {
-        connections.push({
-          id: member.userId._id || member.userId.id,
-          name: member.userId.username || member.userId.email || "Member",
-          role: formatRole(member.role),
-          image: member.userId.profilePicture,
-          isOwner: false,
-        });
-      }
-    });
-  }
-  return connections;
+  
+  allCircles.forEach(circle => {
+    if (circle.owner) {
+      connections.push({
+        id: circle.owner._id || circle.owner.id,
+        name: circle.owner.username || circle.owner.email || "Owner",
+        role: "Owner",
+        image: circle.owner.profilePicture,
+        isOwner: true,
+      });
+    }
+    if (circle.members && Array.isArray(circle.members)) {
+      circle.members.forEach((member) => {
+        if (member.userId) {
+          connections.push({
+            id: member.userId._id || member.userId.id,
+            name: member.userId.username || member.userId.email || "Member",
+            role: formatRole(member.role),
+            image: member.userId.profilePicture,
+            isOwner: false,
+          });
+        }
+      });
+    }
+  });
+
+  // Deduplicate connections by ID
+  const uniqueConnections = [];
+  const seenIds = new Set();
+  connections.forEach(conn => {
+    if (!seenIds.has(conn.id)) {
+      seenIds.add(conn.id);
+      uniqueConnections.push(conn);
+    }
+  });
+  
+  return uniqueConnections;
+};
+
+// Helper function to convert hex to rgb string for rgba usage
+const hexToRgbStr = (hex) => {
+  if (!hex) return null;
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : null;
 };
 
 // --- Sub Components ---
 
 // Avatar Stack Component
-const AvatarStack = ({ items, size = 24, limit = 3, colors }) => {
+const AvatarStack = ({ items, size = 24, limit = 3, colors, isDark }) => {
   // items can be array of {image, name} objects or array of image strings (for backward compatibility)
   const avatarItems = items.map((item, index) => {
     if (typeof item === "string") {
@@ -79,14 +107,17 @@ const AvatarStack = ({ items, size = 24, limit = 3, colors }) => {
     return item;
   });
 
+  const displayedItems = avatarItems.slice(0, limit);
+  const remainingCount = avatarItems.length > limit ? avatarItems.length - limit : 0;
+
   return (
     <View style={styles.avatarStack}>
-      {avatarItems.slice(0, limit).map((item, index) => (
+      {displayedItems.map((item, index) => (
         <View
           key={index}
           style={{
             marginLeft: index === 0 ? 0 : -8,
-            zIndex: limit - index,
+            zIndex: avatarItems.length - index,
           }}>
           <Avatar
             image={item.image}
@@ -97,6 +128,25 @@ const AvatarStack = ({ items, size = 24, limit = 3, colors }) => {
           />
         </View>
       ))}
+      {remainingCount > 0 && (
+        <View
+          style={[
+            styles.plusCounter,
+            {
+              width: size,
+              height: size,
+              borderRadius: size / 2,
+              marginLeft: -8,
+              backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "#f3f4f6",
+              borderColor: colors?.card || "#fff",
+              zIndex: 0,
+            },
+          ]}>
+          <Text style={[styles.plusText, { color: colors?.textSecondary || "#6b7280" }]}>
+            +{remainingCount}
+          </Text>
+        </View>
+      )}
     </View>
   );
 };
@@ -114,34 +164,139 @@ const CircleTab = ({ navigation }) => {
   const dispatch = useDispatch();
   const { colors, isDark } = useTheme();
   const { t } = useTranslation();
-  const { ownedCircle } = useSelector(state => state.circles);
+  const { 
+    allCircles, 
+    loading, 
+    createLoading,
+    allConnections,
+    connectionsLoading,
+  } = useSelector(state => state.circles);
   const { recentActivities, lists } = useSelector(state => state.lists);
+  const { user } = useSelector(state => state.auth);
+  const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [activeMenuId, setActiveMenuId] = useState(null);
+  const [leaveModalVisible, setLeaveModalVisible] = useState(false);
+  const [circleToLeave, setCircleToLeave] = useState(null);
 
-  // Fetch all circle data; show loader only on first visit, background refresh on return
-  const fetchCircleData = useCallback(async () => {
-    await Promise.all([
-      dispatch(fetchOwnedCircle()),
-      dispatch(fetchRecentActivities()),
-      dispatch(fetchAllLists()),
-    ]);
+  console.log("allConnections", allConnections);
+
+  // Fetch all circles on screen mount or manually triggered
+  const fetchFn = useCallback(() => {
+    dispatch(fetchAllCircles());
+    dispatch(fetchAllConnections());
+    dispatch(fetchRecentActivities());
+    dispatch(fetchAllLists());
   }, [dispatch]);
-
-  const hasData = !!ownedCircle;
-  useScreenFetch(fetchCircleData, hasData);
+  
+  // Use useScreenFetch for standard screen loading management
+  useScreenFetch(fetchFn, allCircles.length > 0 || allConnections.length > 0);
 
   // Re-fetch data when internet reconnects
   useOnReconnect(() => {
-    dispatch(fetchOwnedCircle());
+    dispatch(fetchAllCircles());
+    dispatch(fetchAllConnections());
     dispatch(fetchRecentActivities());
     dispatch(fetchAllLists());
   });
 
-  // Build connections from ownedCircle data
-  const connections = buildConnections(ownedCircle);
+  const handleSaveCircle = async (data) => {
+   
+    try {
+      await dispatch(createCircle(data)).unwrap();
+      await dispatch(fetchAllCircles());
+      Toast.show({
+        type: "success",
+        text1: t("circle_create_success"),
+        text2: t("circle_create_success_desc"),
+      });
+      setCreateModalVisible(false);
+    } catch (err) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: err || "Failed to create circle",
+      });
+    }
+  };
+
+  // Handle Leave Circle confirmation
+  const handleLeaveConfirm = async () => {
+    if (!circleToLeave) return;
+    try {
+      await dispatch(leaveCircle({ circleId: circleToLeave.id || circleToLeave._id })).unwrap();
+      Toast.show({
+        type: "success",
+        text1: t("circle_leave_success_title"),
+        text2: t("circle_leave_success_desc"),
+      });
+      setLeaveModalVisible(false);
+      setCircleToLeave(null);
+    } catch (err) {
+      Toast.show({
+        type: "error",
+        text1: t("common_error"),
+        text2: typeof err === "string" ? err : t("common_unexpected_error"),
+      });
+    }
+  };
+
+  const openLeaveConfirmation = (circle) => {
+    setCircleToLeave(circle);
+    setLeaveModalVisible(true);
+    setActiveMenuId(null);
+  };
+
+  // Sorted circles: Owned first, and among owned, default first
+  const sortedCircles = useMemo(() => {
+    if (!Array.isArray(allCircles)) return [];
+    return [...allCircles].sort((a, b) => {
+      const aIsOwned = a.owner?._id === user?._id;
+      const bIsOwned = b.owner?._id === user?._id;
+
+      // Rule 1: Owned circles come first
+      if (aIsOwned && !bIsOwned) return -1;
+      if (!aIsOwned && bIsOwned) return 1;
+
+      // Rule 2: Among owned circles, default circle comes first
+      if (aIsOwned && bIsOwned) {
+        if (a.isDefault && !b.isDefault) return -1;
+        if (!a.isDefault && b.isDefault) return 1;
+      }
+
+      return 0;
+    });
+  }, [allCircles, user?._id]);
+  
+  // Deduplicate connections from Redux and include self
+  const uniqueConnections = useMemo(() => {
+    // Start with current user as owner
+    const self = user ? {
+      ...user,
+      id: user.id || user._id,
+      name: user.username || user.name || user.email || "Me",
+      role: "owner",
+      isSelf: true
+    } : null;
+
+    const connections = Array.isArray(allConnections) ? allConnections : [];
+    const seen = new Set();
+    if (self) seen.add(self.id);
+
+    const filtered = connections.filter(c => {
+      const id = c.id || c._id;
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+
+    return self ? [self, ...filtered] : filtered;
+  }, [allConnections, user]);
+
+  const currentCircle = Array.isArray(sortedCircles) && sortedCircles.length > 0 ? sortedCircles[0] : null;
 
   // Get circle name or default
-  const circleName = ownedCircle?.name || "Family Home";
-  const homeLocation = ownedCircle?.owner?.zone || t("circle_set_location");
+  const circleName = currentCircle?.name || "Circle";
+  const homeLocation = currentCircle?.owner?.zone || t("circle_set_location");
   const activityItems = useMemo(() => {
     const source = Array.isArray(recentActivities) ? recentActivities : [];
     return source.slice(0, 5).map((activity, index) => normalizeActivity(activity, index, t));
@@ -183,14 +338,15 @@ const CircleTab = ({ navigation }) => {
           name: member?.username || member?.name || member?.email || "User",
         }));
 
-      return {
-        id: list.id || list._id,
-        title: list.name || "Untitled List",
-        progress: progress.percentage,
-        updated: formatListTimeAgo(list.updatedAt || list.createdAt),
-        avatars: avatars.length > 0 ? avatars : [{ image: null, name: "User" }],
-      };
-    });
+        return {
+          id: list.id || list._id,
+          title: list.name || "Untitled List",
+          progress: progress.percentage,
+          updated: formatListTimeAgo(list.updatedAt || list.createdAt),
+          avatars: avatars.length > 0 ? avatars : [{ image: null, name: "User" }],
+          color: list.circle?.color,
+        };
+      });
   }, [lists]);
 
   const handleListPress = useCallback((listId) => {
@@ -213,8 +369,11 @@ const CircleTab = ({ navigation }) => {
         title={t("circle_title")}
         subtitle={t("circle_subtitle")}
         rightAction={
-          <TouchableOpacity style={[styles.addUserButton, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]} onPress={() => navigation.navigate("ManageConnections", { tab: "Invite" })}>
-            <UserPlus size={20} color={colors.primary} />
+          <TouchableOpacity 
+            style={[styles.addUserButton, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]} 
+            onPress={() => setCreateModalVisible(true)}
+          >
+            <Plus size={20} color={colors.primary} />
           </TouchableOpacity>
         }
       />
@@ -223,62 +382,127 @@ const CircleTab = ({ navigation }) => {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        {/* Family Home Card */}
-        <View style={[styles.familyCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
-          {/* Decorative Corner */}
-          <View style={[styles.decorativeCorner, { backgroundColor: isDark ? "rgba(14, 165, 233, 0.1)" : "#f0f9ff" }]} />
+        {/* Circle Cards List */}
+        {sortedCircles && sortedCircles.length > 0 ? (
+          sortedCircles.map((circle, index) => {
+            const currentCircleName = circle.name || "Circle";
+            const currentCircleConnections = buildConnections([circle]);
+            
+            const baseThemeColor = circle.color || colors.primary;
+            const rgbColor = hexToRgbStr(circle.color);
+            
+            // Accent colors (decorative corner and icon bg = 20% opacity)
+            const cornerBgColor = circle.color && rgbColor 
+              ? `rgba(${rgbColor}, 0.2)` 
+              : (isDark ? "rgba(14, 165, 233, 0.1)" : "#f0f9ff");
+              
+            const iconBgColor = circle.color && rgbColor 
+              ? `rgba(${rgbColor}, 0.2)` 
+              : (isDark ? "rgba(14, 165, 233, 0.2)" : "#e0f2fe");
+              
+            const badgeBgColor = circle.color && rgbColor 
+              ? `rgba(${rgbColor}, 0.15)` 
+              : (isDark ? "rgba(14, 165, 233, 0.15)" : "#eff6ff");
+              
+            const badgeBorderColor = circle.color && rgbColor 
+              ? `rgba(${rgbColor}, 0.3)` 
+              : (isDark ? "rgba(14, 165, 233, 0.3)" : "#dbeafe");
+            
+            return (
+              <View key={circle.id || circle._id || index} style={[styles.familyCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
+                {/* Decorative Corner */}
+                 <View style={[styles.decorativeCorner, { backgroundColor: cornerBgColor }]} />
 
-          <View style={styles.familyHeaderRow}>
-            <View style={[styles.iconBg, { backgroundColor: isDark ? "rgba(14, 165, 233, 0.2)" : "#e0f2fe" }]}>
-              <ShoppingBag size={20} color={colors.primary} />
-            </View>
-            <View style={styles.familyTitleContainer}>
-              <Text style={[styles.familyTitle, { color: colors.textPrimary }]}>{circleName}</Text>
-              <View style={[styles.ownerBadge, { backgroundColor: isDark ? "rgba(14, 165, 233, 0.15)" : "#eff6ff", borderColor: isDark ? "rgba(14, 165, 233, 0.3)" : "#dbeafe" }]}>
-                <Text style={[styles.ownerText, { color: colors.primary }]}>{t("circle_owner")}</Text>
+                <View style={styles.familyHeaderRow}>
+                  <View style={[styles.iconBg, { backgroundColor: iconBgColor }]}>
+                    <ShoppingBag size={20} color={baseThemeColor} />
+                  </View>
+                  <View style={styles.familyTitleContainer}>
+                      <Text style={[styles.familyTitle, { color: colors.textPrimary }]}>{currentCircleName}</Text>
+                   
+                    {circle.owner._id === user._id && 
+                      <View style={styles.badgeContainer}><View style={[styles.ownerBadge, { backgroundColor: badgeBgColor, borderColor: badgeBorderColor }]}>
+                        <Shield size={12} color={baseThemeColor}/>
+                        <Text style={[styles.ownerText, { color: baseThemeColor }]}>{t("circle_owner")}</Text>
+                      </View>{circle.isDefault && (
+                        <View style={[styles.defaultBadge, { backgroundColor: isDark ? "rgba(107, 114, 128, 0.1)" : "#F2F2F233", borderColor: isDark ? "rgba(107, 114, 128, 0.2)" : "#00000040" }]}>
+                          <Text style={[styles.defaultText]}>{t("circle_default_badge")}</Text>
+                        </View>
+                      )}</View>
+                    }
+                  </View>
+                  {circle.owner._id === user._id ? (
+                    <TouchableOpacity
+                      style={styles.settingsIcon}
+                      onPress={() =>
+                        navigation.navigate("CircleSettings", {
+                          circleId: circle.id || circle._id,
+                          currentCircle: circle,
+                        })
+                      }
+                    >
+                      <Settings size={RFValue(16)} color={colors.iconSecondary} />
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={[styles.settingsIcon, {marginTop: -20}]}>
+                      <Menu
+                        visible={activeMenuId === (circle.id || circle._id)}
+                        onDismiss={() => setActiveMenuId(null)}
+                        anchor={
+                          <TouchableOpacity
+                            onPress={() => setActiveMenuId(circle.id || circle._id)}
+                            hitSlop={15}
+                          >
+                            <MoreVertical size={RFValue(16)} color={colors.iconSecondary} />
+                          </TouchableOpacity>
+                        }
+                        contentStyle={[styles.menuContent, { backgroundColor: colors.card }]}
+                      >
+                        <Menu.Item
+                          onPress={() => openLeaveConfirmation(circle)}
+                          title={t("circle_leave_btn")}
+                          titleStyle={[styles.menuItemTitleDelete]}
+                        />
+                      </Menu>
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.familyFooter}>
+                  <AvatarStack
+                    items={currentCircleConnections.map(conn => ({
+                      image: conn.image,
+                      name: conn.name,
+                    }))}
+                    size={32}
+                    colors={colors}
+                    isDark={isDark}
+                  />
+                  {circle.owner._id === user._id && <TouchableOpacity
+                    style={[styles.manageBtn, { borderColor: baseThemeColor }]}
+                    onPress={() => navigation.navigate("ManageConnections", { circleId: circle.id || circle._id, currentCircle: circle, tab: "Connections" })}
+                  >
+                    <Text style={[styles.manageBtnText, { color: baseThemeColor }]}>{t("circle_manage_btn")}</Text>
+                  </TouchableOpacity>}
+                </View>
               </View>
-            </View>
-            <TouchableOpacity
-              style={styles.settingsIcon}
-              onPress={() => navigation.navigate("CircleSettings")}>
-              <Settings size={20} color={colors.iconMuted} />
-            </TouchableOpacity>
-          </View>
-
-          <View style={[styles.addressRow, { backgroundColor: colors.surfaceSecondary }]}>
-            <MapPin size={16} color={colors.primary} style={{ marginRight: 6 }} />
-            <Text style={[styles.addressText, { color: colors.textSecondary, maxWidth: "80%" }]} numberOfLines={1} ellipsizeMode="tail">
-              {homeLocation}
+            );
+          })
+        ) : (
+          <View style={[styles.familyCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor, alignItems: "center", paddingVertical: 32 }]}>
+            <Text style={{ color: colors.textMuted, fontSize: RFValue(12), fontFamily: FontFamily.medium }}>
+              {t("circle_no_circles")}
             </Text>
-            <TouchableOpacity style={{ marginLeft: "auto" }} onPress={handleMapNavigation}>
-              <Pencil size={14} color={colors.iconMuted} />
-            </TouchableOpacity>
           </View>
+        )}
 
-          <View style={styles.familyFooter}>
-            <AvatarStack
-              items={connections.map(conn => ({
-                image: conn.image,
-                name: conn.name,
-              }))}
-              size={32}
-              colors={colors}
-            />
-            <TouchableOpacity
-              style={[styles.manageBtn, { borderColor: colors.primary }]}
-              onPress={() => navigation.navigate("ManageConnections")}
-            >
-              <Text style={[styles.manageBtnText, { color: colors.primary }]}>{t("circle_manage_btn")}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
 
         {/* Connections Section */}
         <View style={styles.sectionHeaderRow}>
           <Text style={[styles.sectionHeader, { color: colors.textPrimary }]}>{t("circle_connections")}</Text>
           <TouchableOpacity
             style={styles.viewAllBtn}
-            onPress={() => navigation.navigate("ManageConnections")}>
+            onPress={() => navigation.navigate("AllConnections")}>
             <Text style={[styles.viewAllText, { color: colors.primary }]}>{t("circle_view_all")}</Text>
             <ChevronRight size={14} color={colors.primary} />
           </TouchableOpacity>
@@ -288,33 +512,47 @@ const CircleTab = ({ navigation }) => {
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.connectionsScroll}>
-          {connections.map(user => (
-            <View key={user.id} style={styles.connectionItem}>
-              <View style={styles.avatarWrapper}>
-                <Avatar
-                  image={user.image}
-                  name={user.name}
-                  size={56}
-                  colors={colors}
-                />
-                {/* Only show online dot for owner if needed */}
-                {user.isOwner && <View style={[styles.onlineDot, { backgroundColor: colors.primary, borderColor: colors.card }]} />}
-              </View>
-              <Text style={[styles.connectionName, { color: colors.textPrimary }]}>{user.name}</Text>
-              <Text style={[styles.connectionRole, { color: colors.textMuted }]}>{user.role}</Text>
+          {uniqueConnections.length === 0 && !connectionsLoading ? (
+            <View style={styles.noConnectionsWrapper}>
+              <Text style={[styles.noConnectionsText, { color: colors.textMuted }]}>
+                {t("manage_no_connections")}
+              </Text>
             </View>
-          ))}
-          {/* Always show invite button */}
-          <TouchableOpacity
-            style={styles.inviteItem}
-            onPress={() =>
-              navigation.navigate("ManageConnections", { tab: "Invite" })
-            }>
-            <View style={[styles.inviteCircle, { borderColor: colors.border }]}>
-              <UserPlus size={20} color={colors.iconMuted} />
-            </View>
-            <Text style={[styles.inviteText, { color: colors.textMuted }]}>{t("circle_invite")}</Text>
-          </TouchableOpacity>
+          ) : (
+            uniqueConnections.map(user => {
+              const name = user.username || user.name || user.email || "User";
+              const role = user.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : "Member";
+              const isOwner = user.role?.toLowerCase() === "owner";
+              
+              return (
+                <View key={user.id || user._id} style={styles.connectionItem}>
+                  <View style={[
+                    styles.avatarWrapper,
+                    user.circleColor && { 
+                      padding: 2, 
+                      borderWidth: 2, 
+                      borderColor: user.circleColor,
+                      borderRadius: 34, // (56 + 4)/2 + some safety
+                    }
+                  ]}>
+                    <Avatar
+                      image={user.profilePicture || user.image}
+                      name={name}
+                      size={56}
+                      colors={colors}
+                    />
+                    {isOwner && (
+                      <View style={[styles.avatarOwnerBadge, { backgroundColor: colors.primary, borderColor: colors.card, right: user.circleColor ? -2 : 2, bottom: user.circleColor ? -2 : 2 }]}>
+                        <Shield size={8} color="#fff" fill="#fff" />
+                      </View>
+                    )}
+                  </View>
+                  <Text style={[styles.connectionName, { color: colors.textPrimary }]}>{name}</Text>
+                  <Text style={[styles.connectionRole, { color: colors.textMuted }]}>{role}</Text>
+                </View>
+              );
+            })
+          )}
         </ReactScrollView>
 
         {/* Shared Lists Section */}
@@ -327,40 +565,53 @@ const CircleTab = ({ navigation }) => {
           </View>
         ) : (
           <View style={styles.listsContainer}>
-            {sharedLists.map(list => (
-              <TouchableOpacity
-                key={list.id}
-                style={[styles.listCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}
-                onPress={() => handleListPress(list.id)}
-                activeOpacity={0.7}>
-                <View style={styles.listHeader}>
-                  <Text style={[styles.listTitle, { color: colors.textPrimary }]}>{list.title}</Text>
-                  <View style={[styles.syncedBadge, { backgroundColor: isDark ? "rgba(16, 185, 129, 0.2)" : "#d1fae5" }]}>
-                    <Text style={[styles.syncedText, { color: isDark ? "#34d399" : "#059669" }]}>{t("circle_synced")}</Text>
+            {sharedLists.map(list => {
+              
+              const listThemeColor = list?.color || colors.primary;
+              
+              return (
+                <TouchableOpacity
+                  key={list.id}
+                  style={[
+                    styles.listCard, 
+                    { 
+                      backgroundColor: colors.card, 
+                      shadowColor: colors.shadowColor,
+                      borderLeftWidth: 4,
+                      borderLeftColor: listThemeColor,
+                    }
+                  ]}
+                  onPress={() => handleListPress(list.id)}
+                  activeOpacity={0.7}>
+                  <View style={styles.listHeader}>
+                    <Text style={[styles.listTitle, { color: colors.textPrimary }]}>{list.title}</Text>
+                    <View style={[styles.syncedBadge, { backgroundColor: isDark ? "rgba(16, 185, 129, 0.2)" : "#d1fae5" }]}>
+                      <Text style={[styles.syncedText, { color: isDark ? "#34d399" : "#059669" }]}>{t("circle_synced")}</Text>
+                    </View>
                   </View>
-                </View>
-                <ProgressBar percentage={list.progress} colors={colors} isDark={isDark} />
-                <View style={styles.listFooter}>
-                  <View style={styles.listMeta}>
-                    <AvatarStack
-                      items={list.avatars}
-                      size={35}
-                      limit={3}
-                      colors={colors}
-                    />
-                    <Text style={[styles.listUpdated, { color: colors.textMuted }]}>{list.updated}</Text>
-
+                  <ProgressBar percentage={list.progress} colors={{...colors, primary: colors.primary}} isDark={isDark} />
+                  <View style={styles.listFooter}>
+                    <View style={styles.listMeta}>
+                      <AvatarStack
+                        items={list.avatars}
+                        size={35}
+                        limit={3}
+                        colors={colors}
+                      />
+                      <Text style={[styles.listUpdated, { color: colors.textMuted }]}>{list.updated}</Text>
+  
+                    </View>
+                    <TouchableOpacity
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleListPress(list.id);
+                      }}>
+                      <Text style={[styles.viewListText, { color: colors.primary }]}>{t("circle_view_list")}</Text>
+                    </TouchableOpacity>
                   </View>
-                  <TouchableOpacity
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      handleListPress(list.id);
-                    }}>
-                    <Text style={[styles.viewListText, { color: colors.primary }]}>{t("circle_view_list")}</Text>
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
-            ))}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
 
@@ -427,6 +678,28 @@ const CircleTab = ({ navigation }) => {
         {/* Bottom Padding */}
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      <BottomModal
+        isVisible={createModalVisible}
+        onClose={() => setCreateModalVisible(false)}
+        onApply={handleSaveCircle}
+        type="createCircle"
+      />
+
+      <SelectionModal
+        isVisible={leaveModalVisible}
+        onClose={() => {
+          setLeaveModalVisible(false);
+          setCircleToLeave(null);
+        }}
+        onSave={handleLeaveConfirm}
+        type="confirmation"
+        title={t("circle_leave_confirm_title")}
+        description={t("circle_leave_confirm_desc")}
+        danger
+        confirmLabel={loading ? t("common_loading") : t("circle_leave_btn")}
+        cancelLabel={t("common_cancel")}
+      />
     </View>
   );
 };
@@ -501,19 +774,44 @@ const styles = StyleSheet.create({
     color: "#111827",
     marginBottom: 4,
   },
+  badgeContainer: {
+    flexDirection: "row",
+    gap: 8,
+  },
   ownerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     alignSelf: "flex-start",
     backgroundColor: "#eff6ff",
     borderWidth: 1,
     borderColor: "#dbeafe",
     paddingHorizontal: 8,
-    paddingVertical: 2,
     borderRadius: 12,
   },
   ownerText: {
     fontSize: RFValue(8),
     fontFamily: FontFamily.bold,
     color: "#0ea5e9",
+  },
+  defaultBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F2F2F233',
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  defaultText: {
+    fontSize: RFValue(8),
+    fontFamily: FontFamily.bold,
+    color: "#6B7280",
   },
   settingsIcon: {
     marginTop: -40,
@@ -592,16 +890,16 @@ const styles = StyleSheet.create({
     position: "relative",
     marginBottom: 8,
   },
-  onlineDot: {
+  avatarOwnerBadge: {
     position: "absolute",
     bottom: 2,
     right: 2,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: "#0ea5e9",
-    borderWidth: 2,
-    borderColor: "#fff",
+    width: RFValue(12),
+    height: RFValue(12),
+    borderRadius: RFValue(6),
+    borderWidth: 1.5,
+    justifyContent: "center",
+    alignItems: "center",
   },
   connectionName: {
     fontSize: RFValue(10),
@@ -842,6 +1140,34 @@ const styles = StyleSheet.create({
     fontSize: RFValue(10),
     fontFamily: FontFamily.bold,
     color: "#fff",
+  },
+  plusCounter: {
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+  },
+  plusText: {
+    fontSize: RFValue(8),
+    fontFamily: FontFamily.bold,
+  },
+  noConnectionsWrapper: {
+    paddingVertical: 12,
+    marginRight: 20,
+    justifyContent: "center",
+  },
+  noConnectionsText: {
+    fontSize: RFValue(10),
+    fontFamily: FontFamily.regular,
+  },
+  menuContent: {
+    borderRadius: 12,
+    paddingVertical: 4,
+    minWidth: 150,
+  },
+  menuItemTitleDelete: {
+    fontSize: RFValue(12),
+    fontFamily: FontFamily.medium,
+    color: "#ef4444",
   },
 });
 

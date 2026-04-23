@@ -193,7 +193,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
         userName={profile?.username || user?.username || "User"}
         avatar={profile?.profilePicture ? { uri: profile.profilePicture } : null}
         rightIcon="notifications-outline"
-        notificationBadge
+        notificationBadge={user?.hasUnreadNotifications}
         onRightPress={() => setShowNotifications(true)}
       />
 

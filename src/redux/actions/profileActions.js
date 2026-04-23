@@ -11,9 +11,12 @@ export const getProfile = createAsyncThunk(
     async (_, { rejectWithValue }) => {
         try {
             const response = await axios.get("/auth/me");
-            console.log("response", response);
             const data = response.data;
-            return data?.data?.user || data?.user || data;
+            const userData = data?.data?.user || data?.user || data || {};
+            return {
+                ...(typeof userData === "object" ? userData : {}),
+                hasUnreadNotifications: data?.data?.hasUnreadNotifications || false,
+            };
         } catch (err) {
             return rejectWithValue(getErrorMessage(err));
         }

@@ -67,7 +67,7 @@ export const formatActivityAction = (action, metadata, t) => {
           : tr("activity_items", "items");
       return tr(
         "activity_purchase_items",
-        `marked ${itemCount} ${noun} as purchased`,
+        `marked ${itemCount} ${noun} as purchased in`,
         { count: itemCount, noun }
       );
     }
@@ -76,15 +76,15 @@ export const formatActivityAction = (action, metadata, t) => {
         itemCount === 1
           ? tr("activity_item", "item")
           : tr("activity_items", "items");
-      return tr("activity_add_items", `added ${itemCount} ${noun}`, {
+      return tr("activity_add_items", `added ${itemCount} ${noun} to`, {
         count: itemCount,
         noun,
       });
     }
     case "CREATE_LIST":
-      return tr("activity_create_list", "created a list");
+      return tr("activity_create_list", "created a list named");
     case "DELETE_LIST":
-      return tr("activity_delete_list", "deleted a list");
+      return tr("activity_delete_list", "deleted a list named");
     case "JOIN_CIRCLE":
       return tr("activity_join_circle", "joined the circle");
     case "LEAVE_CIRCLE":

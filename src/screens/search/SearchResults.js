@@ -290,8 +290,8 @@ const SearchResultsScreen = ({ navigation, route }) => {
       const name = selectedItem.name;
       setSelectedItem(null);
       try {
-        await dispatch(addItemsToList({ listId, items: [{ name: `${searchQuery} - (${selectedItem?.name})` }] })).unwrap();
-        Toast.show({ type: "success", text1: "Added", text2: `${name} added to your list` });
+        await dispatch(addItemsToList({ listId, items: [{ name: `${searchQuery} From ${selectedItem?.name}` }] })).unwrap();
+        Toast.show({ type: "success", text1: "Added", text2: `${searchQuery} from ${selectedItem?.name} added to your list` });
       } catch (err) {
         Toast.show({
           type: "error",
@@ -795,7 +795,7 @@ const SearchResultsScreen = ({ navigation, route }) => {
       {/* Add to List Modal */}
       <AddToListModal
         isVisible={!!selectedItem}
-        itemName={`${searchQuery} - (${selectedItem?.name})`}
+        itemName={`${searchQuery} From ${selectedItem?.name}`}
         onClose={() => setSelectedItem(null)}
         onSelect={handleAddToList}
       />

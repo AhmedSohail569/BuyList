@@ -16,6 +16,7 @@ import ChangeHomeLocationScreen from "~screens/settings/ChangeHomeLocation";
 import LegalScreen from "~screens/settings/Legal";
 import ListDetailsScreen from "~screens/lists/ListDetails";
 import ManageConnectionsScreen from "~screens/circle/ManageConnections";
+import AllConnectionsScreen from "~screens/circle/AllConnections";
 import PriceCheckScreen from "~screens/home/PriceCheckScreen";
 import AIRecommendationsScreen from "~screens/home/AIRecommendations";
 
@@ -74,6 +75,11 @@ export default () => {
         <Stack.Screen
           name="ManageConnections"
           component={ManageConnectionsScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AllConnections"
+          component={AllConnectionsScreen}
           options={{ headerShown: false }}
         />
         <Stack.Screen

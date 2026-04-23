@@ -70,6 +70,11 @@ const authSlice = createSlice({
       state.pendingLoginEmail = null;
       state.pendingLoginPassword = null;
     },
+    setHasUnreadNotifications(state, action) {
+      if (state.user) {
+        state.user.hasUnreadNotifications = action.payload;
+      }
+    },
     clearError(state) {
       state.error = null;
     },
@@ -318,6 +323,7 @@ const authSlice = createSlice({
 
 export const {
   logout,
+  setHasUnreadNotifications,
   clearError,
   clearForgotPassword,
   clearResetPasswordState,

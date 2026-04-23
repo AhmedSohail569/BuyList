@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   StyleSheet,
@@ -15,6 +15,7 @@ import {
   Trash2,
   ChevronRight,
   Pencil,
+  Star,
 } from "lucide-react-native";
 import { useDispatch, useSelector } from "react-redux";
 import Toast from "react-native-toast-message";
@@ -27,13 +28,16 @@ import { DEFAULT_ROLES } from "~constants";
 import {
   editCircleName,
   updateCircleDefaultMemberRole,
-  fetchOwnedCircle,
+  fetchownedCircles,
+  setDefaultCircle,
+  deleteCircle,
 } from "~redux/actions/circleActions";
 import { clearCircleError } from "~redux/reducers/circleReducer";
 import { useTheme } from "~context/ThemeContext";
 import useOnReconnect from "~hooks/useOnReconnect";
 import useScreenFetch from "~hooks/useScreenFetch";
 import useLocation from "~hooks/useLocation";
+import useTranslation from "~hooks/useTranslation";
 
 const SettingsRow = ({
   icon: Icon,
@@ -78,21 +82,36 @@ const SettingsRow = ({
   );
 };
 
-const CircleSettingsScreen = ({ onQuickAction, navigation }) => {
+const CircleSettingsScreen = ({ onQuickAction, navigation, route }) => {
   const dispatch = useDispatch();
-  const { ownedCircle, loading, error } = useSelector(state => state.circles);
+  const {ownedCircles, loading, error } = useSelector(state => state.circles);
+  const { currentCircle} = route.params;
   const { colors, isDark } = useTheme();
+  const { t } = useTranslation();
 
-  console.log("ownedCircle", ownedCircle);
+  console.log("currentCircle", currentCircle);
 
   // Fetch fresh circle data; background-refresh silently on screen return
-  const fetchFn = useCallback(() => dispatch(fetchOwnedCircle()), [dispatch]);
-  useScreenFetch(fetchFn, !!ownedCircle);
+  const fetchFn = useCallback(() => dispatch(fetchownedCircles()), [dispatch]);
+  useScreenFetch(fetchFn, !!currentCircle);
 
   // Re-fetch circle data when internet reconnects
   useOnReconnect(() => {
-    dispatch(fetchOwnedCircle());
+    dispatch(fetchownedCircles());
   });
+
+  // Safely find the specific circle data in the new arrays based on the original ID
+  const activeCircle = useMemo(() => {
+    if (!currentCircle) return null;
+    const circleId = currentCircle._id || currentCircle.id;
+    if (ownedCircles && Array.isArray(ownedCircles)) {
+      const found = ownedCircles.find(c => (c._id || c.id) === circleId);
+      if (found) return found;
+    }
+    return currentCircle;
+  }, [currentCircle, ownedCircles]);
+
+  console.log("activeCircle", activeCircle);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState(null);
@@ -102,33 +121,33 @@ const CircleSettingsScreen = ({ onQuickAction, navigation }) => {
 
   // Initialize circle name from Redux state
   const [circleName, setCircleName] = useState(
-    ownedCircle?.name || "Family Home",
+    activeCircle?.name || "Circle",
   );
 
   const [homeLocation, setHomeLocation] = useState(
-    ownedCircle?.owner?.zone || "Family Home",
+    activeCircle?.owner?.zone || "Circle",
   );
 
-  // Update circle name when ownedCircle changes
+  // Update circle name when activeCircle changes
   useEffect(() => {
-    if (ownedCircle?.name) {
-      setCircleName(ownedCircle.name);
+    if (activeCircle?.name) {
+      setCircleName(activeCircle.name);
     }
-  }, [ownedCircle?.name]);
+  }, [activeCircle?.name]);
 
-  // Update home location when ownedCircle changes
+  // Update home location when activeCircle changes
   useEffect(() => {
-    if (ownedCircle?.owner?.zone) {
-      setHomeLocation(ownedCircle.owner.zone);
+    if (activeCircle?.owner?.zone) {
+      setHomeLocation(activeCircle.owner.zone);
     }
-  }, [ownedCircle?.owner?.zone]);
+  }, [activeCircle?.owner?.zone]);
 
   // Initialize/update default role from Redux state (if backend provides it)
   useEffect(() => {
-    const apiRole = ownedCircle?.defaultMemberRole;
+    const apiRole = activeCircle?.defaultMemberRole;
     if (apiRole === "editor") setDefaultRole("Editor");
     else if (apiRole === "viewer") setDefaultRole("Viewer");
-  }, [ownedCircle?.defaultMemberRole]);
+  }, [activeCircle?.defaultMemberRole]);
 
   // Handle API errors with toast
   useEffect(() => {
@@ -173,7 +192,7 @@ const CircleSettingsScreen = ({ onQuickAction, navigation }) => {
 
   const handleSave = async newValue => {
     if (modalType === "defaultRole") {
-      const circleId = ownedCircle?._id || ownedCircle?.id;
+      const circleId = currentCircle?._id || currentCircle?.id ;
       if (!circleId) {
         Toast.show({
           type: "error",
@@ -195,7 +214,7 @@ const CircleSettingsScreen = ({ onQuickAction, navigation }) => {
       }
 
       // No change → close modal
-      if (apiRole === ownedCircle?.defaultMemberRole) {
+      if (apiRole === activeCircle?.defaultMemberRole) {
         setDefaultRole(label);
         setModalVisible(false);
         return;
@@ -223,6 +242,22 @@ const CircleSettingsScreen = ({ onQuickAction, navigation }) => {
       return;
     }
 
+    if (modalType === "setDefault") {
+      const circleId = currentCircle?._id || currentCircle?.id;
+      try {
+        await dispatch(setDefaultCircle({ circleId })).unwrap();
+        Toast.show({
+          type: "success",
+          text1: t("circle_set_default_success"),
+          text2: t("circle_set_default_success_desc"),
+        });
+        setModalVisible(false);
+      } catch (err) {
+        // Handled by useEffect
+      }
+      return;
+    }
+
     if (modalType === "circleName") {
       // Validate circle name
       const validationError = validateCircleName(newValue);
@@ -237,14 +272,14 @@ const CircleSettingsScreen = ({ onQuickAction, navigation }) => {
 
       // Check if name actually changed
       const trimmedName = newValue.trim();
-      if (trimmedName === ownedCircle?.name) {
+      if (trimmedName === activeCircle?.name) {
         // No change, just close modal
         setModalVisible(false);
         return;
       }
 
       // Get circle ID
-      const circleId = ownedCircle?._id || ownedCircle?.id;
+      const circleId = currentCircle?._id || currentCircle?.id;
       if (!circleId) {
         Toast.show({
           type: "error",
@@ -280,6 +315,23 @@ const CircleSettingsScreen = ({ onQuickAction, navigation }) => {
       return;
     }
 
+    if (modalType === "delete") {
+      const circleId = currentCircle?._id || currentCircle?.id;
+      try {
+        await dispatch(deleteCircle({ circleId })).unwrap();
+        Toast.show({
+          type: "success",
+          text1: "Circle Deleted",
+          text2: "Your circle has been permanently removed.",
+        });
+        setModalVisible(false);
+        navigation.goBack();
+      } catch (err) {
+        // Handled by error useEffect
+      }
+      return;
+    }
+
     // Handle other modal types (leave, delete)
     console.log(`Saved ${modalType}:`, newValue);
   };
@@ -303,7 +355,7 @@ const CircleSettingsScreen = ({ onQuickAction, navigation }) => {
             iconBgColor={isDark ? "rgba(14, 165, 233, 0.2)" : "#e0f2fe"}
             iconColor={colors.primary}
             title="Circle Name"
-            subtitle={circleName || "Family Home"}
+            subtitle={circleName || "Circle"}
             rightElement={<Pencil size={RFValue(16)} color={colors.iconMuted} />}
             onPress={() => openModal("circleName")}
             colors={colors}
@@ -332,13 +384,25 @@ const CircleSettingsScreen = ({ onQuickAction, navigation }) => {
             onPress={() => openModal("defaultRole")}
             colors={colors}
           />
+           {!activeCircle?.isDefault && (
+            <SettingsRow
+              icon={Star}
+              iconBgColor={isDark ? "rgba(234, 179, 8, 0.2)" : "#fef9c3"}
+              iconColor="#eab308"
+              title={t("circle_set_default_title")}
+              subtitle="Use this as your primary circle"
+              onPress={() => openModal("setDefault")}
+              colors={colors}
+              isLast
+            />
+          )}
           <SettingsRow
             icon={Bell}
             iconBgColor={isDark ? "rgba(234, 179, 8, 0.2)" : "#fef9c3"}
             iconColor="#eab308"
             title="Notifications"
             subtitle="All activity"
-            isLast
+            isLast={activeCircle?.isDefault}
             colors={colors}
             rightElement={
               <Switch
@@ -351,14 +415,15 @@ const CircleSettingsScreen = ({ onQuickAction, navigation }) => {
               />
             }
           />
+         
         </View>
 
         {/* DANGER ZONE SECTION - Commented out for now */}
-        {/* <Text style={[styles.sectionHeader, styles.dangerHeader]}>
+       {!activeCircle?.isDefault && <><Text style={[styles.sectionHeader, styles.dangerHeader]}>
           DANGER ZONE
         </Text>
         <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}>
-          <SettingsRow
+          {/* <SettingsRow
             icon={LogOut}
             iconBgColor="transparent"
             iconColor={colors.iconSecondary}
@@ -367,7 +432,7 @@ const CircleSettingsScreen = ({ onQuickAction, navigation }) => {
             rightElement={<View />}
             onPress={() => openModal("leave")}
             colors={colors}
-          />
+          /> */}
           <SettingsRow
             icon={Trash2}
             iconBgColor="transparent"
@@ -379,12 +444,19 @@ const CircleSettingsScreen = ({ onQuickAction, navigation }) => {
             isLast
             colors={colors}
           />
+         
         </View>
 
         <Text style={[styles.footerNote, { color: colors.textMuted }]}>
           Deleting a circle is permanent and will remove all shared lists and
           history for everyone.
-        </Text> */}
+        </Text></>}
+
+        {activeCircle?.isDefault && (
+          <Text style={[styles.footerNote, { color: colors.textMuted, marginTop: 20, textAlign: 'center',  }]}>
+            {t("circle_default_note")}
+          </Text>
+        )}
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -408,24 +480,28 @@ const CircleSettingsScreen = ({ onQuickAction, navigation }) => {
         title={
           modalType === "defaultRole"
             ? "Change Default Role"
-            : modalType === "leave"
-              ? "Leave Circle"
-              : modalType === "delete"
-                ? "Delete Circle"
-                : "Edit Circle Name"
+            : modalType === "setDefault"
+              ? t("circle_set_default_title")
+              : modalType === "leave"
+                ? "Leave Circle"
+                : modalType === "delete"
+                  ? "Delete Circle"
+                  : "Edit Circle Name"
         }
         initialValue={modalType === "defaultRole" ? defaultRole : circleName}
         description={
-          modalType === "leave"
-            ? "Leaving this circle will remove you from all shared lists. Do you want to continue?"
-            : modalType === "delete"
-              ? "Deleting this circle will permanently remove all shared lists and connections."
-              : ""
+          modalType === "setDefault"
+            ? t("circle_set_default_confirm")
+            : modalType === "leave"
+              ? "Leaving this circle will remove you from all shared lists. Do you want to continue?"
+              : modalType === "delete"
+                ? "Deleting this circle will permanently remove all shared lists and connections."
+                : ""
         }
         danger={modalType === "leave" || modalType === "delete" ? true : false}
         options={DEFAULT_ROLES}
         confirmLabel={
-          (modalType === "circleName" || modalType === "defaultRole") && loading
+          ((modalType === "circleName" || modalType === "defaultRole" || modalType === "setDefault") && loading)
             ? "Saving..."
             : "Save"
         }

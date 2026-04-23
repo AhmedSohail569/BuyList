@@ -13,6 +13,7 @@ import {
   deleteItemFromList,
   deleteList,
   fetchRecentActivities,
+  updateItemPriority,
 } from "../actions/listActions";
 import { logout } from "./authReducer";
 
@@ -560,6 +561,29 @@ const listsSlice = createSlice({
       .addCase(fetchRecentActivities.rejected, (state, action) => {
         state.activitiesLoading = false;
         state.error = action.payload;
+      })
+
+      // ============================================
+      // 9️⃣ UPDATE ITEM PRIORITY (Optimistic Update)
+      // ============================================
+      .addCase(updateItemPriority.pending, (state, action) => {
+        const { listId, itemId, priority } = action.meta.arg;
+        const list = state.listById[listId];
+        if (list?.items) {
+          const updatedItems = list.items.map(item =>
+            (item.id || item._id) === itemId ? { ...item, priority } : item,
+          );
+          const updatedList = { ...list, items: updatedItems };
+          state.listById[listId] = updatedList;
+          const idx = state.lists.findIndex(l => (l.id || l._id) === listId);
+          if (idx !== -1) state.lists = [...state.lists.slice(0, idx), { ...updatedList }, ...state.lists.slice(idx + 1)];
+        }
+      })
+      .addCase(updateItemPriority.fulfilled, state => { state.error = null; })
+      .addCase(updateItemPriority.rejected, (state, action) => {
+        const { previousList, listId, message } = action.payload || {};
+        if (listId && previousList) state.listById[listId] = previousList;
+        state.error = message || action.payload;
       })
 
       // Clear list state on logout

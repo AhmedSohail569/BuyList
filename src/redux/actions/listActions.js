@@ -228,9 +228,28 @@ export const deleteList = createAsyncThunk(
 );
 
 // ============================================
-// 9. GET RECENT ACTIVITIES
-// GET /api/activities/recent
+// 10. UPDATE ITEM PRIORITY (Optimistic Update)
+// PATCH /api/lists/update-item-priority/{listId}/{itemId}
 // ============================================
+export const updateItemPriority = createAsyncThunk(
+  "lists/updateItemPriority",
+  async ({ listId, itemId, priority }, { rejectWithValue, getState }) => {
+    const previousList = getState().lists.listById[listId] || null;
+
+    try {
+      await axios.patch(`/lists/update-item-priority/${listId}/${itemId}`, { priority });
+      return { listId, itemId, priority };
+    } catch (err) {
+      return rejectWithValue({
+        message: getErrorMessage(err),
+        previousList,
+        listId,
+      });
+    }
+  },
+  { condition: requireConnectivity },
+);
+
 export const fetchRecentActivities = createAsyncThunk(
   "lists/fetchRecentActivities",
   async (_, { rejectWithValue }) => {

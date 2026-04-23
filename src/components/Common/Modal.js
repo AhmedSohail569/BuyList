@@ -11,12 +11,14 @@ import {
   ScrollView,
   Platform,
 } from "react-native";
-import {X, Plus, ChevronDown, Users} from "lucide-react-native";
+import {X, Plus, ChevronDown, Users, Check} from "lucide-react-native";
 import {RFValue} from "react-native-responsive-fontsize";
 import {Text} from "~components/Common";
 import {FontFamily} from "~theme/fonts";
 import {useTheme} from "~context/ThemeContext";
 import useTranslation from "~hooks/useTranslation";
+import {useSelector, useDispatch} from "react-redux";
+import {fetchCirclesPicker} from "~redux/actions/circleActions";
 
 const {width, height} = Dimensions.get("window");
 
@@ -24,11 +26,21 @@ export const BottomModal = ({
   isVisible,
   onClose,
   onApply,
-  type = "filter", // 'filter' | 'createList'
+  type = "filter", // 'filter' | 'createList' | 'createCircle'
   loading = false,
 }) => {
   const {colors, isDark} = useTheme();
   const { t } = useTranslation();
+  const dispatch = useDispatch();
+  const { pickerCircles, pickerLoading } = useSelector(state => state.circles || {});
+
+  const CIRCLE_COLORS = [
+    "#0EA5E9", "#EF4444", "#6B7280", "#22C55E", "#0369A1", 
+    "#FACC15", "#A855F7", "#F97316", "#EA580C", "#EC4899", 
+    "#F87171", "#2563EB", "#166534", "#B91C1C", "#92400E", 
+    "#4F46E5", "#BE185D", "#0284C7", "#C084FC", "#1F2937"
+  ];
+  
   // --- STATE: Filter Mode ---
   const [selectedSort, setSelectedSort] = useState("Relevance");
   const [minPrice, setMinPrice] = useState("0");
@@ -40,9 +52,14 @@ export const BottomModal = ({
   const [newItem, setNewItem] = useState("");
   const [items, setItems] = useState([]);
   const [priority, setPriority] = useState("medium");
-  const [isShared, setIsShared] = useState(true);
+  const [isShared, setIsShared] = useState(false);
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedCircleId, setSelectedCircleId] = useState(null);
+
+  // --- STATE: Create Circle Mode ---
+  const [circleName, setCircleName] = useState("");
+  const [selectedColor, setSelectedColor] = useState(CIRCLE_COLORS[0]);
   
   // --- Error States ---
   const [listNameError, setListNameError] = useState("");
@@ -89,10 +106,15 @@ export const BottomModal = ({
       setNewItem("");
       setItems([]);
       setPriority("medium");
-      setIsShared(true);
+      setIsShared(false);
+      setSelectedCircleId(null);
       setShowPriorityDropdown(false);
       setListNameError("");
       setItemsError("");
+    }
+    if (!isVisible && type === "createCircle") {
+      setCircleName("");
+      setSelectedColor(CIRCLE_COLORS[0]);
     }
   }, [isVisible, type]);
 
@@ -100,22 +122,23 @@ export const BottomModal = ({
     const trimmedItem = newItem.trim();
     if (!trimmedItem) return;
 
-    if (items.includes(trimmedItem)) {
+    if (items.some(i => i.name === trimmedItem)) {
       setItemsError(`"${trimmedItem}" is already in the list`);
       return;
     }
 
-    setItems([...items, trimmedItem]);
+    setItems([...items, { name: trimmedItem, priority: "medium" }]);
     setNewItem("");
     if (itemsError) setItemsError("");
   };
 
-  const handleRemoveItem = itemToRemove => {
-    const newItems = items.filter(item => item !== itemToRemove);
+  const handleRemoveItem = index => {
+    const newItems = items.filter((_, i) => i !== index);
     setItems(newItems);
-    if (newItems.length === 0) {
-      // If user removes all items, we can optionally clear error or just let it validate on next submit
-    }
+  };
+
+  const handleItemPriority = (index, p) => {
+    setItems(prev => prev.map((item, i) => i === index ? { ...item, priority: p } : item));
   };
 
   const handleCreateList = async () => {
@@ -146,12 +169,28 @@ export const BottomModal = ({
         onApply({
           name: listName.trim(),
           category: selectedCategory,
-          items: items,
+          items: items.map(item => ({ name: item.name, priority: item.priority })),
           priority: priority,
           shareWithCircle: isShared,
+          circleId: isShared ? selectedCircleId : undefined,
         }),
       );
       // Parent closes modal on success; this keeps behavior consistent.
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCreateCircle = async () => {
+    if (!circleName.trim()) return;
+    if (isSubmitting || loading) return;
+
+    setIsSubmitting(true);
+    try {
+      await Promise.resolve(onApply({
+        name: circleName.trim(),
+        color: selectedColor,
+      }));
     } finally {
       setIsSubmitting(false);
     }
@@ -300,6 +339,67 @@ export const BottomModal = ({
           })}
         </View>
 
+        {/* Share with Circle Toggle */}
+        <View style={[styles.divider, {backgroundColor: colors.divider}]} />
+        <View style={styles.toggleRow}>
+          <View style={styles.toggleLeft}>
+            <View style={[styles.iconCircle, {backgroundColor: isDark ? "rgba(14, 165, 233, 0.2)" : "#eff6ff"}]}>
+              <Users size={20} color={colors.primary} />
+            </View>
+            <View>
+              <Text style={[styles.toggleTitle, {color: colors.textPrimary}]}>{t("modal_share")}</Text>
+              <Text style={[styles.toggleSubtitle, {color: colors.textMuted}]}>{t("modal_share_circle_subtitle")}</Text>
+            </View>
+          </View>
+          <Switch
+            trackColor={{false: colors.border, true: colors.primary}}
+            thumbColor={"#ffffff"}
+            ios_backgroundColor={colors.border}
+            onValueChange={(val) => {
+              setIsShared(val);
+              setSelectedCircleId(null);
+              if (val) dispatch(fetchCirclesPicker());
+            }}
+            value={isShared}
+            style={styles.switch}
+          />
+        </View>
+
+        {/* Circle Picker — shown only when sharing is on */}
+        {isShared && (
+          <View style={styles.circlePickerContainer}>
+            {pickerLoading ? (
+              <Text style={[styles.circlePickerLoading, {color: colors.textMuted}]}>{t("modal_share_loading")}</Text>
+            ) : pickerCircles.length === 0 ? (
+              <Text style={[styles.circlePickerLoading, {color: colors.textMuted}]}>{t("modal_share_no_circles")}</Text>
+            ) : (
+              pickerCircles.map(circle => {
+                const isSelected = selectedCircleId === circle._id;
+                return (
+                  <TouchableOpacity
+                    key={circle._id}
+                    style={[
+                      styles.circlePickerItem,
+                      {
+                        backgroundColor: isSelected
+                          ? (isDark ? "rgba(14, 165, 233, 0.15)" : "#eff6ff")
+                          : colors.surfaceSecondary,
+                        borderColor: isSelected ? colors.primary : colors.border,
+                      },
+                    ]}
+                    onPress={() => setSelectedCircleId(isSelected ? null : circle._id)}>
+                    <View style={[styles.circleColorDot, {backgroundColor: circle.color || colors.primary}]} />
+                    <Text style={[styles.circlePickerName, {color: colors.textPrimary}]} numberOfLines={1}>
+                      {circle.name}
+                    </Text>
+                    {isSelected && <Check size={16} color={colors.primary} />}
+                  </TouchableOpacity>
+                );
+              })
+            )}
+          </View>
+        )}
+
         {/* Add Items */}
         <Text style={[styles.inputLabel, {color: colors.textMuted}]}>{t("modal_add_items")} <Text style={{color: "#ef4444"}}>*</Text></Text>
         <View style={[styles.inputContainer, {backgroundColor: colors.surfaceSecondary, borderColor: itemsError ? "#ef4444" : colors.border, marginBottom: 12}]}>
@@ -332,24 +432,46 @@ export const BottomModal = ({
         {items.length > 0 && (
           <View style={[styles.itemsContainerList, { borderColor: colors.divider, backgroundColor: colors.surfaceSecondary }]}>
             {items.map((item, index) => (
-              <View 
-                key={index} 
+              <View
+                key={index}
                 style={[
-                  styles.itemListItem, 
+                  styles.itemListItem,
                   { borderBottomColor: colors.divider },
-                  index === items.length - 1 && { borderBottomWidth: 0 }
+                  index === items.length - 1 && { borderBottomWidth: 0 },
                 ]}>
-                <Text 
-                  style={[styles.itemListItemText, {color: colors.textPrimary}]}
+                <Text
+                  style={[styles.itemListItemText, { color: colors.textPrimary }]}
                   numberOfLines={1}
                   ellipsizeMode="tail">
-                  {item}
+                  {item.name}
                 </Text>
-                <TouchableOpacity
-                  onPress={() => handleRemoveItem(item)}
-                  hitSlop={8}>
-                  <X size={18} color={colors.textMuted} />
-                </TouchableOpacity>
+                <View style={styles.itemPriorityRow}>
+                  {["low", "medium", "high"].map(p => {
+                    const isActive = item.priority === p;
+                    const color = p === "high" ? "#EF4444" : p === "medium" ? "#FFFFFF" : "#16A34A";
+                    const bgActive = p === "high" ? "#EF44441F" : p === "medium" ? "#1E9DF1" : "#16A34A1F";
+                    return (
+                      <TouchableOpacity
+                        key={p}
+                        onPress={() => handleItemPriority(index, p)}
+                        style={[
+                          styles.itemPriorityBtn,
+                          isActive && { backgroundColor: bgActive },
+                          !isActive && { borderColor: colors.border, backgroundColor: colors.surfaceSecondary },
+                        ]}>
+                        <Text style={[
+                          styles.itemPriorityText,
+                          { color: isActive ? color : colors.textMuted },
+                        ]}>
+                          {p.charAt(0).toUpperCase() + p.slice(1)}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                  <TouchableOpacity onPress={() => handleRemoveItem(index)} hitSlop={8}>
+                    <X size={16} color={colors.textMuted} />
+                  </TouchableOpacity>
+                </View>
               </View>
             ))}
           </View>
@@ -406,27 +528,7 @@ export const BottomModal = ({
           )}
         </View>
 
-        {/* Share Toggle */}
-        <View style={[styles.divider, {backgroundColor: colors.divider}]} />
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleLeft}>
-            <View style={[styles.iconCircle, {backgroundColor: isDark ? "rgba(14, 165, 233, 0.2)" : "#eff6ff"}]}>
-              <Users size={20} color={colors.primary} />
-            </View>
-            <View>
-              <Text style={[styles.toggleTitle, {color: colors.textPrimary}]}>{t("modal_share")}</Text>
-              <Text style={[styles.toggleSubtitle, {color: colors.textMuted}]}>Family Home</Text>
-            </View>
-          </View>
-          <Switch
-            trackColor={{false: colors.border, true: colors.primary}}
-            thumbColor={"#ffffff"}
-            ios_backgroundColor={colors.border}
-            onValueChange={setIsShared}
-            value={isShared}
-            style={styles.switch}
-          />
-        </View>
+       
       </ScrollView>
 
       {/* Footer Button */}
@@ -447,6 +549,59 @@ export const BottomModal = ({
     </>
   );
 
+  const renderCreateCircleContent = () => (
+    <>
+      <View style={styles.modalHeader}>
+        <Text style={[styles.modalTitle, {color: colors.textPrimary}]}>{t("circle_create_title")}</Text>
+        <TouchableOpacity onPress={onClose} hitSlop={10}>
+          <X size={24} color={colors.iconMuted} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Circle Name */}
+      <Text style={[styles.inputLabel, {color: colors.textMuted, marginBottom: 8}]}>{t("circle_create_name_label")}</Text>
+      <View style={[styles.inputContainer, {backgroundColor: colors.surfaceSecondary, borderColor: colors.border, marginBottom: 20}]}>
+        <TextInput
+          style={[styles.textInput, {color: colors.textPrimary}]}
+          placeholder={t("circle_create_name_placeholder")}
+          placeholderTextColor={colors.inputPlaceholder}
+          value={circleName}
+          onChangeText={setCircleName}
+          autoFocus
+        />
+      </View>
+
+      {/* Color Grid */}
+      <Text style={[styles.inputLabel, {color: colors.textMuted, marginBottom: 10}]}>{t("circle_create_color_label")}</Text>
+      <View style={styles.colorGrid}>
+        {CIRCLE_COLORS.map(color => (
+          <TouchableOpacity
+            key={color}
+            style={[styles.colorOption, {backgroundColor: color}]}
+            onPress={() => setSelectedColor(color)}>
+            {selectedColor === color && <Check size={RFValue(14)} color="#fff" />}
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Footer Button */}
+      <View style={[styles.modalFooterSingle, {marginTop: 20}]}>
+        <TouchableOpacity
+          style={[
+            styles.createButton,
+            {backgroundColor: colors.primary},
+            (loading || isSubmitting || !circleName.trim()) && styles.createButtonDisabled,
+          ]}
+          onPress={handleCreateCircle}
+          disabled={loading || isSubmitting || !circleName.trim()}>
+          <Text style={styles.createButtonText}>
+            {loading || isSubmitting ? t("circle_create_btn_loading") : t("circle_create_btn")}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </>
+  );
+
   return (
     <Modal
       visible={isVisible}
@@ -461,6 +616,8 @@ export const BottomModal = ({
         <View style={[styles.modalContent, {backgroundColor: colors.modalBackground, shadowColor: colors.shadowColor}]}>
           {type === "createList"
             ? renderCreateListContent()
+            : type === "createCircle"
+            ? renderCreateCircleContent()
             : renderFilterContent()}
         </View>
       </View>
@@ -632,15 +789,29 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderBottomWidth: 1,
   },
   itemListItemText: {
     flex: 1,
     fontSize: RFValue(12),
     fontFamily: FontFamily.medium,
-    marginRight: 10,
+    marginRight: 8,
+  },
+  itemPriorityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  itemPriorityBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 0,
+    borderRadius: 6,
+  },
+  itemPriorityText: {
+    fontSize: RFValue(8),
+    fontFamily: FontFamily.bold,
   },
   dropdownContainer: {
     marginBottom: 20,
@@ -814,5 +985,54 @@ const styles = StyleSheet.create({
     fontSize: RFValue(12),
     fontFamily: FontFamily.bold,
     color: "#ffffff",
+  },
+
+  // --- Create Circle Mode Styles ---
+  colorGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 8,
+    justifyContent: 'center'
+  },
+  colorOption: {
+    width: (width - 40 - 64) / 8, // 8 items per row, 7 gaps of ~8-9px
+    height: 40,
+    aspectRatio: 1,
+    borderRadius: 8,
+    marginRight: 8,
+    marginBottom: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  // --- Circle Picker Styles ---
+  circlePickerContainer: {
+    gap: 8,
+    marginBottom: 8,
+  },
+  circlePickerItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 10,
+  },
+  circleColorDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+  },
+  circlePickerName: {
+    flex: 1,
+    fontSize: RFValue(12),
+    fontFamily: FontFamily.medium,
+  },
+  circlePickerLoading: {
+    fontSize: RFValue(11),
+    fontFamily: FontFamily.regular,
+    textAlign: "center",
+    paddingVertical: 12,
   },
 });

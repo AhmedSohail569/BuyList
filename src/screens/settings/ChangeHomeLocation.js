@@ -58,10 +58,10 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
 
     const { detectLocation, loading: detectingLocation } = useLocation();
     const { user } = useSelector((state) => state.auth);
-    const { ownedCircle } = useSelector((state) => state.circles);
+    const { ownedCircles } = useSelector((state) => state.circles);
 
-    // Get the saved home address (zone) from ownedCircle or user
-    const savedHomeAddress = ownedCircle?.owner?.zone || user?.zone || "";
+    // Get the saved home address (zone) from ownedCircles or user
+    const savedHomeAddress = ownedCircles?.owner?.zone || user?.zone || "";
 
     // Selected location - initialize with defaults, will be updated via useEffect if home address exists
     const [selectedAddress, setSelectedAddress] = useState(savedHomeAddress);

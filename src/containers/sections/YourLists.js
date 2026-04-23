@@ -22,9 +22,22 @@ const MAX_COMPLETED_FILL = 2; // max completed lists allowed to fill up to MAX_L
 // Helpers
 // ──────────────────────────────────────────────────────────────────────────────
 
+const priorityWeight = {
+  high: 3,
+  medium: 2,
+  low: 1,
+  none: 0,
+};
+
+const getPriorityWeight = (priority) => {
+  if (!priority) return 0;
+  return priorityWeight[priority.toLowerCase()] || 0;
+};
+
 /**
  * Smart filter:
  * - Prefer uncompleted lists (progress.percentage < 100)
+ * - Sort internally by priority (High > Medium > Low)
  * - If uncompleted count < MAX_LISTS, fill remaining slots with up to
  *   MAX_COMPLETED_FILL completed lists
  * - Total capped at MAX_LISTS
@@ -34,6 +47,20 @@ const selectHomeLists = (lists) => {
 
   const uncompleted = lists.filter((l) => (l.progress?.percentage ?? 0) < 100);
   const completed = lists.filter((l) => (l.progress?.percentage ?? 0) >= 100);
+
+  // Sort uncompleted by priority (high to low), fallback to date descending
+  uncompleted.sort((a, b) => {
+    const diff = getPriorityWeight(b.priority) - getPriorityWeight(a.priority);
+    if (diff !== 0) return diff;
+    return new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0);
+  });
+
+  // Sort completed by priority (high to low), fallback to date descending
+  completed.sort((a, b) => {
+    const diff = getPriorityWeight(b.priority) - getPriorityWeight(a.priority);
+    if (diff !== 0) return diff;
+    return new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0);
+  });
 
   if (uncompleted.length >= MAX_LISTS) {
     return uncompleted.slice(0, MAX_LISTS);
@@ -62,9 +89,52 @@ const ListCard = ({ item, onPress, colors, t }) => {
           <Text variant="body" style={[styles.listTitle, { color: colors.textPrimary }]}>
             {item.name}
           </Text>
-          <Text variant="caption" color="muted" style={styles.listSubtitle}>
-            {t("home_list_updated")} {formatTimeAgo(item.updatedAt || item.createdAt)}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            {item.type === "shared" && (
+              <>
+                <Text
+                  variant="caption"
+                  style={[
+                    styles.listSubtitle,
+                    {
+                      color: "#0ea5e9",
+                      fontFamily: FontFamily.bold,
+                    },
+                  ]}>
+                  Shared
+                </Text>
+                <Text variant="caption" color="muted" style={styles.listSubtitle}>
+                  {" • "}
+                </Text>
+              </>
+            )}
+            {item.priority && item.priority !== "none" && (
+              <>
+                <Text
+                  variant="caption"
+                  style={[
+                    styles.listSubtitle,
+                    {
+                      color:
+                        item.priority === "high"
+                          ? "#ef4444"
+                          : item.priority === "medium"
+                          ? "#ca8a04"
+                          : "#16a34a",
+                      fontFamily: FontFamily.bold,
+                    },
+                  ]}>
+                  {item.priority.charAt(0).toUpperCase() + item.priority.slice(1)}
+                </Text>
+                <Text variant="caption" color="muted" style={styles.listSubtitle}>
+                  {" • "}
+                </Text>
+              </>
+            )}
+            <Text variant="caption" color="muted" style={styles.listSubtitle}>
+              {t("home_list_updated")} {formatTimeAgo(item.updatedAt || item.createdAt)}
+            </Text>
+          </View>
         </View>
         {/* Member Avatars */}
         {members.length > 0 && (

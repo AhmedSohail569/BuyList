@@ -5,6 +5,7 @@ import CustomScrollView from "./Scrollview";
 import {BottomModal} from "./Modal";
 import CustomAlert from "./CustomAlert";
 import AddToListModal from "./AddToListModal";
+import ItemPriorityModal from "./ItemPriorityModal";
 
 export {
   AppText as Text,
@@ -14,4 +15,5 @@ export {
   BottomModal as Modal,
   CustomAlert as Alert,
   AddToListModal,
+  ItemPriorityModal,
 };

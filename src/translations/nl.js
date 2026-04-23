@@ -87,6 +87,9 @@ const nl = {
   modal_priority_medium: "Gemiddeld",
   modal_priority_high: "Hoog",
   modal_share: "Delen met cirkel",
+  modal_share_circle_subtitle: "Selecteer een cirkel om mee te delen",
+  modal_share_loading: "Cirkels laden...",
+  modal_share_no_circles: "Geen cirkels beschikbaar",
   modal_create_list: "Lijst aanmaken",
   modal_creating_list: "Aanmaken...",
   
@@ -101,10 +104,10 @@ const nl = {
   modal_sort_distance: "Afstand",
 
   // ── Activity Feed ──────────────────────────────────────────────────────────────
-  activity_purchase_items: "markeerde {{count}} {{noun}} als gekocht",
-  activity_add_items: "voegde {{count}} {{noun}} toe",
-  activity_create_list: "maakte een lijst aan",
-  activity_delete_list: "verwijderde een lijst",
+  activity_purchase_items: "markeerde {{count}} {{noun}} als gekocht in",
+  activity_add_items: "voegde {{count}} {{noun}} toe aan",
+  activity_create_list: "maakte een lijst aan genaamd",
+  activity_delete_list: "verwijderde een lijst genaamd",
   activity_join_circle: "heeft de cirkel betreden",
   activity_leave_circle: "heeft de cirkel verlaten",
   activity_default: "werkte de cirkel bij",
@@ -171,11 +174,27 @@ const nl = {
   circle_owner: "Eigenaar",
   circle_no_shared_lists: "Nog geen gedeelde lijsten. Maak een lijst aan en deel die met je cirkel.",
   circle_view_list: "Lijst bekijken",
+  circle_no_circles: "Nog geen cirkels. Maak een cirkel aan en nodig leden uit om te beginnen.",
+  circle_default_note: "Let op: Dit is je standaard cirkel en kan niet worden verwijderd.",
+  circle_default_badge: "Standaard",
+  circle_set_default_title: "Als standaard instellen",
+  circle_set_default_confirm: "Weet je zeker dat je deze cirkel als standaard wilt instellen?",
+  circle_set_default_success: "Standaardcirkel bijgewerkt",
+  circle_set_default_success_desc: "Deze cirkel is nu je standaard hub.",
+  circle_create_title: "Nieuwe Cirkel",
+  circle_create_name_label: "CIRKELNAAM",
+  circle_create_name_placeholder: "bijv. Thuis",
+  circle_create_color_label: "CIRKELKLEUR",
+  circle_create_btn: "Cirkel Aanmaken",
+  circle_create_btn_loading: "Cirkel aanmaken...",
+  circle_create_success: "Cirkel Aangemaakt",
+  circle_create_success_desc: "Je nieuwe cirkel is succesvol aangemaakt.",
 
   // ── Manage Connections ───────────────────────────────────────────────────────
   manage_title: "Verbindingen beheren",
   manage_tab_connections: "Verbindingen",
   manage_tab_invite: "Mensen uitnodigen",
+  all_connections_title: "Alle verbindingen",
   manage_search_placeholder: "Zoek verbindingen...",
   manage_no_connections: "Nog geen verbindingen. Nodig leden uit om te beginnen.",
   manage_no_results: "Geen resultaten gevonden voor",
@@ -387,6 +406,13 @@ const nl = {
   common_unexpected_error: "Er is een onverwachte fout opgetreden",
   common_recently: "Onlangs",
   common_just_now: "Zojuist",
+
+  // ── Leave Circle ──────────────────────────────────────────────────────────────
+  circle_leave_btn: "Verlaten",
+  circle_leave_confirm_title: "Cirkel Verlaten",
+  circle_leave_confirm_desc: "Als je deze cirkel verlaat, word je verwijderd uit alle gedeelde lijsten. Wil je doorgaan?",
+  circle_leave_success_title: "Cirkel Verlaten",
+  circle_leave_success_desc: "Je hebt de cirkel succesvol verlaten.",
 };
 
 export default nl;

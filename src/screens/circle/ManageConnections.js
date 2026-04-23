@@ -27,7 +27,7 @@ import { RFValue } from "react-native-responsive-fontsize";
 import { FontFamily } from "~theme/fonts";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  fetchOwnedCircle,
+  fetchCircleMembers,
   updateMemberRole,
   removeMemberFromCircle,
 } from "~redux/actions/circleActions";
@@ -46,23 +46,23 @@ const formatRole = (role) => {
   return role.charAt(0).toUpperCase() + role.slice(1);
 };
 
-// Build connections list from ownedCircle data with role-based badge colors
-const buildConnections = (ownedCircle, colors) => {
-  if (!ownedCircle) return [];
+// Build connections list from ownedCircles data with role-based badge colors
+const buildConnections = (ownedCircles, colors) => {
+  if (!ownedCircles) return [];
   const connections = [];
-  if (ownedCircle.owner) {
+  if (ownedCircles.owner) {
     connections.push({
-      id: ownedCircle.owner._id || ownedCircle.owner.id,
-      name: ownedCircle.owner.username || ownedCircle.owner.email || "Owner",
+      id: ownedCircles.owner._id || ownedCircles.owner.id,
+      name: ownedCircles.owner.username || ownedCircles.owner.email || "Owner",
       role: "Owner",
-      avatar: ownedCircle.owner.profilePicture,
+      avatar: ownedCircles.owner.profilePicture,
       isOwner: true,
       badgeColor: colors.badgeBackground,
       textColor: colors.primary,
     });
   }
-  if (ownedCircle.members && Array.isArray(ownedCircle.members)) {
-    ownedCircle.members.forEach((member) => {
+  if (ownedCircles.members && Array.isArray(ownedCircles.members)) {
+    ownedCircles.members.forEach((member) => {
       if (member.userId) {
         const role = formatRole(member.role);
         const isEditor = role === "Editor";
@@ -85,15 +85,15 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
   const dispatch = useDispatch();
   const { colors } = useTheme();
   const { 
-    ownedCircle, 
     loading, 
     inviteLink, 
     inviteLinkLoading,
     inviteQR,
     inviteQRLoading,
+    membersByCircleId,
   } = useSelector(state => state.circles);
   const { showAlert, showError } = useAlert();
-  const { tab } = route.params || {};
+  const { tab, circleId, currentCircle } = route.params || {};
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(tab || "Connections");
   const [activeMenuId, setActiveMenuId] = useState(null);
@@ -101,27 +101,42 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
   const [isQRModalVisible, setQRModalVisible] = useState(false);
   const isMenuDismissingRef = useRef(false);
 
-  // Get circle ID
-  const circleId = ownedCircle?._id || ownedCircle?.id;
 
-  // Fetch owned circle; background-refresh silently when navigating back
-  const fetchFn = useCallback(() => dispatch(fetchOwnedCircle()), [dispatch]);
-  useScreenFetch(fetchFn, !!ownedCircle);
+  // Fetch circle members initially and on background-refresh
+  const fetchFn = useCallback(() => {
+    if (circleId) {
+      dispatch(fetchCircleMembers({ circleId }));
+    }
+  }, [dispatch, circleId]);
+  useScreenFetch(fetchFn, !!membersByCircleId?.[circleId]);
 
-  // Re-fetch circle data when internet reconnects
+  // Re-fetch circle members when internet reconnects
   useOnReconnect(() => {
-    dispatch(fetchOwnedCircle());
+    if (circleId) {
+      dispatch(fetchCircleMembers({ circleId }));
+    }
   });
 
-  // Generate invite link when switching to Invite tab
-  useEffect(() => {
-    if (activeTab === "Invite" && circleId && !inviteLink) {
+  // Reconcile currentCircle with updated members from Redux if available
+  const activeCircle = useMemo(() => {
+    if (!currentCircle) return null;
+    const fetchedMembers = membersByCircleId?.[circleId];
+    if (fetchedMembers) {
+      return { ...currentCircle, members: fetchedMembers };
+    }
+    return currentCircle;
+  }, [currentCircle, membersByCircleId, circleId]);
+
+  // Build connections from activeCircle data
+  const connections = useMemo(() => buildConnections(activeCircle, colors), [activeCircle, colors]);
+
+  // Generate invite link gracefully alongside screen fetch to bypass stale Redux circle states
+  const fetchInviteLinkFn = useCallback(() => {
+    if (circleId) {
       dispatch(getCircleInviteLink({ circleId }));
     }
-  }, [activeTab, circleId, inviteLink, dispatch]);
-
-  // Build connections from ownedCircle data
-  const connections = useMemo(() => buildConnections(ownedCircle, colors), [ownedCircle, colors]);
+  }, [dispatch, circleId]);
+  const { loading: localInviteLoading } = useScreenFetch(fetchInviteLinkFn, false);
 
   // Filter connections based on search query
   const filteredConnections = useMemo(() => {
@@ -169,7 +184,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
     }
 
     try {
-      const circleName = ownedCircle?.name || "our circle";
+      const circleName = currentCircle?.name || "our circle";
       await Share.share({
         message: `Join ${circleName} on Bagg! ${inviteLink}`,
         url: inviteLink,
@@ -179,7 +194,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
       console.error("Share error:", err);
       // User cancelled share, no need to show error
     }
-  }, [inviteLink, ownedCircle]);
+  }, [inviteLink, currentCircle]);
 
   // Share invite link via SMS (From Contacts)
   const handleShareViaSMS = useCallback(async () => {
@@ -192,7 +207,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
       return;
     }
 
-    const circleName = ownedCircle?.name || "our circle";
+    const circleName = currentCircle?.name || "our circle";
     const message = `Join ${circleName} on Bagg! ${inviteLink}`;
     // Use ?body= for both iOS and Android in modern RN, but &body= is safer for some older iOS
     const separator = Platform.OS === "ios" ? "&" : "?";
@@ -210,7 +225,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
       console.error("Failed to open SMS:", err);
       handleShareLink(); // Fallback on error
     }
-  }, [inviteLink, ownedCircle, handleShareLink]);
+  }, [inviteLink, currentCircle, handleShareLink]);
 
   // Show QR Code modal
   const handleShowQR = useCallback(() => {
@@ -271,8 +286,8 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
           text2: `${t("manage_role_updated_desc")} ${newRole}`,
         });
 
-        // Refetch owned circle to update UI
-        dispatch(fetchOwnedCircle());
+        // Refetch members to update UI
+        dispatch(fetchCircleMembers({ circleId }));
       } catch (err) {
         showError("Error", err || "Failed to update member role");
       }
@@ -314,8 +329,8 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
                   text2: `${memberName} ${t("manage_remove_success_desc")}`,
                 });
 
-                // Refetch owned circle to update UI
-                dispatch(fetchOwnedCircle());
+                // Refetch members to update UI
+                dispatch(fetchCircleMembers({ circleId }));
               } catch (err) {
                 showError("Error", err || "Failed to remove member");
               }
@@ -482,7 +497,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
               </View>
 
               <Text style={[styles.inviteTitle, { color: colors.textPrimary }]}>
-                {t("manage_tab_invite")} {ownedCircle?.name ? `${ownedCircle.name}` : ""}
+                {t("manage_tab_invite")} {currentCircle?.name ? `${currentCircle.name}` : ""}
               </Text>
               <Text style={[styles.inviteDesc, { color: colors.textSecondary }]}>
                 {t("manage_invite_desc")}
@@ -491,7 +506,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
               {/* Copy Link Box */}
               <View style={[styles.copyBox, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
                 <LinkIcon size={16} color={colors.iconMuted} style={{ marginRight: 8 }} />
-                {inviteLinkLoading ? (
+                {inviteLinkLoading || localInviteLoading ? (
                   <View style={{ flex: 1, alignItems: "center" }}>
                     <ActivityIndicator size="small" color={colors.primary} />
                   </View>
@@ -511,13 +526,13 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
               </View>
 
               {/* Share Button */}
-              {!inviteLinkLoading && inviteLink && (
+              {!inviteLinkLoading && !localInviteLoading && inviteLink ? (
                 <TouchableOpacity 
                   style={[styles.shareButton, { backgroundColor: colors.primary }]}
                   onPress={handleShareLink}>
                   <Text style={styles.shareButtonText}>{t("manage_share_link")}</Text>
                 </TouchableOpacity>
-              )}
+              ) : null}
             </View>
 
             {/* Bottom Action Grid */}
@@ -552,7 +567,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
         onClose={() => setQRModalVisible(false)}
         qrCodeUrl={inviteQR}
         loading={inviteQRLoading}
-        circleName={ownedCircle?.name}
+        circleName={currentCircle?.name}
       />
     </View>
   );

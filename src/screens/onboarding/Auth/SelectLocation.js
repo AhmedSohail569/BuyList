@@ -176,7 +176,7 @@ const SelectLocationScreen = ({ navigation, route }) => {
 
             <TextInput
               label="Your City"
-              placeholder="e.g. Lahore"
+              placeholder="City"
               value={city}
               onChangeText={setCity}
               maxLength={50}
@@ -197,14 +197,14 @@ const SelectLocationScreen = ({ navigation, route }) => {
             /> */}
 
             {/* Coordinates indicator */}
-            {coords && (
+            {/* {coords && (
               <View style={styles.coordsRow}>
                 <Icon name="map-pin" size={RFValue(12)} color="#9CA3AF" />
                 <Text variant="caption" style={styles.coordsText}>
                   {coords.latitude.toFixed(4)}, {coords.longitude.toFixed(4)}
                 </Text>
               </View>
-            )}
+            )} */}
 
             </View>
           </View>

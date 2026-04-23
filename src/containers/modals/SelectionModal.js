@@ -8,18 +8,18 @@ import {
   TextInput,
   Dimensions,
 } from "react-native";
-import {X, Trash2, LogOut} from "lucide-react-native";
+import {X, Trash2, LogOut, Check} from "lucide-react-native";
+import useTranslation from "~hooks/useTranslation";
 import {Text} from "~components/Common";
 import {RFValue} from "react-native-responsive-fontsize";
 import {FontFamily} from "~theme/fonts";
 import {useTheme} from "~context/ThemeContext";
 
 const {width} = Dimensions.get("window");
-
 /**
- * Enhanced Selection Modal
  * Supports: 'selection' | 'input' | 'confirmation'
  */
+
 const SelectionModal = ({
   isVisible,
   onClose,
@@ -34,6 +34,7 @@ const SelectionModal = ({
   danger = false, // For red buttons (Delete/Leave)
 }) => {
   const {colors} = useTheme();
+  const {t} = useTranslation();
   const [selected, setSelected] = useState(initialValue);
   const [inputText, setInputText] = useState("");
 

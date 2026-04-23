@@ -38,7 +38,7 @@ import useTranslation from "~hooks/useTranslation";
 
 // --- Sub Components ---
 
-const FilterTab = ({ label, isActive, onPress, colors, isDark }) => (
+const FilterTab = ({ label, count, isActive, onPress, colors, isDark }) => (
   <TouchableOpacity
     onPress={onPress}
     style={[
@@ -53,7 +53,7 @@ const FilterTab = ({ label, isActive, onPress, colors, isDark }) => (
         styles.filterText,
         { color: isActive ? "#ffffff" : colors.textMuted },
       ]}>
-      {label}
+      {label} ({count})
     </Text>
   </TouchableOpacity>
 );
@@ -98,6 +98,7 @@ const ListCard = React.memo(
       item.progress?.purchased || 0;
     const isCompleted = totalItems > 0 && completedItems === totalItems;
     const progressColor = item.type === "personal" ? "#16A34A" : isCompleted ? "#22c55e" : "#0ea5e9";
+    const stripColor = item.circle?.color || progressColor;
 
     return (
       <TouchableOpacity
@@ -108,15 +109,14 @@ const ListCard = React.memo(
         <View
           style={[
             styles.cardBorderStrip,
-            { backgroundColor: progressColor },
+            { backgroundColor: stripColor },
           ]}
         />
-
         <View style={styles.cardContent}>
           <View style={styles.cardHeader}>
             <View style={styles.titleRow}>
               <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>{item.name}</Text>
-              {item.shareWithCircle && (
+              {item.type === "shared" && (
                 <View style={[styles.sharedBadge, { backgroundColor: isDark ? "rgba(14, 165, 233, 0.2)" : "#e0f2fe" }]}>
                   <Users
                     size={10}
@@ -150,6 +150,44 @@ const ListCard = React.memo(
           <Text style={[styles.subtitle, { color: colors.textMuted }]}>
             {item.category} • {formatDate(item.updatedAt || item.createdAt)}
           </Text>
+
+          {item.priority && item.priority !== "none" && (
+            <View
+              style={[
+                styles.priorityBadge,
+                {
+                  backgroundColor:
+                    item.priority === "high"
+                      ? isDark
+                        ? "rgba(239, 68, 68, 0.2)"
+                        : "#fee2e2"
+                      : item.priority === "medium"
+                      ? isDark
+                        ? "rgba(234, 179, 8, 0.2)"
+                        : "#fef9c3"
+                      : isDark
+                      ? "rgba(34, 197, 94, 0.2)"
+                      : "#dcfce7",
+                },
+              ]}>
+              <Text
+                style={[
+                  styles.priorityText,
+                  {
+                    color:
+                      item.priority === "high"
+                        ? "#ef4444"
+                        : item.priority === "medium"
+                        ? "#ca8a04"
+                        : "#16a34a",
+                  },
+                ]}>
+                {item.priority.charAt(0).toUpperCase() + item.priority.slice(1)}
+              </Text>
+            </View>
+          )}
+
+          
 
           <View style={styles.progressSection}>
             <ProgressBar
@@ -188,6 +226,7 @@ const ListCard = React.memo(
       prevProps.item.progress?.purchased === nextProps.item.progress?.purchased &&
       prevProps.item.progress?.total === nextProps.item.progress?.total &&
       prevProps.item.progress?.percentage === nextProps.item.progress?.percentage &&
+      prevProps.item.circle?.color === nextProps.item.circle?.color &&
       prevProps.isDeleting === nextProps.isDeleting &&
       prevProps.menuVisible === nextProps.menuVisible
     );
@@ -242,6 +281,15 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
         return activeTab;
     }
   };
+  const listCounts = useMemo(() => {
+    const totalLists = lists || [];
+    return {
+      all: totalLists.length,
+      personal: totalLists.filter(item => item.type === "personal").length,
+      shared: totalLists.filter(item => item.type === "shared").length,
+    };
+  }, [lists]);
+
   const isDismissingRef = useRef(false);
   const isFetchingOnFocusRef = useRef(false);
 
@@ -410,6 +458,8 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
     return sortLists(filtered);
   }, [lists, activeTab, sortLists, searchQuery]);
 
+
+
   // Pull to refresh
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -491,6 +541,8 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
       }
 
       setIsCreatingList(true);
+
+
       try {
         await dispatch(createList(data)).unwrap();
         Toast.show({
@@ -501,6 +553,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
         closeCreateListModal();
         // Optimistic update already handled, no refetch needed
       } catch (err) {
+
         // Error handled by useEffect
       } finally {
         setIsCreatingList(false);
@@ -532,6 +585,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
     // Toggle menu state
     setShowSortMenu(prev => !prev);
   }, [activeMenuListId]);
+  
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -557,6 +611,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
           <View style={styles.filtersRow}>
             <FilterTab
               label={t("lists_tab_all")}
+              count={listCounts.all}
               isActive={activeTab === "All Lists"}
               onPress={() => setActiveTab("All Lists")}
               colors={colors}
@@ -564,6 +619,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
             />
             <FilterTab
               label={t("lists_tab_personal")}
+              count={listCounts.personal}
               isActive={activeTab === "Personal Lists"}
               onPress={() => setActiveTab("Personal Lists")}
               colors={colors}
@@ -571,6 +627,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
             />
             <FilterTab
               label={t("lists_tab_shared")}
+              count={listCounts.shared}
               isActive={activeTab === "Shared Lists"}
               onPress={() => setActiveTab("Shared Lists")}
               colors={colors}
@@ -836,7 +893,7 @@ const styles = StyleSheet.create({
   },
   filterTab: {
     paddingHorizontal: 16,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 20,
     borderWidth: 1,
   },
@@ -991,6 +1048,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
+    gap: 4,
   },
   sharedText: {
     fontSize: RFValue(8),
@@ -1001,7 +1059,17 @@ const styles = StyleSheet.create({
     fontSize: RFValue(9),
     fontFamily: FontFamily.regular,
     color: "#9ca3af",
-    marginBottom: 16,
+    marginBottom: 4,
+  },
+  priorityBadge: {
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+    marginBottom: 4,
+  },
+  priorityText: {
+    fontSize: RFValue(9),
+    fontFamily: FontFamily.bold,
   },
   progressSection: {
     marginBottom: 16,

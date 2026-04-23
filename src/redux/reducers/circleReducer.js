@@ -4,7 +4,7 @@
  */
 import { createSlice } from "@reduxjs/toolkit";
 import {
-  fetchOwnedCircle,
+  fetchownedCircles,
   fetchAllCircles,
   fetchCircleMembers,
   removeMemberFromCircle,
@@ -12,6 +12,12 @@ import {
   addMemberToCircle,
   updateMemberRole,
   updateCircleDefaultMemberRole,
+  setDefaultCircle,
+  deleteCircle,
+  createCircle,
+  fetchCirclesPicker,
+  fetchAllConnections,
+  leaveCircle,
 } from "../actions/circleActions";
 import {
   getCircleInviteLink,
@@ -26,7 +32,7 @@ import { logout } from "./authReducer";
 // ============================================
 const initialState = {
   // User's owned circle (can only have one)
-  ownedCircle: null,
+  ownedCircles: [],
 
   // All circles: owned + circles user is member of
   allCircles: [],
@@ -43,6 +49,14 @@ const initialState = {
 
   // Track which circles have loaded members (avoid refetching)
   loadedMemberCircleIds: [],
+
+  // Circles available for the "share with circle" picker in create-list modal
+  pickerCircles: [],
+  pickerLoading: false,
+
+  // Global connections: all members across all user's circles
+  allConnections: [],
+  connectionsLoading: false,
 
   // Invite state
   inviteCode: null,
@@ -71,8 +85,8 @@ const circleSlice = createSlice({
     },
 
     // Manually set owned circle (if needed)
-    setOwnedCircle(state, action) {
-      state.ownedCircle = action.payload;
+    setownedCircles(state, action) {
+      state.ownedCircles = Array.isArray(action.payload) ? action.payload : [];
     },
 
     // Invalidate loaded members for a specific circle (force refetch)
@@ -89,15 +103,15 @@ const circleSlice = createSlice({
       // ============================================
       // 1️⃣ FETCH OWNED CIRCLE
       // ============================================
-      .addCase(fetchOwnedCircle.pending, state => {
+      .addCase(fetchownedCircles.pending, state => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchOwnedCircle.fulfilled, (state, action) => {
+      .addCase(fetchownedCircles.fulfilled, (state, action) => {
         state.loading = false;
-        state.ownedCircle = action.payload;
+        state.ownedCircles = Array.isArray(action.payload) ? action.payload : [];
       })
-      .addCase(fetchOwnedCircle.rejected, (state, action) => {
+      .addCase(fetchownedCircles.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
@@ -172,9 +186,13 @@ const circleSlice = createSlice({
       .addCase(editCircleName.pending, (state, action) => {
         const { circleId, name } = action.meta.arg;
 
-        // Update in ownedCircle if it matches
-        if (state.ownedCircle && (state.ownedCircle.id === circleId || state.ownedCircle._id === circleId)) {
-          state.ownedCircle = { ...state.ownedCircle, name };
+        // Update in ownedCircles if it matches
+        if (state.ownedCircles && Array.isArray(state.ownedCircles)) {
+          state.ownedCircles = state.ownedCircles.map(circle =>
+            circle.id === circleId || circle._id === circleId
+              ? { ...circle, name }
+              : circle,
+          );
         }
 
         // Update in allCircles array
@@ -200,8 +218,12 @@ const circleSlice = createSlice({
 
           // Only update if we have something to update
           if (Object.keys(updates).length > 0) {
-            if (state.ownedCircle && (state.ownedCircle.id === circleId || state.ownedCircle._id === circleId)) {
-              state.ownedCircle = { ...state.ownedCircle, ...updates };
+            if (state.ownedCircles && Array.isArray(state.ownedCircles)) {
+              state.ownedCircles = state.ownedCircles.map(circle =>
+                circle.id === circleId || circle._id === circleId
+                  ? { ...circle, ...updates }
+                  : circle,
+              );
             }
             state.allCircles = state.allCircles.map(circle =>
               circle.id === circleId || circle._id === circleId
@@ -214,10 +236,10 @@ const circleSlice = createSlice({
       })
       // ROLLBACK: Restore previous circle data on failure
       .addCase(editCircleName.rejected, (state, action) => {
-        const { previousOwnedCircle, previousAllCircles, message } =
+        const { previousownedCircles, previousAllCircles, message } =
           action.payload || {};
-        if (previousOwnedCircle !== undefined) {
-          state.ownedCircle = previousOwnedCircle;
+        if (previousownedCircles !== undefined) {
+          state.ownedCircles = previousownedCircles;
         }
         if (previousAllCircles) {
           state.allCircles = previousAllCircles;
@@ -318,12 +340,13 @@ const circleSlice = createSlice({
         const { circleId, defaultMemberRole } = action.meta.arg || {};
         if (!circleId) return;
 
-        // Optimistically update in ownedCircle if it matches
-        if (
-          state.ownedCircle &&
-          (state.ownedCircle.id === circleId || state.ownedCircle._id === circleId)
-        ) {
-          state.ownedCircle = { ...state.ownedCircle, defaultMemberRole };
+        // Optimistically update in ownedCircles if it matches
+        if (state.ownedCircles && Array.isArray(state.ownedCircles)) {
+          state.ownedCircles = state.ownedCircles.map(circle =>
+            circle.id === circleId || circle._id === circleId
+              ? { ...circle, defaultMemberRole }
+              : circle,
+          );
         }
 
         // Optimistically update in allCircles array
@@ -346,11 +369,12 @@ const circleSlice = createSlice({
 
         if (Object.keys(updates).length === 0) return;
 
-        if (
-          state.ownedCircle &&
-          (state.ownedCircle.id === circleId || state.ownedCircle._id === circleId)
-        ) {
-          state.ownedCircle = { ...state.ownedCircle, ...updates };
+        if (state.ownedCircles && Array.isArray(state.ownedCircles)) {
+          state.ownedCircles = state.ownedCircles.map(circle =>
+            circle.id === circleId || circle._id === circleId
+              ? { ...circle, ...updates }
+              : circle,
+          );
         }
 
         state.allCircles = state.allCircles.map(circle =>
@@ -368,15 +392,20 @@ const circleSlice = createSlice({
       // 9️⃣ UPDATE ZONE (Home Location)
       // ============================================
       .addCase(updateZone.fulfilled, (state, action) => {
-        // Update ownedCircle.owner.zone to reflect changes immediately
-        if (state.ownedCircle && state.ownedCircle.owner) {
-          state.ownedCircle = {
-            ...state.ownedCircle,
-            owner: {
-              ...state.ownedCircle.owner,
-              zone: action.payload.zone,
-            },
-          };
+        // Update ownedCircles.owner.zone to reflect changes immediately
+        if (state.ownedCircles && Array.isArray(state.ownedCircles)) {
+          state.ownedCircles = state.ownedCircles.map(circle => {
+            if (circle.owner) {
+              return {
+                ...circle,
+                owner: {
+                  ...circle.owner,
+                  zone: action.payload.zone,
+                },
+              };
+            }
+            return circle;
+          });
         }
       })
 
@@ -423,14 +452,14 @@ const circleSlice = createSlice({
       .addCase(joinCircleViaInvite.fulfilled, (state, action) => {
         state.joiningCircle = false;
         // Add the new circle to allCircles
-        if (action.payload.circle) {
-          const circleExists = state.allCircles.some(
-            (c) => c._id === action.payload.circle._id || c.id === action.payload.circle.id
-          );
-          if (!circleExists) {
-            state.allCircles.push(action.payload.circle);
-          }
-        }
+        // if (action.payload.circle) {
+        //   const circleExists = state.allCircles.some(
+        //     (c) => c._id === action.payload.circle._id || c.id === action.payload.circle.id
+        //   );
+        //   if (!circleExists) {
+        //     state.allCircles.push(action.payload.circle);
+        //   }
+        // }
       })
       .addCase(joinCircleViaInvite.rejected, (state, action) => {
         state.joiningCircle = false;
@@ -440,6 +469,125 @@ const circleSlice = createSlice({
       // Clear circle state on logout
       .addCase(logout, () => {
         return initialState;
+      })
+      // ============================================
+      // 9. SET CIRCLE AS DEFAULT
+      // ============================================
+      .addCase(setDefaultCircle.pending, state => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(setDefaultCircle.fulfilled, (state, action) => {
+        const { circleId } = action.payload;
+        state.loading = false;
+        
+        // Update allCircles: set isDefault true for this ID, false for others
+        state.allCircles = state.allCircles.map(circle => ({
+          ...circle,
+          isDefault: (circle._id === circleId || circle.id === circleId)
+        }));
+
+        // Update ownedCircles: set isDefault true for this ID, false for others
+        state.ownedCircles = state.ownedCircles.map(circle => ({
+          ...circle,
+          isDefault: (circle._id === circleId || circle.id === circleId)
+        }));
+      })
+      .addCase(setDefaultCircle.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // ============================================
+      // 10. DELETE CIRCLE
+      // ============================================
+      .addCase(deleteCircle.pending, state => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteCircle.fulfilled, (state, action) => {
+        const { circleId } = action.payload;
+        state.loading = false;
+        
+        // Remove from allCircles
+        state.allCircles = state.allCircles.filter(
+          circle => circle._id !== circleId && circle.id !== circleId
+        );
+
+        // Remove from ownedCircles
+        state.ownedCircles = state.ownedCircles.filter(
+          circle => circle._id !== circleId && circle.id !== circleId
+        );
+      })
+      .addCase(deleteCircle.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // ============================================
+      // 11. CREATE CIRCLE
+      // ============================================
+      .addCase(createCircle.pending, state => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(createCircle.fulfilled, (state, action) => {
+        state.loading = false;
+        // Add the newly created circle to both states
+        // if (action.payload) {
+        //   state.allCircles.unshift(action.payload);
+        //   state.ownedCircles.unshift(action.payload);
+        // }
+      })
+      .addCase(createCircle.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // ── fetchCirclesPicker ─────────────────
+      .addCase(fetchCirclesPicker.pending, (state) => {
+        state.pickerLoading = true;
+      })
+      .addCase(fetchCirclesPicker.fulfilled, (state, action) => {
+        state.pickerLoading = false;
+        state.pickerCircles = action.payload || [];
+      })
+      .addCase(fetchCirclesPicker.rejected, (state) => {
+        state.pickerLoading = false;
+      })
+      // ── fetchAllConnections ─────────────────
+      .addCase(fetchAllConnections.pending, (state) => {
+        state.connectionsLoading = true;
+      })
+      .addCase(fetchAllConnections.fulfilled, (state, action) => {
+        state.connectionsLoading = false;
+        state.allConnections = action.payload || [];
+      })
+      .addCase(fetchAllConnections.rejected, (state, action) => {
+        state.connectionsLoading = false;
+        state.error = action.payload;
+      })
+      // ============================================
+      // 12. LEAVE CIRCLE
+      // ============================================
+      .addCase(leaveCircle.pending, state => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(leaveCircle.fulfilled, (state, action) => {
+        const { circleId } = action.payload;
+        state.loading = false;
+        
+        // Remove from allCircles
+        state.allCircles = state.allCircles.filter(
+          circle => circle._id !== circleId && circle.id !== circleId
+        );
+
+        // Remove from ownedCircles (just in case)
+        state.ownedCircles = state.ownedCircles.filter(
+          circle => circle._id !== circleId && circle.id !== circleId
+        );
+      })
+      .addCase(leaveCircle.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
   },
 });
@@ -450,7 +598,7 @@ const circleSlice = createSlice({
 export const {
   clearCircleState,
   clearCircleError,
-  setOwnedCircle,
+  setownedCircles,
   invalidateCircleMembers,
 } = circleSlice.actions;
 

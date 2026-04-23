@@ -31,6 +31,8 @@ import {
   markNotificationRead,
   markAllNotificationsRead,
 } from "~redux/actions/notificationActions";
+import { getProfile } from "~redux/actions/profileActions";
+import { setHasUnreadNotifications } from "~redux/reducers/authReducer";
 import { formatTimeAgo } from "~utils/time";
 import useTranslation from "~hooks/useTranslation";
 
@@ -85,6 +87,17 @@ const NotificationsDropdown = ({ visible, onClose }) => {
     () => items.filter((n) => !n.isRead).length,
     [items],
   );
+
+  const prevUnreadCountRef = useRef(unreadCount);
+
+  // Unread Count Observer -- Dispatch actions when unread count drops to 0
+  useEffect(() => {
+    if (prevUnreadCountRef.current > 0 && unreadCount === 0) {
+      dispatch(setHasUnreadNotifications(false));
+      dispatch(getProfile());
+    }
+    prevUnreadCountRef.current = unreadCount;
+  }, [unreadCount, dispatch]);
 
   // ── Animate open / close ──────────────────────────────────────────────────
   useEffect(() => {

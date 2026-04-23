@@ -11,11 +11,12 @@ import { requireConnectivity } from "~utils/network";
 // 1️⃣ GET USER OWNED CIRCLE
 // User can only have one owned circle
 // ============================================
-export const fetchOwnedCircle = createAsyncThunk(
-  "circles/fetchOwnedCircle",
+export const fetchownedCircles = createAsyncThunk(
+  "circles/fetchownedCircles",
   async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get("/circles/owned");
+      console.log("response==>", response);
       return response.data?.data || response.data;
     } catch (err) {
       const message = getErrorMessage(err);
@@ -33,6 +34,7 @@ export const fetchAllCircles = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get("/circles/my-circles");
+      console.log("responseAllCircles==>", response);
       return response.data?.data || response.data;
     } catch (err) {
       const message = getErrorMessage(err);
@@ -97,7 +99,7 @@ export const editCircleName = createAsyncThunk(
   async ({ circleId, name }, { rejectWithValue, getState }) => {
     // Store previous state for rollback
     const state = getState().circles;
-    const previousOwnedCircle = state.ownedCircle;
+    const previousownedCircles = Array.isArray(state.ownedCircles) ? [...state.ownedCircles] : state.ownedCircles;
     const previousAllCircles = [...state.allCircles];
 
     try {
@@ -115,7 +117,7 @@ export const editCircleName = createAsyncThunk(
       // Return previous state for rollback
       return rejectWithValue({
         message,
-        previousOwnedCircle,
+        previousownedCircles,
         previousAllCircles,
         circleId,
       });
@@ -209,6 +211,135 @@ export const updateCircleDefaultMemberRole = createAsyncThunk(
         defaultMemberRole: normalizedRole,
         response: response.data?.data || response.data,
       };
+    } catch (err) {
+      const message = getErrorMessage(err);
+      return rejectWithValue(message);
+    }
+  },
+  { condition: requireConnectivity },
+);
+
+// ============================================
+// 9. SET CIRCLE AS DEFAULT
+// PUT /circles/set-default/{circleId}
+// ============================================
+export const setDefaultCircle = createAsyncThunk(
+  "circles/setDefaultCircle",
+  async ({ circleId }, { rejectWithValue }) => {
+    try {
+      if (!circleId) {
+        return rejectWithValue("Circle not found");
+      }
+
+      await axios.put(`/circles/set-default/${circleId}`);
+
+      return { circleId };
+    } catch (err) {
+      const message = getErrorMessage(err);
+      return rejectWithValue(message);
+    }
+  },
+  { condition: requireConnectivity },
+);
+
+// ============================================
+// 10. DELETE CIRCLE
+// DELETE /circles/delete-circle/{circleId}
+// ============================================
+export const deleteCircle = createAsyncThunk(
+  "circles/deleteCircle",
+  async ({ circleId }, { rejectWithValue }) => {
+    try {
+      if (!circleId) {
+        return rejectWithValue("Circle not found");
+      }
+
+      await axios.delete(`/circles/delete-circle/${circleId}`);
+
+      return { circleId };
+    } catch (err) {
+      const message = getErrorMessage(err);
+      return rejectWithValue(message);
+    }
+  },
+  { condition: requireConnectivity },
+);
+
+// ============================================
+// 11. CREATE CIRCLE
+// POST /circles/create-circle
+// Body: { name, color }
+// ============================================
+export const createCircle = createAsyncThunk(
+  "circles/createCircle",
+  async ({ name, color }, { rejectWithValue }) => {
+    try {
+      if (!name) {
+        return rejectWithValue("Circle name is required");
+      }
+
+      const response = await axios.post("/circles/create-circle", {
+        name,
+        color,
+      });
+
+      return response.data?.data || response.data;
+    } catch (err) {
+      const message = getErrorMessage(err);
+      return rejectWithValue(message);
+    }
+  },
+  { condition: requireConnectivity },
+);
+
+// ============================================
+// 8️⃣ GET CIRCLES FOR PICKER
+// Lightweight list used in create-list modal
+// ============================================
+export const fetchCirclesPicker = createAsyncThunk(
+  "circles/fetchCirclesPicker",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get("/circles/picker");
+      console.log("response", response.data?.data || response.data);
+      return response.data?.data || response.data;
+    } catch (err) {
+      return rejectWithValue(getErrorMessage(err));
+    }
+  },
+);
+
+// ============================================
+// 9️⃣ GET ALL CONNECTIONS
+// All members across all circles user belongs to
+// ============================================
+export const fetchAllConnections = createAsyncThunk(
+  "circles/fetchAllConnections",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get("/circles/all-connections");
+      return response.data?.data || response.data;
+    } catch (err) {
+      return rejectWithValue(getErrorMessage(err));
+    }
+  },
+);
+
+// ============================================
+// 12. LEAVE CIRCLE
+// POST /circles/leave/{circleId}
+// ============================================
+export const leaveCircle = createAsyncThunk(
+  "circles/leaveCircle",
+  async ({ circleId }, { rejectWithValue }) => {
+    try {
+      if (!circleId) {
+        return rejectWithValue("Circle not found");
+      }
+
+      await axios.post(`/circles/leave/${circleId}`);
+
+      return { circleId };
     } catch (err) {
       const message = getErrorMessage(err);
       return rejectWithValue(message);
