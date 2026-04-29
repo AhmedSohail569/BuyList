@@ -33,14 +33,19 @@ const getLocationPermission = () =>
     });
 
 /** Prompt user to open settings when permission is permanently blocked */
-const showSettingsAlert = () => {
+const showSettingsAlert = (t) => {
+    const title = t ? t("location_denied_title") : "Location Access Required";
+    const message = t ? t("location_denied_desc") : "Location permission is needed. Please enable it in your device settings.";
+    const cancelText = t ? t("common_cancel") : "Cancel";
+    const settingsText = t ? t("settings_title") : "Open Settings";
+
     Alert.alert(
-        "Location Access Required",
-        "Location permission is needed to find nearby stores and deals. Please enable it in your device settings.",
+        title,
+        message,
         [
-            { text: "Cancel", style: "cancel" },
+            { text: cancelText, style: "cancel" },
             {
-                text: "Open Settings",
+                text: settingsText,
                 onPress: () => openSettings().catch(() => Linking.openSettings()),
             },
         ],
@@ -55,7 +60,8 @@ const useLocation = () => {
     const isFetchingRef = useRef(false);
 
     /** Check / request location permission */
-    const requestLocationPermission = useCallback(async (interactive = false) => {
+    const requestLocationPermission = useCallback(async (options = {}) => {
+        const { interactive = false, t = null } = options;
         const permission = getLocationPermission();
         if (!permission) return false;
 
@@ -73,13 +79,15 @@ const useLocation = () => {
                         return true;
                     }
                     if (interactive) {
-                        showSettingsAlert();
+                        showSettingsAlert(t);
                     }
                     return false;
                 }
 
                 case RESULTS.BLOCKED:
-                    showSettingsAlert();
+                    if (interactive) {
+                        showSettingsAlert(t);
+                    }
                     return false;
 
                 case RESULTS.UNAVAILABLE:
@@ -93,7 +101,7 @@ const useLocation = () => {
             setError("Failed to check location permission");
             return false;
         }
-    }, []);
+    }, [setError]);
 
     /** Get current device position */
     const getCurrentPosition = useCallback(() => {
@@ -118,7 +126,7 @@ const useLocation = () => {
     }, []);
 
     /** Full location flow: permission → geolocation → reverse geocoding */
-    const detectLocation = useCallback(async () => {
+    const detectLocation = useCallback(async (options = {}) => {
         if (isFetchingRef.current) return null;
 
         // ── Connectivity guard ──
@@ -135,7 +143,7 @@ const useLocation = () => {
         setError(null);
 
         try {
-            const hasPermission = await requestLocationPermission();
+            const hasPermission = await requestLocationPermission(options);
             if (!hasPermission) return null;
 
             const position = await getCurrentPosition();

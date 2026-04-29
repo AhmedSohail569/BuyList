@@ -19,7 +19,7 @@ import {
   Smartphone,
   Shield,
 } from "lucide-react-native";
-import { Menu } from "react-native-paper";
+import Popover from "react-native-popover-view";
 import Toast from "react-native-toast-message";
 import Header from "~components/Header";
 import { ScrollView, Text } from "~components/Common";
@@ -91,17 +91,20 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
     inviteQR,
     inviteQRLoading,
     membersByCircleId,
+    ownedCircles,
   } = useSelector(state => state.circles);
   const { showAlert, showError } = useAlert();
-  const { tab, circleId, currentCircle } = route.params || {};
+  const { tab, circleId } = route.params || {};
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(tab || "Connections");
   const [activeMenuId, setActiveMenuId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isQRModalVisible, setQRModalVisible] = useState(false);
   const isMenuDismissingRef = useRef(false);
+  // Stores the action to run after the popover fully closes (iOS modal-in-modal fix)
+  const pendingActionRef = useRef(null);
 
-
+ 
   // Fetch circle members initially and on background-refresh
   const fetchFn = useCallback(() => {
     if (circleId) {
@@ -117,15 +120,17 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
     }
   });
 
-  // Reconcile currentCircle with updated members from Redux if available
+  // Reconcile activeCircle from ownedCircles with updated members from Redux if available
   const activeCircle = useMemo(() => {
-    if (!currentCircle) return null;
+    const baseCircle = Array.isArray(ownedCircles) ? ownedCircles.find(c => (c._id || c.id) === circleId) : null;
+    if (!baseCircle) return null;
+
     const fetchedMembers = membersByCircleId?.[circleId];
     if (fetchedMembers) {
-      return { ...currentCircle, members: fetchedMembers };
+      return { ...baseCircle, members: fetchedMembers };
     }
-    return currentCircle;
-  }, [currentCircle, membersByCircleId, circleId]);
+    return baseCircle;
+  }, [ownedCircles, membersByCircleId, circleId]);
 
   // Build connections from activeCircle data
   const connections = useMemo(() => buildConnections(activeCircle, colors), [activeCircle, colors]);
@@ -184,7 +189,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
     }
 
     try {
-      const circleName = currentCircle?.name || "our circle";
+      const circleName = activeCircle?.name || "our circle";
       await Share.share({
         message: `Join ${circleName} on Bagg! ${inviteLink}`,
         url: inviteLink,
@@ -194,7 +199,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
       console.error("Share error:", err);
       // User cancelled share, no need to show error
     }
-  }, [inviteLink, currentCircle]);
+  }, [inviteLink, activeCircle]);
 
   // Share invite link via SMS (From Contacts)
   const handleShareViaSMS = useCallback(async () => {
@@ -207,7 +212,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
       return;
     }
 
-    const circleName = currentCircle?.name || "our circle";
+    const circleName = activeCircle?.name || "our circle";
     const message = `Join ${circleName} on Bagg! ${inviteLink}`;
     // Use ?body= for both iOS and Android in modern RN, but &body= is safer for some older iOS
     const separator = Platform.OS === "ios" ? "&" : "?";
@@ -225,14 +230,14 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
       console.error("Failed to open SMS:", err);
       handleShareLink(); // Fallback on error
     }
-  }, [inviteLink, currentCircle, handleShareLink]);
+  }, [inviteLink, activeCircle, handleShareLink]);
 
   // Show QR Code modal
   const handleShowQR = useCallback(() => {
     if (circleId) {
-      if (!inviteQR) {
+      // if (!inviteQR) {
         dispatch(getCircleInviteQR({ circleId }));
-      }
+      // }
       setQRModalVisible(true);
     }
   }, [circleId, inviteQR, dispatch]);
@@ -372,41 +377,66 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
       </View>
 
       {!item.isOwner && (
-        <Menu
-          visible={activeMenuId === item.id}
-          onDismiss={handleMenuDismiss}
-          anchor={
+        <Popover
+          isVisible={activeMenuId === item.id}
+          onRequestClose={handleMenuDismiss}
+          onCloseComplete={() => {
+            // The custom patch removed the native unmount delay; we must delay the next modal here
+            if (pendingActionRef.current) {
+              const action = pendingActionRef.current;
+              setTimeout(() => {
+                action();
+              }, 400);
+              pendingActionRef.current = null;
+            }
+          }}
+          from={(sourceRef, showPopover) => (
             <TouchableOpacity
+              ref={sourceRef}
               hitSlop={10}
-              onPress={() => handleMenuToggle(item.id)}
+              onPress={() => {
+                showPopover();
+                handleMenuToggle(item.id);
+              }}
               disabled={loading}>
               <MoreHorizontal size={20} color={colors.iconMuted} />
             </TouchableOpacity>
-          }
-          contentStyle={[styles.menuContent, { backgroundColor: colors.card }]}>
-          {/* Show Editor option only if current role is not Editor */}
-          {item.role.toLowerCase() !== "editor" && (
-            <Menu.Item
-              onPress={() => handleUpdateRole(item.id, "Editor")}
-              title={t("manage_role_editor")}
-              titleStyle={[styles.menuItemTitle, { color: colors.textPrimary }]}
-            />
           )}
-          {/* Show Viewer option only if current role is not Viewer */}
-          {item.role.toLowerCase() !== "viewer" && (
-            <Menu.Item
-              onPress={() => handleUpdateRole(item.id, "Viewer")}
-              title={t("manage_role_viewer")}
-              titleStyle={[styles.menuItemTitle, { color: colors.textPrimary }]}
-            />
-          )}
-          {/* Always show Remove option */}
-          <Menu.Item
-            onPress={() => handleRemoveMember(item.id, item.name)}
-            title={t("manage_action_remove")}
-            titleStyle={styles.menuItemTitleDelete}
-          />
-        </Menu>
+          popoverStyle={[styles.menuContent, { backgroundColor: colors.card }]}>
+          <View style={{ paddingVertical: 4 }}>
+            {/* Show Editor option only if current role is not Editor */}
+            {item.role.toLowerCase() !== "editor" && (
+              <TouchableOpacity
+                onPress={() => {
+                  pendingActionRef.current = () => handleUpdateRole(item.id, "Editor");
+                  handleMenuDismiss();
+                }}
+                style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                <Text style={[styles.menuItemTitle, { color: colors.textPrimary }]}>{t("manage_role_editor")}</Text>
+              </TouchableOpacity>
+            )}
+            {/* Show Viewer option only if current role is not Viewer */}
+            {item.role.toLowerCase() !== "viewer" && (
+              <TouchableOpacity
+                onPress={() => {
+                  pendingActionRef.current = () => handleUpdateRole(item.id, "Viewer");
+                  handleMenuDismiss();
+                }}
+                style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                <Text style={[styles.menuItemTitle, { color: colors.textPrimary }]}>{t("manage_role_viewer")}</Text>
+              </TouchableOpacity>
+            )}
+            {/* Always show Remove option */}
+            <TouchableOpacity
+              onPress={() => {
+                pendingActionRef.current = () => handleRemoveMember(item.id, item.name);
+                handleMenuDismiss();
+              }}
+              style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+              <Text style={styles.menuItemTitleDelete}>{t("manage_action_remove")}</Text>
+            </TouchableOpacity>
+          </View>
+        </Popover>
       )}
     </View>
   );
@@ -497,7 +527,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
               </View>
 
               <Text style={[styles.inviteTitle, { color: colors.textPrimary }]}>
-                {t("manage_tab_invite")} {currentCircle?.name ? `${currentCircle.name}` : ""}
+                {t("manage_tab_invite")} {activeCircle?.name ? `${activeCircle.name}` : ""}
               </Text>
               <Text style={[styles.inviteDesc, { color: colors.textSecondary }]}>
                 {t("manage_invite_desc")}
@@ -536,7 +566,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
             </View>
 
             {/* Bottom Action Grid */}
-            <View style={styles.actionGrid}>
+            <View style={styles.actionGrid} pointerEvents="box-none">
               <TouchableOpacity 
                 style={[styles.actionCard, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}
                 onPress={handleShowQR}
@@ -567,7 +597,7 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
         onClose={() => setQRModalVisible(false)}
         qrCodeUrl={inviteQR}
         loading={inviteQRLoading}
-        circleName={currentCircle?.name}
+        circleName={activeCircle?.name}
       />
     </View>
   );

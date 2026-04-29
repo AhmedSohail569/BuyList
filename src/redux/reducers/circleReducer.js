@@ -18,6 +18,7 @@ import {
   fetchCirclesPicker,
   fetchAllConnections,
   leaveCircle,
+  toggleCircleNotifications,
 } from "../actions/circleActions";
 import {
   getCircleInviteLink,
@@ -587,6 +588,66 @@ const circleSlice = createSlice({
       })
       .addCase(leaveCircle.rejected, (state, action) => {
         state.loading = false;
+        state.error = action.payload;
+      })
+      // ============================================
+      // 13. TOGGLE CIRCLE NOTIFICATIONS (Optimistic Update)
+      // ============================================
+      .addCase(toggleCircleNotifications.pending, (state, action) => {
+        const { circleId } = action.meta.arg;
+
+        // Optimistically toggle isNotificationMuted in ownedCircles
+        if (state.ownedCircles && Array.isArray(state.ownedCircles)) {
+          state.ownedCircles = state.ownedCircles.map(circle =>
+            circle.id === circleId || circle._id === circleId
+              ? { ...circle, isNotificationMuted: !circle.isNotificationMuted }
+              : circle,
+          );
+        }
+
+        // Optimistically toggle isNotificationMuted in allCircles
+        state.allCircles = state.allCircles.map(circle =>
+          circle.id === circleId || circle._id === circleId
+            ? { ...circle, isNotificationMuted: !circle.isNotificationMuted }
+            : circle,
+        );
+      })
+      .addCase(toggleCircleNotifications.fulfilled, (state, action) => {
+        const { circleId, isNotificationMuted } = action.payload;
+        
+        // Sync with server response just in case
+        if (isNotificationMuted !== undefined) {
+          if (state.ownedCircles && Array.isArray(state.ownedCircles)) {
+            state.ownedCircles = state.ownedCircles.map(circle =>
+              circle.id === circleId || circle._id === circleId
+                ? { ...circle, isNotificationMuted }
+                : circle,
+            );
+          }
+          state.allCircles = state.allCircles.map(circle =>
+            circle.id === circleId || circle._id === circleId
+              ? { ...circle, isNotificationMuted }
+              : circle,
+          );
+        }
+        state.error = null;
+      })
+      .addCase(toggleCircleNotifications.rejected, (state, action) => {
+        const { circleId } = action.meta.arg;
+        
+        // Rollback optimistic toggle on failure
+        if (state.ownedCircles && Array.isArray(state.ownedCircles)) {
+          state.ownedCircles = state.ownedCircles.map(circle =>
+            circle.id === circleId || circle._id === circleId
+              ? { ...circle, isNotificationMuted: !circle.isNotificationMuted }
+              : circle,
+          );
+        }
+        state.allCircles = state.allCircles.map(circle =>
+          circle.id === circleId || circle._id === circleId
+            ? { ...circle, isNotificationMuted: !circle.isNotificationMuted }
+            : circle,
+        );
         state.error = action.payload;
       });
   },

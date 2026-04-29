@@ -16,6 +16,9 @@ import usePermissions from "~hooks/usePermissions";
 import { PermissionsProvider } from "~context/PermissionsContext";
 import { joinCircleViaInvite } from "~redux/actions/inviteActions";
 import {
+  fetchAllCircles,
+} from "~redux/actions/circleActions";
+import {
   parseInviteLink,
   storePendingInvite,
   getPendingInvite,
@@ -63,6 +66,7 @@ const RootNavigator = () => {
   const { user, accessToken } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const processedUrlRef = useRef(null);
+  const isProcessingInviteRef = useRef(false);
 
   // Sequential permission flow: notifications first, then location
   const { locationReady } = usePermissions();
@@ -103,6 +107,8 @@ const RootNavigator = () => {
         return;
       }
 
+      if (isProcessingInviteRef.current) return;
+
       if (user) {
         // Authenticated → join circle immediately
         try {
@@ -112,7 +118,12 @@ const RootNavigator = () => {
             text2: "Please wait",
           });
 
+
+          isProcessingInviteRef.current = true;
           await dispatch(joinCircleViaInvite({ inviteCode })).unwrap();
+
+          // Refresh circle data immediately after joining
+          dispatch(fetchAllCircles());
 
           Toast.show({
             type: "success",
@@ -123,7 +134,7 @@ const RootNavigator = () => {
           // Navigate to circle screen
           if (navigationRef.isReady()) {
             navigationRef.navigate("AppTabNavigator", {
-              screen: "Lists",
+              screen: "Home",
             });
           }
         } catch (err) {
@@ -132,6 +143,8 @@ const RootNavigator = () => {
             text1: "Failed to Join",
             text2: typeof err === "string" ? err : "Could not join the circle.",
           });
+        } finally {
+          isProcessingInviteRef.current = false;
         }
       } else {
         // Not authenticated → store invite for after login/signup
@@ -163,8 +176,6 @@ const RootNavigator = () => {
 
     // 2. Handle URLs that arrive while the app is already open (warm start)
     const sub = Linking.addEventListener("url", ({ url }) => {
-      // Reset so the same link can be re-processed if opened again
-      processedUrlRef.current = null;
       handleDeepLink(url);
     });
 
@@ -188,7 +199,11 @@ const RootNavigator = () => {
           text2: "Processing your pending invite.",
         });
 
+        isProcessingInviteRef.current = true;
         await dispatch(joinCircleViaInvite({ inviteCode: pendingCode })).unwrap();
+
+        // Refresh circle data immediately after joining
+        dispatch(fetchAllCircles());
 
         Toast.show({
           type: "success",
@@ -197,7 +212,7 @@ const RootNavigator = () => {
         });
 
         if (navigationRef.isReady()) {
-          navigationRef.navigate("AppTabNavigator", { screen: "Lists" });
+          navigationRef.navigate("AppTabNavigator", { screen: "Home" });
         }
       } catch (err) {
         Toast.show({
@@ -205,6 +220,8 @@ const RootNavigator = () => {
           text1: "Failed to Join",
           text2: typeof err === "string" ? err : "Could not join the circle.",
         });
+      } finally {
+        isProcessingInviteRef.current = false;
       }
     };
 

@@ -8,7 +8,7 @@ import axios from "~utils/axiosInstance";
  */
 export const searchLocalStores = createAsyncThunk(
   "search/searchLocalStores",
-  async ({ query, lat, lng, page = 1, limit = 10 }, { rejectWithValue }) => {
+  async ({ query, lat, lng, page = 1, limit = 10, silent = false }, { rejectWithValue }) => {
     try {
       if (!query?.trim()) {
         return rejectWithValue("Search query is required");
@@ -18,6 +18,7 @@ export const searchLocalStores = createAsyncThunk(
         query: query.trim(),
         page: page,
         limit: limit,
+        silent: silent
       };
       if (lat != null && lng != null) {
         params.lat = lat;
@@ -25,6 +26,7 @@ export const searchLocalStores = createAsyncThunk(
       }
 
       const response = await axios.get("/search/stores", { params });
+
       const data = response.data;
 
       return {

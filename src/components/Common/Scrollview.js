@@ -17,7 +17,7 @@ const CustomScrollView = React.forwardRef(
       includeAvoidingView = true,
       children,
       contentContainerStyle,
-      keyboardVerticalOffset = 80,
+      keyboardVerticalOffset = 0,
       style,
       ...props
     },

@@ -28,6 +28,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { fetchRecentActivities, fetchAllLists } from "~redux/actions/listActions";
 // import { fetchPersonalizedRecommendations } from "~redux/actions/recommendationsActions";
 import { getProfile } from "~redux/actions/profileActions";
+import { fetchNotifications } from "~redux/actions/notificationActions";
 import { useTheme } from "~context/ThemeContext";
 import AdsOffersCarousel from "~components/AdsOffersCarousel";
 import NotificationsDropdown from "~components/NotificationsDropdown";
@@ -105,6 +106,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
       dispatch(getProfile()),
       dispatch(fetchRecentActivities()),
       dispatch(fetchAllLists()),
+      dispatch(fetchNotifications()),
       // dispatch(fetchPersonalizedRecommendations({ page: 1, limit: 2 })),
     ];
 
@@ -116,6 +118,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
             lat: latitude,
             lng: longitude,
             limit: 5,
+            silent: true
           })
         )
       );
@@ -185,6 +188,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
     },
   };
 
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header
@@ -193,7 +197,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
         userName={profile?.username || user?.username || "User"}
         avatar={profile?.profilePicture ? { uri: profile.profilePicture } : null}
         rightIcon="notifications-outline"
-        notificationBadge={user?.hasUnreadNotifications}
+        notificationBadge={profile?.hasUnreadNotifications || user?.hasUnreadNotifications}
         onRightPress={() => setShowNotifications(true)}
       />
 

@@ -14,7 +14,7 @@ import {
   Check,
   MoreHorizontal,
 } from "lucide-react-native";
-import { Menu } from "react-native-paper";
+import Popover from "react-native-popover-view";
 import { useDispatch, useSelector } from "react-redux";
 import { useFocusEffect } from "@react-navigation/native";
 import Toast from "react-native-toast-message";
@@ -108,6 +108,9 @@ const ListDetailsScreen = ({ navigation, route }) => {
       return next;
     });
   }, []);
+
+  // Stores the action to run after the popover fully closes (iOS modal-in-modal fix)
+  const pendingActionRef = useRef(null);
 
   // Header menu toggle (guarded to prevent Menu open/close race conditions)
   const handleHeaderMenuToggle = useCallback(() => {
@@ -366,44 +369,60 @@ const ListDetailsScreen = ({ navigation, route }) => {
           </View>
 
           {!isViewer && (
-            <Menu
-              visible={isMenuOpen}
-              onDismiss={() => setActiveItemMenuId(null)}
-              anchor={
+            <Popover
+              isVisible={isMenuOpen}
+              onRequestClose={() => setActiveItemMenuId(null)}
+              onCloseComplete={() => {
+                // The custom patch removed the native unmount delay; we must delay the next modal here
+                if (pendingActionRef.current) {
+                  const action = pendingActionRef.current;
+                  setTimeout(() => {
+                    action();
+                  }, 400);
+                  pendingActionRef.current = null;
+                }
+              }}
+              from={(sourceRef, showPopover) => (
                 <TouchableOpacity
-                  onPress={() => setActiveItemMenuId(itemId)}
+                  ref={sourceRef}
+                  onPress={() => {
+                    showPopover();
+                    setActiveItemMenuId(itemId);
+                  }}
                   hitSlop={10}
                   disabled={isPending}>
                   <MoreHorizontal size={20} color={colors.iconMuted} />
                 </TouchableOpacity>
-              }
-              contentStyle={[styles.menuContent, { backgroundColor: colors.card }]}>
-              <Menu.Item
-                onPress={() => {
-                  const item = list?.items?.find(i => (i.id || i._id) === itemId);
-                  setActiveItemMenuId(null);
-                  setPriorityModal({ visible: true, itemId, current: item?.priority || "medium" });
-                }}
-                title={"Set Priority"}
-                titleStyle={[styles.menuItemTitle, { color: colors.textPrimary }]}
-              />
-              <Menu.Item
-                onPress={() => {
-                  setActiveItemMenuId(null);
-                  toggleItemStatus(itemId);
-                }}
-                title={item.status === "purchased" ? "Pending" : "Completed"}
-                titleStyle={[styles.menuItemTitle, { color: colors.textPrimary }]}
-              />
-              <Menu.Item
-                onPress={() => {
-                  setActiveItemMenuId(null);
-                  handleDeleteItem(itemId);
-                }}
-                title="Delete"
-                titleStyle={styles.menuItemTitleDelete}
-              />
-            </Menu>
+              )}
+              popoverStyle={[styles.menuContent, { backgroundColor: colors.card }]}>
+              <View style={{ paddingVertical: 4 }}>
+                <TouchableOpacity
+                  onPress={() => {
+                    const currentItem = list?.items?.find(i => (i.id || i._id) === itemId);
+                    pendingActionRef.current = () => setPriorityModal({ visible: true, itemId, current: currentItem?.priority || "medium" });
+                    setActiveItemMenuId(null);
+                  }}
+                  style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                  <Text style={[styles.menuItemTitle, { color: colors.textPrimary }]}>Set Priority</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    pendingActionRef.current = () => toggleItemStatus(itemId);
+                    setActiveItemMenuId(null);
+                  }}
+                  style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                  <Text style={[styles.menuItemTitle, { color: colors.textPrimary }]}>{item.status === "purchased" ? "Pending" : "Completed"}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    pendingActionRef.current = () => handleDeleteItem(itemId);
+                    setActiveItemMenuId(null);
+                  }}
+                  style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                  <Text style={styles.menuItemTitleDelete}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </Popover>
           )}
         </View>
       );
@@ -458,43 +477,51 @@ const ListDetailsScreen = ({ navigation, route }) => {
               {/* <TouchableOpacity style={styles.iconButton}>
                 <Share2 size={22} color={colors.icon} />
               </TouchableOpacity> */}
-              <Menu
-                visible={showHeaderMenu}
-                onDismiss={() => {
+              <Popover
+                isVisible={showHeaderMenu}
+                onRequestClose={() => {
                   isHeaderMenuDismissingRef.current = true;
                   setShowHeaderMenu(false);
                   setTimeout(() => {
                     isHeaderMenuDismissingRef.current = false;
                   }, 100);
                 }}
-                anchor={
+                onCloseComplete={() => {
+                  if (pendingActionRef.current) {
+                    const action = pendingActionRef.current;
+                    setTimeout(() => {
+                      action();
+                    }, 400);
+                    pendingActionRef.current = null;
+                  }
+                }}
+                from={(sourceRef, showPopover) => (
                   <TouchableOpacity
+                    ref={sourceRef}
                     style={styles.iconButton}
-                    onPress={handleHeaderMenuToggle}>
+                    onPress={() => {
+                      showPopover();
+                      handleHeaderMenuToggle();
+                    }}>
                     <MoreVertical size={22} color={colors.icon} />
                   </TouchableOpacity>
-                }
-                contentStyle={[styles.menuContent, { backgroundColor: colors.card }]}>
-                {/* <Menu.Item
-                  onPress={() => {
-                    setShowHeaderMenu(false);
-                    // Handle edit action
-                  }}
-                  title="Edit"
-                  titleStyle={[styles.menuItemTitle, { color: colors.textPrimary }]}
-                /> */}
-                <Menu.Item
-                  onPress={() => {
-                    isHeaderMenuDismissingRef.current = true;
-                    confirmDeleteThisList();
-                    setTimeout(() => {
-                      isHeaderMenuDismissingRef.current = false;
-                    }, 100);
-                  }}
-                  title="Delete"
-                  titleStyle={styles.menuItemTitleDelete}
-                />
-              </Menu>
+                )}
+                popoverStyle={[styles.menuContent, { backgroundColor: colors.card }]}>
+                <View style={{ paddingVertical: 4 }}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      isHeaderMenuDismissingRef.current = true;
+                      pendingActionRef.current = () => {
+                        confirmDeleteThisList();
+                        isHeaderMenuDismissingRef.current = false;
+                      };
+                      setShowHeaderMenu(false);
+                    }}
+                    style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                    <Text style={styles.menuItemTitleDelete}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+              </Popover>
             </View>
           ) : null
         }

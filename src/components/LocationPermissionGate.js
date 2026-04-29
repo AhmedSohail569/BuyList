@@ -29,6 +29,7 @@ import {
     setPermissionGranted,
     dismissLocationPrompt,
 } from "~redux/reducers/locationReducer";
+import { fetchCurrentLocation } from "~redux/actions/locationActions";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -136,21 +137,11 @@ const LocationPermissionGate = ({ enabled = true }) => {
     }, [scaleAnim, opacityAnim]);
 
     /**
-     * Fetch location and store in Redux
+     * Fetch location and store in Redux using the centralized thunk
      */
     const fetchAndStoreLocation = useCallback(async () => {
-        const result = await detectLocation();
-        if (result) {
-            dispatch(
-                setLocation({
-                    latitude: result.latitude,
-                    longitude: result.longitude,
-                    city: result.city,
-                    area: result.area,
-                }),
-            );
-        }
-    }, [detectLocation, dispatch]);
+        dispatch(fetchCurrentLocation());
+    }, [dispatch]);
 
     /**
      * Handle "Enable Location" press
@@ -158,7 +149,7 @@ const LocationPermissionGate = ({ enabled = true }) => {
     const handleEnableLocation = useCallback(async () => {
         setChecking(true);
 
-        const granted = await requestLocationPermission(true);
+        const granted = await requestLocationPermission({ interactive: true, t });
 
         if (granted) {
             dispatch(setPermissionGranted(true));
@@ -397,6 +388,7 @@ const styles = StyleSheet.create({
     },
     skipButton: {
         borderWidth: 1,
+        flex: 0.5,
     },
     enableButton: {},
     buttonText: {

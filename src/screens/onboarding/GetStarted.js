@@ -92,7 +92,6 @@ const GetStartedScreen = ({ navigation }) => {
 
   const handlePhoneSubmit = useCallback(
     async (phoneData) => {
-      console.log("phoneData", phoneData);
       // Check connectivity
       const isConnected = await checkConnectivity();
       if (!isConnected) {

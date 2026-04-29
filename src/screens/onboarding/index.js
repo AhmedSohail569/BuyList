@@ -12,7 +12,7 @@ import { RFPercentage, RFValue } from "react-native-responsive-fontsize";
 import { Button, Text } from "~components/Common";
 import { Images } from "~assets";
 
-const { height } = Dimensions.get("window");
+const { height, width } = Dimensions.get("window");
 
 const OnboardingScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -22,7 +22,8 @@ const OnboardingScreen = ({ navigation }) => {
       <ImageBackground
         source={Images.onboarding}
         style={styles.image}
-        imageStyle={styles.imageStyle}>
+        imageStyle={styles.imageStyle}
+        resizeMode="stretch">
         {/* Content */}
         <View
           style={[
@@ -74,7 +75,8 @@ const styles = StyleSheet.create({
 
   imageStyle: {
     // borderRadius: 28,
-    height: height,
+    height: height + 5,
+    width: width,
   },
 
   content: {

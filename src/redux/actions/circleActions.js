@@ -347,3 +347,29 @@ export const leaveCircle = createAsyncThunk(
   },
   { condition: requireConnectivity },
 );
+
+// ============================================
+// 13. TOGGLE CIRCLE NOTIFICATIONS
+// PATCH /notifications/toggle-circle-notifications/{circleId}
+// ============================================
+export const toggleCircleNotifications = createAsyncThunk(
+  "circles/toggleCircleNotifications",
+  async ({ circleId }, { rejectWithValue }) => {
+    try {
+      if (!circleId) {
+        return rejectWithValue("Circle not found");
+      }
+
+      const response = await axios.patch(`/notifications/toggle-circle-notifications/${circleId}`);
+      
+      return { 
+        circleId,
+        isNotificationMuted: response.data?.data?.isNotificationMuted ?? response.data?.isNotificationMuted
+      };
+    } catch (err) {
+      const message = getErrorMessage(err);
+      return rejectWithValue(message);
+    }
+  },
+  { condition: requireConnectivity },
+);

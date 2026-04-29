@@ -10,6 +10,7 @@ import {
   Switch,
   ScrollView,
   Platform,
+  KeyboardAvoidingView,
 } from "react-native";
 import {X, Plus, ChevronDown, Users, Check} from "lucide-react-native";
 import {RFValue} from "react-native-responsive-fontsize";
@@ -60,6 +61,9 @@ export const BottomModal = ({
   // --- STATE: Create Circle Mode ---
   const [circleName, setCircleName] = useState("");
   const [selectedColor, setSelectedColor] = useState(CIRCLE_COLORS[0]);
+  
+  // --- STATE: Keyboard Management ---
+  const [avoidKeyboard, setAvoidKeyboard] = useState(true);
   
   // --- Error States ---
   const [listNameError, setListNameError] = useState("");
@@ -206,7 +210,9 @@ export const BottomModal = ({
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}>
         {/* Sort Section */}
         <Text style={[styles.sectionLabel, {color: colors.textMuted}]}>{t("modal_sort_label")}</Text>
         <View style={styles.chipsContainer}>
@@ -259,24 +265,24 @@ export const BottomModal = ({
             />
           </View>
         </View>
-      </ScrollView>
 
-      {/* Footer Buttons */}
-      <View style={styles.modalFooter}>
-        <TouchableOpacity
-          style={[styles.resetButton, {backgroundColor: colors.surfaceSecondary}]}
-          onPress={handleResetFilter}>
-          <Text style={[styles.resetButtonText, {color: colors.textPrimary}]}>{t("modal_reset")}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.applyButton, {backgroundColor: colors.primary}]}
-          onPress={() => {
-            onApply({sort: selectedSort, minPrice, maxPrice});
-            onClose();
-          }}>
-          <Text style={styles.applyButtonText}>{t("modal_show_results")}</Text>
-        </TouchableOpacity>
-      </View>
+        {/* Footer Buttons - Moved inside scroll */}
+        <View style={[styles.modalFooter, { marginTop: 10 }]}>
+          <TouchableOpacity
+            style={[styles.resetButton, {backgroundColor: colors.surfaceSecondary}]}
+            onPress={handleResetFilter}>
+            <Text style={[styles.resetButtonText, {color: colors.textPrimary}]}>{t("modal_reset")}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.applyButton, {backgroundColor: colors.primary}]}
+            onPress={() => {
+              onApply({sort: selectedSort, minPrice, maxPrice});
+              onClose();
+            }}>
+            <Text style={styles.applyButtonText}>{t("modal_show_results")}</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </>
   );
 
@@ -288,11 +294,11 @@ export const BottomModal = ({
           <X size={24} color={colors.iconMuted} />
         </TouchableOpacity>
       </View>
-
       <ScrollView 
         ref={scrollViewRef}
         showsVerticalScrollIndicator={false} 
-        keyboardShouldPersistTaps="handled">
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}>
         {/* List Name */}
         <Text style={[styles.inputLabel, {color: colors.textMuted}]}>{t("modal_list_name")} <Text style={{color: "#ef4444"}}>*</Text></Text>
         <View style={[styles.inputContainer, {backgroundColor: colors.surfaceSecondary, borderColor: listNameError ? "#ef4444" : colors.border, marginBottom: listNameError ? 4 : 20}]}>
@@ -301,6 +307,8 @@ export const BottomModal = ({
             placeholder={t("modal_list_name_placeholder")}
             placeholderTextColor={colors.inputPlaceholder}
             value={listName}
+            onFocus={() => setAvoidKeyboard(false)}
+            onBlur={() => setAvoidKeyboard(true)}
             onChangeText={(text) => {
               setListName(text);
               if (listNameError) setListNameError("");
@@ -408,6 +416,7 @@ export const BottomModal = ({
             placeholder={t("modal_add_item_placeholder")}
             placeholderTextColor={colors.inputPlaceholder}
             value={newItem}
+            onFocus={() => setAvoidKeyboard(true)}
             onChangeText={setNewItem}
             onSubmitEditing={handleAddItem}
             returnKeyType="done"
@@ -528,24 +537,22 @@ export const BottomModal = ({
           )}
         </View>
 
-       
+        {/* Footer Button - Moved inside scroll */}
+        <View style={[styles.modalFooterSingle, { marginTop: 10 }]}>
+          <TouchableOpacity
+            style={[
+              styles.createButton,
+              {backgroundColor: colors.primary},
+              (loading || isSubmitting) && styles.createButtonDisabled,
+            ]}
+            onPress={handleCreateList}
+            disabled={loading || isSubmitting}>
+            <Text style={styles.createButtonText}>
+              {loading || isSubmitting ? t("modal_creating_list") : t("modal_create_list")}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
-
-      {/* Footer Button */}
-      <View style={styles.modalFooterSingle} >
-        <TouchableOpacity
-          style={[
-            styles.createButton,
-            {backgroundColor: colors.primary},
-            (loading || isSubmitting) && styles.createButtonDisabled,
-          ]}
-          onPress={handleCreateList}
-          disabled={loading || isSubmitting}>
-          <Text style={styles.createButtonText}>
-            {loading || isSubmitting ? t("modal_creating_list") : t("modal_create_list")}
-          </Text>
-        </TouchableOpacity>
-      </View>
     </>
   );
 
@@ -558,47 +565,54 @@ export const BottomModal = ({
         </TouchableOpacity>
       </View>
 
-      {/* Circle Name */}
-      <Text style={[styles.inputLabel, {color: colors.textMuted, marginBottom: 8}]}>{t("circle_create_name_label")}</Text>
-      <View style={[styles.inputContainer, {backgroundColor: colors.surfaceSecondary, borderColor: colors.border, marginBottom: 20}]}>
-        <TextInput
-          style={[styles.textInput, {color: colors.textPrimary}]}
-          placeholder={t("circle_create_name_placeholder")}
-          placeholderTextColor={colors.inputPlaceholder}
-          value={circleName}
-          onChangeText={setCircleName}
-          autoFocus
-        />
-      </View>
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{flexGrow: 1, paddingBottom: 20}}>
+        {/* Circle Name */}
+        <Text style={[styles.inputLabel, {color: colors.textMuted, marginBottom: 8}]}>{t("circle_create_name_label")}</Text>
+        <View style={[styles.inputContainer, {backgroundColor: colors.surfaceSecondary, borderColor: colors.border, marginBottom: 20}]}>
+          <TextInput
+            style={[styles.textInput, {color: colors.textPrimary}]}
+            placeholder={t("circle_create_name_placeholder")}
+            placeholderTextColor={colors.inputPlaceholder}
+            value={circleName}
+            onFocus={() => setAvoidKeyboard(true)}
+            // onBlur={() => setAvoidKeyboard(false)}
+            onChangeText={setCircleName}
+            autoFocus
+          />
+        </View>
 
-      {/* Color Grid */}
-      <Text style={[styles.inputLabel, {color: colors.textMuted, marginBottom: 10}]}>{t("circle_create_color_label")}</Text>
-      <View style={styles.colorGrid}>
-        {CIRCLE_COLORS.map(color => (
+        {/* Color Grid */}
+        <Text style={[styles.inputLabel, {color: colors.textMuted, marginBottom: 10}]}>{t("circle_create_color_label")}</Text>
+        <View style={styles.colorGrid}>
+          {CIRCLE_COLORS.map(color => (
+            <TouchableOpacity
+              key={color}
+              style={[styles.colorOption, {backgroundColor: color}]}
+              onPress={() => setSelectedColor(color)}>
+              {selectedColor === color && <Check size={RFValue(14)} color="#fff" />}
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Footer Button - included inside scroll to ensure it's pushable by keyboard if needed */}
+        <View style={[styles.modalFooterSingle, {marginTop: 20}]}>
           <TouchableOpacity
-            key={color}
-            style={[styles.colorOption, {backgroundColor: color}]}
-            onPress={() => setSelectedColor(color)}>
-            {selectedColor === color && <Check size={RFValue(14)} color="#fff" />}
+            style={[
+              styles.createButton,
+              {backgroundColor: colors.primary},
+              (loading || isSubmitting || !circleName.trim()) && styles.createButtonDisabled,
+            ]}
+            onPress={handleCreateCircle}
+            disabled={loading || isSubmitting || !circleName.trim()}>
+            <Text style={styles.createButtonText}>
+              {loading || isSubmitting ? t("circle_create_btn_loading") : t("circle_create_btn")}
+            </Text>
           </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Footer Button */}
-      <View style={[styles.modalFooterSingle, {marginTop: 20}]}>
-        <TouchableOpacity
-          style={[
-            styles.createButton,
-            {backgroundColor: colors.primary},
-            (loading || isSubmitting || !circleName.trim()) && styles.createButtonDisabled,
-          ]}
-          onPress={handleCreateCircle}
-          disabled={loading || isSubmitting || !circleName.trim()}>
-          <Text style={styles.createButtonText}>
-            {loading || isSubmitting ? t("circle_create_btn_loading") : t("circle_create_btn")}
-          </Text>
-        </TouchableOpacity>
-      </View>
+        </View>
+      </ScrollView>
     </>
   );
 
@@ -608,19 +622,26 @@ export const BottomModal = ({
       transparent
       animationType="fade"
       onRequestClose={onClose}>
-      <View style={[styles.modalOverlay, {backgroundColor: colors.modalOverlay}]}>
+      <KeyboardAvoidingView
+        behavior="height"
+        style={[styles.modalOverlay, {backgroundColor: colors.modalOverlay}]}
+        enabled={avoidKeyboard}>
         <TouchableWithoutFeedback onPress={onClose}>
           <View style={styles.modalBackdrop} />
         </TouchableWithoutFeedback>
 
-        <View style={[styles.modalContent, {backgroundColor: colors.modalBackground, shadowColor: colors.shadowColor}]}>
+        <View
+          style={[
+            styles.modalContent,
+            {backgroundColor: colors.modalBackground, shadowColor: colors.shadowColor},
+          ]}>
           {type === "createList"
             ? renderCreateListContent()
             : type === "createCircle"
             ? renderCreateCircleContent()
             : renderFilterContent()}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };

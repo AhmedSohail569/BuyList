@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState } from "react";
+import { useMemo, useCallback, useState, useRef } from "react";
 import {
   View,
   StyleSheet,
@@ -18,14 +18,14 @@ import {
   Plus,
   MoreVertical
 } from "lucide-react-native";
-import { Menu } from "react-native-paper";
+import Popover from "react-native-popover-view";
 import { ScrollView, Text } from "~components/Common";
 import { RFValue } from "react-native-responsive-fontsize";
 import { FontFamily } from "~theme/fonts";
 import Header from "~components/Header";
 import { useDispatch, useSelector } from "react-redux";
 import Toast from "react-native-toast-message";
-import { fetchAllCircles, createCircle, fetchAllConnections, leaveCircle } from "~redux/actions/circleActions";
+import { fetchAllCircles, createCircle, fetchAllConnections, leaveCircle, fetchownedCircles } from "~redux/actions/circleActions";
 import SelectionModal from "~containers/modals/SelectionModal";
 import { BottomModal } from "~components/Common/Modal";
 import { fetchRecentActivities, fetchAllLists } from "~redux/actions/listActions";
@@ -175,14 +175,35 @@ const CircleTab = ({ navigation }) => {
   const { user } = useSelector(state => state.auth);
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState(null);
+  const isMenuDismissingRef = useRef(false);
+  // Stores the action to run after the popover fully closes (iOS modal-in-modal fix)
+  const pendingActionRef = useRef(null);
   const [leaveModalVisible, setLeaveModalVisible] = useState(false);
   const [circleToLeave, setCircleToLeave] = useState(null);
 
-  console.log("allConnections", allConnections);
+  const handleMenuToggle = useCallback(
+    (circleId) => {
+      if (isMenuDismissingRef.current) {
+        return;
+      }
+      setActiveMenuId(prev => (prev === circleId ? null : circleId));
+    },
+    []
+  );
+
+  const handleMenuDismiss = useCallback(() => {
+    isMenuDismissingRef.current = true;
+    setActiveMenuId(null);
+    setTimeout(() => {
+      isMenuDismissingRef.current = false;
+    }, 100);
+  }, []);
+
 
   // Fetch all circles on screen mount or manually triggered
   const fetchFn = useCallback(() => {
     dispatch(fetchAllCircles());
+    dispatch(fetchownedCircles());
     dispatch(fetchAllConnections());
     dispatch(fetchRecentActivities());
     dispatch(fetchAllLists());
@@ -194,6 +215,7 @@ const CircleTab = ({ navigation }) => {
   // Re-fetch data when internet reconnects
   useOnReconnect(() => {
     dispatch(fetchAllCircles());
+    dispatch(fetchownedCircles());
     dispatch(fetchAllConnections());
     dispatch(fetchRecentActivities());
     dispatch(fetchAllLists());
@@ -204,6 +226,7 @@ const CircleTab = ({ navigation }) => {
     try {
       await dispatch(createCircle(data)).unwrap();
       await dispatch(fetchAllCircles());
+      await dispatch(fetchownedCircles());
       Toast.show({
         type: "success",
         text1: t("circle_create_success"),
@@ -224,6 +247,7 @@ const CircleTab = ({ navigation }) => {
     if (!circleToLeave) return;
     try {
       await dispatch(leaveCircle({ circleId: circleToLeave.id || circleToLeave._id })).unwrap();
+      dispatch(fetchAllLists());
       Toast.show({
         type: "success",
         text1: t("circle_leave_success_title"),
@@ -293,6 +317,13 @@ const CircleTab = ({ navigation }) => {
   }, [allConnections, user]);
 
   const currentCircle = Array.isArray(sortedCircles) && sortedCircles.length > 0 ? sortedCircles[0] : null;
+
+  // Explicitly find the default circle for the "Grow Your Circle" section
+  const defaultCircle = useMemo(() => {
+    if (!Array.isArray(allCircles)) return null;
+    return allCircles.find(c => c.isDefault && c.owner?._id === user?._id) || 
+           allCircles.find(c => c.owner?._id === user?._id);
+  }, [allCircles, user?._id]);
 
   // Get circle name or default
   const circleName = currentCircle?.name || "Circle";
@@ -437,7 +468,6 @@ const CircleTab = ({ navigation }) => {
                       onPress={() =>
                         navigation.navigate("CircleSettings", {
                           circleId: circle.id || circle._id,
-                          currentCircle: circle,
                         })
                       }
                     >
@@ -445,25 +475,45 @@ const CircleTab = ({ navigation }) => {
                     </TouchableOpacity>
                   ) : (
                     <View style={[styles.settingsIcon, {marginTop: -20}]}>
-                      <Menu
-                        visible={activeMenuId === (circle.id || circle._id)}
-                        onDismiss={() => setActiveMenuId(null)}
-                        anchor={
-                          <TouchableOpacity
-                            onPress={() => setActiveMenuId(circle.id || circle._id)}
-                            hitSlop={15}
+                        <Popover
+                          isVisible={activeMenuId === (circle.id || circle._id)}
+                          onRequestClose={handleMenuDismiss}
+                          onCloseComplete={() => {
+                            // The custom patch removed the native unmount delay; we must delay the next modal here
+                            if (pendingActionRef.current) {
+                              const action = pendingActionRef.current;
+                              setTimeout(() => {
+                                action();
+                              }, 400);   
+                              pendingActionRef.current = null;
+                            }
+                          }}
+                          from={(sourceRef, showPopover) => (
+                            <TouchableOpacity
+                              ref={sourceRef}
+                              onPress={() => {
+                                showPopover();
+                                handleMenuToggle(circle.id || circle._id);
+                              }}
+                              hitSlop={15}
+                            >
+                              <MoreVertical size={RFValue(16)} color={colors.iconSecondary} />
+                            </TouchableOpacity>
+                          )}
+                          popoverStyle={[styles.menuContent, { backgroundColor: colors.card }]}
                           >
-                            <MoreVertical size={RFValue(16)} color={colors.iconSecondary} />
-                          </TouchableOpacity>
-                        }
-                        contentStyle={[styles.menuContent, { backgroundColor: colors.card }]}
-                      >
-                        <Menu.Item
-                          onPress={() => openLeaveConfirmation(circle)}
-                          title={t("circle_leave_btn")}
-                          titleStyle={[styles.menuItemTitleDelete]}
-                        />
-                      </Menu>
+                          <View style={{ paddingVertical: 4 }}>
+                            <TouchableOpacity
+                              onPress={() => {
+                                // Store the action, then close the popover — onCloseComplete will fire it
+                                pendingActionRef.current = () => openLeaveConfirmation(circle);
+                                handleMenuDismiss();
+                              }}
+                              style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                              <Text style={styles.menuItemTitleDelete}>{t("circle_leave_btn")}</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </Popover>
                     </View>
                   )}
                 </View>
@@ -480,7 +530,7 @@ const CircleTab = ({ navigation }) => {
                   />
                   {circle.owner._id === user._id && <TouchableOpacity
                     style={[styles.manageBtn, { borderColor: baseThemeColor }]}
-                    onPress={() => navigation.navigate("ManageConnections", { circleId: circle.id || circle._id, currentCircle: circle, tab: "Connections" })}
+                    onPress={() => navigation.navigate("ManageConnections", { circleId: circle.id || circle._id, tab: "Connections" })}
                   >
                     <Text style={[styles.manageBtnText, { color: baseThemeColor }]}>{t("circle_manage_btn")}</Text>
                   </TouchableOpacity>}
@@ -649,34 +699,42 @@ const CircleTab = ({ navigation }) => {
         </View>
 
         {/* Grow Your Circle Banner */}
-        <View style={[styles.growBanner, { backgroundColor: isDark ? "rgba(14, 165, 233, 0.15)" : "#eff6ff", borderColor: isDark ? "rgba(14, 165, 233, 0.3)" : "#dbeafe" }]}>
-          <View style={styles.growHeader}>
-            <View>
-              <Text style={[styles.growTitle, { color: colors.textPrimary }]}>{t("circle_grow_title")}</Text>
-              <Text style={[styles.growSubtitle, { color: colors.textMuted }]}>
-                {t("circle_grow_desc")}
-              </Text>
+        {defaultCircle && (
+          <View style={[styles.growBanner, { backgroundColor: isDark ? "rgba(14, 165, 233, 0.15)" : "#eff6ff", borderColor: isDark ? "rgba(14, 165, 233, 0.3)" : "#dbeafe" }]}>
+            <View style={styles.growHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.growTitle, { color: colors.textPrimary }]}>{t("circle_grow_title")}</Text>
+                <Text style={[styles.growSubtitle, { color: colors.textMuted }]}>
+                  {t("circle_grow_desc", { name: defaultCircle.name })}
+                </Text>
+              </View>
+              <TouchableOpacity style={[styles.growIconBox, { backgroundColor: colors.primary }]} onPress={() =>
+                navigation.navigate("ManageConnections", { circleId: defaultCircle.id || defaultCircle._id, tab: "Invite" })
+              }>
+                <UserPlus size={20} color="#ffffff" />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity style={[styles.growIconBox, { backgroundColor: colors.primary }]}  onPress={() =>
-              navigation.navigate("ManageConnections", { tab: "Invite" })
-            }>
-              <UserPlus size={20} color="#ffffff" />
-            </TouchableOpacity>
+            <View style={styles.growActions}>
+              <TouchableOpacity
+                style={[styles.inviteLinkBtn, { backgroundColor: colors.card, borderColor: colors.primary }]}
+                onPress={() => navigation.navigate("ManageConnections", { circleId: defaultCircle.id || defaultCircle._id, tab: "Invite" })}
+              >
+                <Share2 size={16} color={colors.primary} style={{ marginRight: 8 }} />
+                <Text style={[styles.inviteLinkText, { color: colors.primary }]}>{t("circle_invite_link")}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.qrCodeBtn, { backgroundColor: colors.primary }]}
+                onPress={() => navigation.navigate("ManageConnections", { circleId: defaultCircle.id || defaultCircle._id, tab: "Invite" })}
+              >
+                <QrCode size={16} color="#ffffff" style={{ marginRight: 8 }} />
+                <Text style={styles.qrCodeText}>{t("circle_qr_code")}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          <View style={styles.growActions}>
-            <TouchableOpacity style={[styles.inviteLinkBtn, { backgroundColor: colors.card, borderColor: colors.primary }]} onPress={() => navigation.navigate("ManageConnections", { tab: "Invite" })}>
-              <Share2 size={16} color={colors.primary} style={{ marginRight: 8 }} />
-              <Text style={[styles.inviteLinkText, { color: colors.primary }]}>{t("circle_invite_link")}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.qrCodeBtn, { backgroundColor: colors.primary }]} onPress={() => navigation.navigate("ManageConnections", { tab: "Invite" })}>
-              <QrCode size={16} color="#ffffff" style={{ marginRight: 8 }} />
-              <Text style={styles.qrCodeText}>{t("circle_qr_code")}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        )}
 
         {/* Bottom Padding */}
-        <View style={{ height: 100 }} />
+        <View style={{ height: 60 }} />
       </ScrollView>
 
       <BottomModal

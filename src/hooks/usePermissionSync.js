@@ -24,6 +24,7 @@ import {
   resetLocationPrompt,
 } from "~redux/reducers/locationReducer";
 import { checkNotificationPermission } from "~utils/notificationService";
+import { fetchCurrentLocation } from "~redux/actions/locationActions";
 
 const NOTIFICATION_ASKED_KEY = "@notification_permission_asked";
 
@@ -67,10 +68,12 @@ const usePermissionSync = () => {
       dispatch(setPermissionGranted(false));
       dispatch(resetLocationPrompt());
       console.log("[PermissionSync] Location permission revoked — reset.");
-    } else if (!locationGranted && locationNowGranted) {
-      // Granted outside the app (e.g. via Settings) → sync silently
+    } else if (locationNowGranted) {
+      // If granted, always sync status and trigger a fetch to ensure fresh coordinates.
+      // This covers both "just granted in settings" and "already granted on app start".
       dispatch(setPermissionGranted(true));
-      console.log("[PermissionSync] Location permission detected as granted — synced.");
+      dispatch(fetchCurrentLocation());
+      console.log("[PermissionSync] Location permission active — triggered fetch.");
     }
 
     // Removed: Notification Sync loop. 

@@ -171,6 +171,8 @@ const NotificationsScreen = ({ navigation }) => {
     (state) => state.notifications,
   );
 
+
+  console.log("settings", settings);
   // Fetch settings on focus; background-refresh when navigating back
   const fetchFn = useCallback(
     () => dispatch(fetchNotificationSettings()),

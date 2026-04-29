@@ -31,6 +31,7 @@ import {
   fetchownedCircles,
   setDefaultCircle,
   deleteCircle,
+  toggleCircleNotifications,
 } from "~redux/actions/circleActions";
 import { clearCircleError } from "~redux/reducers/circleReducer";
 import { useTheme } from "~context/ThemeContext";
@@ -38,6 +39,7 @@ import useOnReconnect from "~hooks/useOnReconnect";
 import useScreenFetch from "~hooks/useScreenFetch";
 import useLocation from "~hooks/useLocation";
 import useTranslation from "~hooks/useTranslation";
+import { fetchAllLists } from "~redux/actions/listActions";
 
 const SettingsRow = ({
   icon: Icon,
@@ -84,12 +86,17 @@ const SettingsRow = ({
 
 const CircleSettingsScreen = ({ onQuickAction, navigation, route }) => {
   const dispatch = useDispatch();
-  const {ownedCircles, loading, error } = useSelector(state => state.circles);
-  const { currentCircle} = route.params;
+  const { ownedCircles, loading, error } = useSelector(state => state.circles);
+  const { circleId } = route.params;
   const { colors, isDark } = useTheme();
   const { t } = useTranslation();
 
-  console.log("currentCircle", currentCircle);
+  // Find the current circle in the Redux store
+  const currentCircle = useMemo(() => {
+    if (!Array.isArray(ownedCircles)) return null;
+    return ownedCircles.find(c => (c.id || c._id) === circleId);
+  }, [ownedCircles, circleId]);
+
 
   // Fetch fresh circle data; background-refresh silently on screen return
   const fetchFn = useCallback(() => dispatch(fetchownedCircles()), [dispatch]);
@@ -111,18 +118,24 @@ const CircleSettingsScreen = ({ onQuickAction, navigation, route }) => {
     return currentCircle;
   }, [currentCircle, ownedCircles]);
 
-  console.log("activeCircle", activeCircle);
-
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState(null);
 
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [defaultRole, setDefaultRole] = useState("Editor");
 
   // Initialize circle name from Redux state
   const [circleName, setCircleName] = useState(
     activeCircle?.name || "Circle",
   );
+
+  const [notificationsEnabled, setNotificationsEnabled] = useState(
+    !activeCircle?.isNotificationMuted,
+  );
+
+  // Sync toggle state with Redux when it changes from server/reducer
+  useEffect(() => {
+    setNotificationsEnabled(!activeCircle?.isNotificationMuted);
+  }, [activeCircle?.isNotificationMuted]);
 
   const [homeLocation, setHomeLocation] = useState(
     activeCircle?.owner?.zone || "Circle",
@@ -319,6 +332,7 @@ const CircleSettingsScreen = ({ onQuickAction, navigation, route }) => {
       const circleId = currentCircle?._id || currentCircle?.id;
       try {
         await dispatch(deleteCircle({ circleId })).unwrap();
+        dispatch(fetchAllLists());
         Toast.show({
           type: "success",
           text1: "Circle Deleted",
@@ -409,7 +423,15 @@ const CircleSettingsScreen = ({ onQuickAction, navigation, route }) => {
                 trackColor={{ false: colors.border, true: colors.primary }}
                 thumbColor={"#ffffff"}
                 ios_backgroundColor={colors.border}
-                onValueChange={setNotificationsEnabled}
+                onValueChange={() => {
+                  const id = activeCircle?._id || activeCircle?.id;
+                  if (id) {
+                    // Update UI immediately
+                    setNotificationsEnabled(!notificationsEnabled);
+                    // Dispatch toggle action
+                    dispatch(toggleCircleNotifications({ circleId: id }));
+                  }
+                }}
                 value={notificationsEnabled}
                 style={styles.switch}
               />

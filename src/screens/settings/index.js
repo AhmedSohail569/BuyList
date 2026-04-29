@@ -236,7 +236,6 @@ const SettingsTab = ({ onQuickAction, navigation }) => {
               if (defaultCircle) {
                 navigation.navigate("CircleSettings", {
                   circleId: defaultCircle.id || defaultCircle._id,
-                  currentCircle: defaultCircle,
                 });
               } else {
                 navigation.navigate("CircleTab");

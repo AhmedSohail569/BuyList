@@ -34,12 +34,15 @@ import {
   fetchBanners,
 } from "~redux/actions/searchActions";
 import { clearSearchResults } from "~redux/reducers/searchReducer";
-import { setLocation, setPermissionGranted, dismissLocationPrompt } from "~redux/reducers/locationReducer";
+import {
+  setLocation,
+  setPermissionGranted,
+  dismissLocationPrompt,
+} from "~redux/reducers/locationReducer";
 import { calculateDistance, formatDistance } from "~utils";
 import AdsOffersCarousel from "~components/AdsOffersCarousel";
 import useTranslation from "~hooks/useTranslation";
 import useLocation from "~hooks/useLocation";
-import { check, PERMISSIONS, RESULTS } from "react-native-permissions";
 import { useAlert } from "~context/AlertContext";
 import { addItemsToList } from "~redux/actions/listActions";
 import Toast from "react-native-toast-message";
@@ -79,14 +82,10 @@ const SearchResultsScreen = ({ navigation, route }) => {
     bannersLoading,
   } = useSelector((state) => state.search);
   const { distanceUnit } = useSelector((state) => state.settings);
-  const { latitude, longitude, permissionGranted, promptDismissed } = useSelector(
+  const { latitude, longitude } = useSelector(
     (state) => state.location,
   );
 
-  console.log("permissionGranted", permissionGranted);
-  console.log("promptDismissed", promptDismissed);
-
-  // Track if we've shown the prompt this component lifecycle (prevents double-show)
   const hasPromptedRef = useRef(false);
   // Keep a ref to the current search query so async callbacks always see the latest value
   const searchQueryRef = useRef("");
@@ -94,105 +93,52 @@ const SearchResultsScreen = ({ navigation, route }) => {
   // useLocation gives us detectLocation() which requests permission + acquires location
   const { detectLocation } = useLocation();
 
-  /**
-   * Check current permission status (read-only, no dialog).
-   * Returns true if already granted, false otherwise.
-   */
-  const checkCurrentPermission = useCallback(async () => {
-    const permission = Platform.select({
-      ios: PERMISSIONS.IOS.LOCATION_WHEN_IN_USE,
-      android: PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
-    });
-    if (!permission) return false;
-    try {
-      const status = await check(permission);
-      return status === RESULTS.GRANTED || status === RESULTS.LIMITED;
-    } catch {
-      return false;
-    }
-  }, []);
-
-  /**
-   * Show custom in-app location permission prompt.
-   * "Allow" triggers the OS dialog via detectLocation().
-   * "Not Now" dismisses and search continues without location.
-   */
-  const showLocationPrompt = useCallback(() => {
-    showAlert({
-      title: "Enable Location",
-      message:
-        "Allow BuyList to use your location to find nearby stores and show distances. You can skip this and still search normally.",
-      type: "confirm",
-      buttons: [
-        {
-          text: "Not Now",
-          style: "cancel",
-          onPress: () => dispatch(dismissLocationPrompt()),
-        },
-        {
-          text: "Allow",
-          onPress: async () => {
-            const result = await detectLocation();
-            if (result) {
-              // 1. Persist location to Redux so the whole app has lat/lng
-              dispatch(setLocation({
-                latitude: result.latitude,
-                longitude: result.longitude,
-                city: result.city || "",
-                area: result.area || "",
-              }));
-              dispatch(setPermissionGranted(true));
-
-              // 2. Immediately re-run any pending search with the fresh coordinates.
-              //    We cannot rely on the Redux state re-render here because the
-              //    performSearch closure captured null lat/lng at prompt creation time.
-              const currentQuery = searchQueryRef.current;
-              if (currentQuery?.trim()) {
-                dispatch(
-                  searchLocalStores({
-                    query: currentQuery,
-                    lat: result.latitude,
-                    lng: result.longitude,
-                    page: 1,
-                    limit: 10,
-                  }),
-                );
-              }
-            } else {
-              // OS-level denial or blocked — detectLocation already handles UI
-              dispatch(dismissLocationPrompt());
-            }
-          },
-        },
-      ],
-    });
-  }, [showAlert, dispatch, detectLocation]);
-
-  /**
-   * On mount: check location permission and prompt once if not granted.
-   * Fires immediately when the screen is entered — does not require
-   * the user to tap the search bar.
-   */
-  useEffect(() => {
-    if (permissionGranted || hasPromptedRef.current) return;
-
-    const checkAndPrompt = async () => {
-      // Silent read-only check first — avoids showing prompt if already granted
-      const alreadyGranted = await checkCurrentPermission();
-      if (alreadyGranted) {
-        dispatch(setPermissionGranted(true));
-        return;
-      }
-      hasPromptedRef.current = true;
-      showLocationPrompt();
-    };
-
-    checkAndPrompt();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // Debounce timer ref
   const debounceRef = useRef(null);
+
+  /**
+   * Helper to prompt for location and fetch coordinates on-demand
+   */
+  const handleRequestLocation = useCallback(async () => {
+    return new Promise((resolve) => {
+      showAlert({
+        title: t("location_prompt_title", "Enable Location"),
+        message: t(
+          "location_prompt_message",
+          "Allow BuyList to use your location to find nearby stores and show distances."
+        ),
+        type: "confirm",
+        buttons: [
+          {
+            text: t("common_not_now", "Not Now"),
+            style: "cancel",
+            onPress: () => resolve(null),
+          },
+          {
+            text: t("common_allow", "Allow"),
+            onPress: async () => {
+              const result = await detectLocation({ interactive: true, t });
+              if (result) {
+                // Persist to Redux
+                dispatch(
+                  setLocation({
+                    latitude: result.latitude,
+                    longitude: result.longitude,
+                    city: result.city || "",
+                    area: result.area || "",
+                  })
+                );
+                dispatch(setPermissionGranted(true));
+                resolve(result);
+              } else {
+                resolve(null);
+              }
+            },
+          },
+        ],
+      });
+    });
+  }, [showAlert, detectLocation, dispatch, t]);
 
   // Derived state
   const isOnlineTab = activeTab === "Online Stores";
@@ -207,24 +153,39 @@ const SearchResultsScreen = ({ navigation, route }) => {
    * Perform search based on active tab
    */
   const performSearch = useCallback(
-    (query, page = 1) => {
+    async (query, page = 1) => {
       if (!query?.trim()) return;
 
       if (activeTab === "Online Stores") {
         dispatch(searchOnlineStores({ query, page, limit: 10 }));
       } else {
+        // ── Local Stores Gate ──
+        // Only proceed if we have coordinates. If not, prompt the user.
+        let lat = latitude;
+        let lng = longitude;
+
+        if (lat == null || lng == null) {
+          const locationResult = await handleRequestLocation();
+          if (!locationResult) {
+            // User denied or error — do not proceed with search
+            return;
+          }
+          lat = locationResult.latitude;
+          lng = locationResult.longitude;
+        }
+
         dispatch(
           searchLocalStores({
             query,
-            lat: latitude,
-            lng: longitude,
+            lat,
+            lng,
             page,
             limit: 10,
           }),
         );
       }
     },
-    [activeTab, dispatch, latitude, longitude],
+    [activeTab, dispatch, latitude, longitude, handleRequestLocation],
   );
 
   // Get current page from Redux

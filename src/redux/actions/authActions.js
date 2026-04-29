@@ -101,12 +101,6 @@ export const loginUser = createAsyncThunk(
 export const signupUser = createAsyncThunk(
   "auth/registerUser",
   async ({ username, email, password, phone, zone, area }, { rejectWithValue }) => {
-console.log('username', username);
-console.log('email', email);
-console.log('password', password);
-console.log('phone', phone);
-console.log('zone', zone);
-console.log('area', area);
     try {
       const response = await axios.post("/auth/signup", {
         username,

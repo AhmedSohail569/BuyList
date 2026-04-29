@@ -38,6 +38,7 @@ export const fetchNotifications = createAsyncThunk(
       const res = await axios.get(
         `/notifications/get-notifications?page=${page}`,
       );
+      console.log("res", res);
       const data =
         res.data?.data?.notifications ||
         res.data?.data ||

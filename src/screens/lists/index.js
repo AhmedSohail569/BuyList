@@ -20,7 +20,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { useFocusEffect } from "@react-navigation/native";
 import Toast from "react-native-toast-message";
-import { Menu } from "react-native-paper";
+import Popover from "react-native-popover-view";
 import { Modal, ScrollView, Text } from "~components/Common";
 import Header from "~components/Header";
 import { RFValue } from "react-native-responsive-fontsize";
@@ -90,8 +90,9 @@ const ListCard = React.memo(
     menuVisible,
     onOpenMenu,
     onCloseMenu,
-    onRequestDelete,
+    onRequestDelete,profile
   }) => {
+    const pendingActionRef = React.useRef(null);
     const { colors, isDark } = useTheme();
     const totalItems = item.progress?.total || 0;
     const completedItems =
@@ -127,24 +128,42 @@ const ListCard = React.memo(
                 </View>
               )}
             </View>
-            {item.userRole !== "viewer" && <Menu
-              visible={menuVisible}
-              onDismiss={onCloseMenu}
-              anchor={
-                <TouchableOpacity onPress={onOpenMenu} disabled={isDeleting}>
+            {item.owner === profile._id && <Popover
+              isVisible={menuVisible}
+              onRequestClose={onCloseMenu}
+              onCloseComplete={() => {
+                // The custom patch removed the native unmount delay; we must delay the next modal here
+                if (pendingActionRef.current) {
+                  const action = pendingActionRef.current;
+                  setTimeout(() => {
+                    action();
+                  }, 400);
+                  pendingActionRef.current = null;
+                }
+              }}
+              from={(sourceRef, showPopover) => (
+                <TouchableOpacity
+                  ref={sourceRef}
+                  onPress={() => {
+                    showPopover();
+                    onOpenMenu();
+                  }}
+                  disabled={isDeleting}>
                   <MoreHorizontal size={20} color={colors.iconMuted} />
                 </TouchableOpacity>
-              }
-              contentStyle={[styles.menuContent, { backgroundColor: colors.card }]}>
-              <Menu.Item
-                title="Delete"
-                titleStyle={styles.menuItemDelete}
-                onPress={() => {
-                  onCloseMenu();
-                  onRequestDelete();
-                }}
-              />
-            </Menu>}
+              )}
+              popoverStyle={[styles.menuContent, { backgroundColor: colors.card }]}>
+              <View style={{ paddingVertical: 4 }}>
+                <TouchableOpacity
+                  onPress={() => {
+                    pendingActionRef.current = () => onRequestDelete();
+                    onCloseMenu();
+                  }}
+                  style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                  <Text style={styles.menuItemDelete}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </Popover>}
           </View>
 
           <Text style={[styles.subtitle, { color: colors.textMuted }]}>
@@ -252,6 +271,7 @@ const formatDate = date => {
 
 const ListsTab = ({ onQuickAction, navigation, route }) => {
   const dispatch = useDispatch();
+  const {profile} = useSelector(state => state.profile);
   const { lists, loading, error } = useSelector(state => state.lists);
   const { showAlert, showError } = useAlert();
   const { colors, isDark } = useTheme();
@@ -268,6 +288,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
   const [isCreatingList, setIsCreatingList] = useState(false);
   const [sortOption, setSortOption] = useState("priority");
   const [showSortMenu, setShowSortMenu] = useState(false);
+
 
   const getActiveTabTitle = () => {
     switch (activeTab) {
@@ -701,116 +722,121 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
           {/* Section Header */}
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{getActiveTabTitle().toUpperCase()}</Text>
-            <Menu
-              visible={showSortMenu}
-              onDismiss={() => {
+            <Popover
+              isVisible={showSortMenu}
+              onRequestClose={() => {
                 isDismissingRef.current = true;
                 setShowSortMenu(false);
-                // Reset flag after a short delay to allow state to settle
                 setTimeout(() => {
                   isDismissingRef.current = false;
                 }, 100);
               }}
-              anchor={
+              from={(sourceRef, showPopover) => (
                 <TouchableOpacity
+                  ref={sourceRef}
                   style={[styles.sortButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-                  onPress={handleSortMenuToggle}>
+                  onPress={() => {
+                    showPopover();
+                    handleSortMenuToggle();
+                  }}>
                   <ListFilter size={14} color={colors.iconMuted} style={{ marginRight: 4 }} />
                   <Text style={[styles.sortText, { color: colors.textMuted }]}>Sort</Text>
                 </TouchableOpacity>
-              }
-              contentStyle={[styles.sortMenuContent, { backgroundColor: colors.card }]}>
-              <Menu.Item
-                onPress={() => {
-                  isDismissingRef.current = true;
-                  setSortOption("priority");
-                  setShowSortMenu(false);
-                  setTimeout(() => {
-                    isDismissingRef.current = false;
-                  }, 100);
-                }}
-                title="Priority"
-                titleStyle={[
-                  styles.sortMenuItem,
-                  { color: sortOption === "priority" ? colors.primary : colors.textPrimary },
-                ]}
-              />
-              <Menu.Item
-                onPress={() => {
-                  isDismissingRef.current = true;
-                  setSortOption("createdOn");
-                  setShowSortMenu(false);
-                  setTimeout(() => {
-                    isDismissingRef.current = false;
-                  }, 100);
-                }}
-                title="Created On"
-                titleStyle={[
-                  styles.sortMenuItem,
-                  { color: sortOption === "createdOn" ? colors.primary : colors.textPrimary },
-                ]}
-              />
-              <Menu.Item
-                onPress={() => {
-                  isDismissingRef.current = true;
-                  setSortOption("recentlyUpdated");
-                  setShowSortMenu(false);
-                  setTimeout(() => {
-                    isDismissingRef.current = false;
-                  }, 100);
-                }}
-                title="Recently Updated"
-                titleStyle={[
-                  styles.sortMenuItem,
-                  { color: sortOption === "recentlyUpdated" ? colors.primary : colors.textPrimary },
-                ]}
-              />
-              <Menu.Item
-                onPress={() => {
-                  isDismissingRef.current = true;
-                  setSortOption("alphabetical");
-                  setShowSortMenu(false);
-                  setTimeout(() => {
-                    isDismissingRef.current = false;
-                  }, 100);
-                }}
-                title="Alphabetical A-Z"
-                titleStyle={[
-                  styles.sortMenuItem,
-                  { color: sortOption === "alphabetical" ? colors.primary : colors.textPrimary },
-                ]}
-              />
-              <Menu.Item
-                onPress={() => {
-                  isDismissingRef.current = true;
-                  setSortOption("mostItems");
-                  setShowSortMenu(false);
-                  setTimeout(() => {
-                    isDismissingRef.current = false;
-                  }, 100);
-                }}
-                title="Most Items"
-                titleStyle={[
-                  styles.sortMenuItem,
-                  { color: sortOption === "mostItems" ? colors.primary : colors.textPrimary },
-                ]}
-              />
-              <Menu.Item
-                onPress={() => {
-                  isDismissingRef.current = true;
-                  setSortOption("leastItems");
-                  setShowSortMenu(false);
-                  setTimeout(() => {
-                    isDismissingRef.current = false;
-                  }, 100);
-                }}
-                title="Least Items"
-                titleStyle={[
-                  styles.sortMenuItem,
-                  { color: sortOption === "leastItems" ? colors.primary : colors.textPrimary },
-                ]}
-              />
-            </Menu>
+              )}
+              popoverStyle={[styles.sortMenuContent, { backgroundColor: colors.card }]}>
+              <View style={{ paddingVertical: 4 }}>
+                <TouchableOpacity
+                  onPress={() => {
+                    isDismissingRef.current = true;
+                    setSortOption("priority");
+                    setShowSortMenu(false);
+                    setTimeout(() => {
+                      isDismissingRef.current = false;
+                    }, 100);
+                  }}
+                  style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                  <Text style={[
+                    styles.sortMenuItem,
+                    { color: sortOption === "priority" ? colors.primary : colors.textPrimary },
+                  ]}>Priority</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    isDismissingRef.current = true;
+                    setSortOption("createdOn");
+                    setShowSortMenu(false);
+                    setTimeout(() => {
+                      isDismissingRef.current = false;
+                    }, 100);
+                  }}
+                  style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                  <Text style={[
+                    styles.sortMenuItem,
+                    { color: sortOption === "createdOn" ? colors.primary : colors.textPrimary },
+                  ]}>Created On</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    isDismissingRef.current = true;
+                    setSortOption("recentlyUpdated");
+                    setShowSortMenu(false);
+                    setTimeout(() => {
+                      isDismissingRef.current = false;
+                    }, 100);
+                  }}
+                  style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                  <Text style={[
+                    styles.sortMenuItem,
+                    { color: sortOption === "recentlyUpdated" ? colors.primary : colors.textPrimary },
+                  ]}>Recently Updated</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    isDismissingRef.current = true;
+                    setSortOption("alphabetical");
+                    setShowSortMenu(false);
+                    setTimeout(() => {
+                      isDismissingRef.current = false;
+                    }, 100);
+                  }}
+                  style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                  <Text style={[
+                    styles.sortMenuItem,
+                    { color: sortOption === "alphabetical" ? colors.primary : colors.textPrimary },
+                  ]}>Alphabetical A-Z</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    isDismissingRef.current = true;
+                    setSortOption("mostItems");
+                    setShowSortMenu(false);
+                    setTimeout(() => {
+                      isDismissingRef.current = false;
+                    }, 100);
+                  }}
+                  style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                  <Text style={[
+                    styles.sortMenuItem,
+                    { color: sortOption === "mostItems" ? colors.primary : colors.textPrimary },
+                  ]}>Most Items</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    isDismissingRef.current = true;
+                    setSortOption("leastItems");
+                    setShowSortMenu(false);
+                    setTimeout(() => {
+                      isDismissingRef.current = false;
+                    }, 100);
+                  }}
+                  style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                  <Text style={[
+                    styles.sortMenuItem,
+                    { color: sortOption === "leastItems" ? colors.primary : colors.textPrimary },
+                  ]}>Least Items</Text>
+                </TouchableOpacity>
+              </View>
+            </Popover>
           </View>
           {/* Lists Cards */}
           <View style={styles.cardsContainer}>
@@ -826,6 +852,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
                 onRequestDelete={() =>
                   confirmDeleteList(item.id || item._id, item.name)
                 }
+                profile={profile}
               />
             ))}
 

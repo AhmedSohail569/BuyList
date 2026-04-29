@@ -58,7 +58,6 @@ const SelectLocationScreen = ({ navigation, route }) => {
    */
   const handleDetectLocation = useCallback(async () => {
     const result = await detectLocation();
-    console.log("result", result);
     if (result) {
       setCity(result.city);
       // setArea(result.area);
