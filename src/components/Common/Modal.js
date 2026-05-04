@@ -55,6 +55,8 @@ export const BottomModal = ({
   const [priority, setPriority] = useState("medium");
   const [isShared, setIsShared] = useState(false);
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
+  const [showCircleDropdown, setShowCircleDropdown] = useState(false);
+  const [circleDropdownDirection, setCircleDropdownDirection] = useState("down");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCircleId, setSelectedCircleId] = useState(null);
 
@@ -71,6 +73,7 @@ export const BottomModal = ({
   
   // --- Refs ---
   const scrollViewRef = useRef(null);
+  const circleDropdownRef = useRef(null);
 
   // --- CONSTANTS ---
   const sortOptions = [
@@ -113,6 +116,7 @@ export const BottomModal = ({
       setIsShared(false);
       setSelectedCircleId(null);
       setShowPriorityDropdown(false);
+      setShowCircleDropdown(false);
       setListNameError("");
       setItemsError("");
     }
@@ -372,38 +376,88 @@ export const BottomModal = ({
             style={styles.switch}
           />
         </View>
-
+        
         {/* Circle Picker — shown only when sharing is on */}
         {isShared && (
-          <View style={styles.circlePickerContainer}>
+          <View style={styles.dropdownContainer}>
             {pickerLoading ? (
-              <Text style={[styles.circlePickerLoading, {color: colors.textMuted}]}>{t("modal_share_loading")}</Text>
+              <Text style={[styles.circlePickerLoading, {color: colors.textMuted, marginLeft: 0, marginBottom: 16}]}>{t("modal_share_loading")}</Text>
             ) : pickerCircles.length === 0 ? (
-              <Text style={[styles.circlePickerLoading, {color: colors.textMuted}]}>{t("modal_share_no_circles")}</Text>
+              <Text style={[styles.circlePickerLoading, {color: colors.textMuted, marginLeft: 0, marginBottom: 16}]}>{t("modal_share_no_circles")}</Text>
             ) : (
-              pickerCircles.map(circle => {
-                const isSelected = selectedCircleId === circle._id;
-                return (
-                  <TouchableOpacity
-                    key={circle._id}
-                    style={[
-                      styles.circlePickerItem,
-                      {
-                        backgroundColor: isSelected
-                          ? (isDark ? "rgba(14, 165, 233, 0.15)" : "#eff6ff")
-                          : colors.surfaceSecondary,
-                        borderColor: isSelected ? colors.primary : colors.border,
-                      },
-                    ]}
-                    onPress={() => setSelectedCircleId(isSelected ? null : circle._id)}>
-                    <View style={[styles.circleColorDot, {backgroundColor: circle.color || colors.primary}]} />
-                    <Text style={[styles.circlePickerName, {color: colors.textPrimary}]} numberOfLines={1}>
-                      {circle.name}
-                    </Text>
-                    {isSelected && <Check size={16} color={colors.primary} />}
-                  </TouchableOpacity>
-                );
-              })
+              <>
+                <TouchableOpacity
+                  ref={circleDropdownRef}
+                  style={[styles.dropdownInput, {backgroundColor: colors.surfaceSecondary, borderColor: colors.border, marginBottom: 16}]}
+                  onPress={() => {
+                    if (!showCircleDropdown) {
+                      circleDropdownRef.current?.measureInWindow((_x, y, _w, h) => {
+                        const spaceBelow = height - (y + h);
+                        setCircleDropdownDirection(spaceBelow >= 220 ? "down" : "up");
+                      });
+                    }
+                    setShowCircleDropdown(!showCircleDropdown);
+                  }}>
+                  <Text style={[styles.inputText, {color: selectedCircleId ? colors.textPrimary : colors.textSecondary}]}>
+                    {selectedCircleId 
+                      ? pickerCircles.find(c => c._id === selectedCircleId)?.name 
+                      : t("modal_share_select_circle")}
+                  </Text>
+                  <ChevronDown
+                    size={20}
+                    color={colors.iconMuted}
+                    style={{
+                      transform: [{rotate: showCircleDropdown ? "180deg" : "0deg"}],
+                    }}
+                  />
+                </TouchableOpacity>
+
+                {showCircleDropdown && (
+                  <>
+                    <TouchableWithoutFeedback
+                      onPress={() => setShowCircleDropdown(false)}>
+                      <View style={styles.dropdownBackdrop} />
+                    </TouchableWithoutFeedback>
+                    <View style={[
+                      styles.dropdownMenu,
+                      {backgroundColor: colors.modalBackground, borderColor: colors.border},
+                      circleDropdownDirection === "down"
+                        ? {top: 52, bottom: null}
+                        : {bottom: 52, top: null},
+                    ]}>
+                      <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                        {pickerCircles.map(circle => {
+                          const isSelected = selectedCircleId === circle._id;
+                          return (
+                            <TouchableOpacity
+                              key={circle._id}
+                              style={[
+                                styles.dropdownOption,
+                                {borderBottomColor: colors.divider, flexDirection: "row", alignItems: "center"},
+                                isSelected && {backgroundColor: isDark ? "rgba(14, 165, 233, 0.15)" : "#eff6ff"},
+                              ]}
+                              onPress={() => {
+                                setSelectedCircleId(isSelected ? null : circle._id);
+                                setShowCircleDropdown(false);
+                              }}>
+                              <View style={[styles.circleColorDot, {backgroundColor: circle.color || colors.primary, marginRight: 8}]} />
+                              <Text
+                                style={[
+                                  styles.dropdownOptionText,
+                                  {flex: 1, color: isSelected ? colors.primary : colors.textPrimary},
+                                ]}
+                                numberOfLines={1}>
+                                {circle.name}
+                              </Text>
+                              {isSelected && <Check size={16} color={colors.primary} />}
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </ScrollView>
+                    </View>
+                  </>
+                )}
+              </>
             )}
           </View>
         )}

@@ -250,6 +250,81 @@ export const updateItemPriority = createAsyncThunk(
   { condition: requireConnectivity },
 );
 
+// ============================================
+// 9. FETCH ARCHIVED LISTS
+// GET /api/lists/archived
+// ============================================
+export const fetchArchivedLists = createAsyncThunk(
+  "lists/fetchArchivedLists",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get("/lists/archived");
+      return response.data?.data || response.data;
+    } catch (err) {
+      return rejectWithValue(getErrorMessage(err));
+    }
+  },
+);
+
+// ============================================
+// 10. TOGGLE ARCHIVE LIST (Optimistic Update)
+// PATCH /api/lists/toggle-archive/{listId}
+// ============================================
+export const toggleArchiveList = createAsyncThunk(
+  "lists/toggleArchiveList",
+  async ({ listId }, { rejectWithValue, getState }) => {
+    const previousLists = [...getState().lists.lists];
+    const previousListById = { ...getState().lists.listById };
+    try {
+      const response = await axios.patch(`/lists/toggle-archive/${listId}`);
+      return { listId, data: response.data?.data || response.data };
+    } catch (err) {
+      return rejectWithValue({
+        message: getErrorMessage(err),
+        previousLists,
+        previousListById,
+      });
+    }
+  },
+  { condition: requireConnectivity },
+);
+
+// ============================================
+// 11. DUPLICATE LIST
+// POST /api/lists/duplicate/{listId}
+// ============================================
+export const duplicateList = createAsyncThunk(
+  "lists/duplicateList",
+  async ({ listId }, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(`/lists/duplicate/${listId}`);
+      return response.data?.data || response.data;
+    } catch (err) {
+      return rejectWithValue(getErrorMessage(err));
+    }
+  },
+  { condition: requireConnectivity },
+);
+
+// ============================================
+// 12. UPDATE LIST NAME (Optimistic Update)
+// PATCH /api/lists/update-name/{listId}
+// ============================================
+export const updateListName = createAsyncThunk(
+  "lists/updateListName",
+  async ({ listId, name }, { rejectWithValue, getState }) => {
+    const previousLists = [...getState().lists.lists];
+    const previousListById = { ...getState().lists.listById };
+    try {
+      const response = await axios.patch(`/lists/update-name/${listId}`, { name });
+      return { listId, name, data: response.data?.data || response.data };
+    } catch (err) {
+      return rejectWithValue({ message: getErrorMessage(err), previousLists, previousListById });
+    }
+  },
+  { condition: requireConnectivity },
+);
+
 export const fetchRecentActivities = createAsyncThunk(
   "lists/fetchRecentActivities",
   async (_, { rejectWithValue }) => {

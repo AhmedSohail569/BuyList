@@ -12,7 +12,8 @@ const nl = {
   getstarted_invalid_phone: "Ongeldig telefoonnummer",
   getstarted_invalid_phone_desc: "Voer een geldig telefoonnummer in",
   getstarted_phone_exists: "Telefoonnummer bestaat al",
-  getstarted_phone_exists_desc: "Dit telefoonnummer is al geregistreerd. Log in plaats daarvan in.",
+  getstarted_phone_exists_desc:
+    "Dit telefoonnummer is al geregistreerd. Log in plaats daarvan in.",
   getstarted_google_failed: "Google-login mislukt",
   getstarted_apple_failed: "Apple-login mislukt",
   getstarted_error: "Fout",
@@ -46,6 +47,7 @@ const nl = {
   lists_tab_all: "Alle lijsten",
   lists_tab_personal: "Persoonlijke lijsten",
   lists_tab_shared: "Gedeelde lijsten",
+  lists_tab_archived: "Gearchiveerd",
   lists_search_placeholder: "Zoek in je lijsten...",
   lists_sort_priority: "Prioriteit",
   lists_sort_created: "Aangemaakt op",
@@ -80,19 +82,23 @@ const nl = {
   modal_list_name: "LIJSTNAAM",
   modal_list_name_placeholder: "bijv. Wekelijkse boodschappen",
   modal_category: "CATEGORIE",
-  modal_add_items: "ITEMS TOEVOEGEN",
+  modal_add_items: "Items toevoegen",
   modal_add_item_placeholder: "Item toevoegen...",
-  modal_set_priority: "PRIORITEIT INSTELLEN",
+  modal_set_priority: "LIJST PRIORITEIT",
   modal_priority_low: "Laag",
   modal_priority_medium: "Gemiddeld",
   modal_priority_high: "Hoog",
   modal_share: "Delen met cirkel",
-  modal_share_circle_subtitle: "Selecteer een cirkel om mee te delen",
+  modal_share_subtitle:
+    "Gedeelde lijsten kunnen door alle leden worden bekeken",
+  modal_share_circle_subtitle:
+    "Selecteer een cirkel om deze lijst mee te delen",
   modal_share_loading: "Cirkels laden...",
-  modal_share_no_circles: "Geen cirkels beschikbaar",
+  modal_share_no_circles: "Geen cirkels beschikbaar. Maak er eerst een aan!",
+  modal_share_select_circle: "Selecteer een cirkel",
   modal_create_list: "Lijst aanmaken",
   modal_creating_list: "Aanmaken...",
-  
+
   modal_filters_title: "Filters & Sorteren",
   modal_sort_label: "SORTEREN OP",
   modal_price_label: "PRIJSKLASSE",
@@ -105,7 +111,8 @@ const nl = {
 
   // ── Activity Feed ──────────────────────────────────────────────────────────────
   activity_purchase_items: "markeerde {{count}} {{noun}} als voltooid",
-  activity_unpurchase_items: "verplaatste {{count}} {{noun}} terug naar openstaand",
+  activity_unpurchase_items:
+    "verplaatste {{count}} {{noun}} terug naar openstaand",
   activity_add_items: "voegde {{count}} {{noun}} toe aan",
   activity_create_list: "maakte een lijst aan genaamd",
   activity_delete_list: "verwijderde een lijst genaamd",
@@ -175,13 +182,17 @@ const nl = {
   circle_invite: "Uitnodigen",
   circle_set_location: "Stel je thuislocatie in",
   circle_owner: "Eigenaar",
-  circle_no_shared_lists: "Nog geen gedeelde lijsten. Maak een lijst aan en deel die met je cirkel.",
+  circle_no_shared_lists:
+    "Nog geen gedeelde lijsten. Maak een lijst aan en deel die met je cirkel.",
   circle_view_list: "Lijst bekijken",
-  circle_no_circles: "Nog geen cirkels. Maak een cirkel aan en nodig leden uit om te beginnen.",
-  circle_default_note: "Let op: Dit is je standaard cirkel en kan niet worden verwijderd.",
+  circle_no_circles:
+    "Nog geen cirkels. Maak een cirkel aan en nodig leden uit om te beginnen.",
+  circle_default_note:
+    "Let op: Dit is je standaard cirkel en kan niet worden verwijderd.",
   circle_default_badge: "Standaard",
   circle_set_default_title: "Als standaard instellen",
-  circle_set_default_confirm: "Weet je zeker dat je deze cirkel als standaard wilt instellen?",
+  circle_set_default_confirm:
+    "Weet je zeker dat je deze cirkel als standaard wilt instellen?",
   circle_set_default_success: "Standaardcirkel bijgewerkt",
   circle_set_default_success_desc: "Deze cirkel is nu je standaard hub.",
   circle_create_title: "Nieuwe Cirkel",
@@ -199,9 +210,11 @@ const nl = {
   manage_tab_invite: "Mensen uitnodigen",
   all_connections_title: "Alle verbindingen",
   manage_search_placeholder: "Zoek verbindingen...",
-  manage_no_connections: "Nog geen verbindingen. Nodig leden uit om te beginnen.",
+  manage_no_connections:
+    "Nog geen verbindingen. Nodig leden uit om te beginnen.",
   manage_no_results: "Geen resultaten gevonden voor",
-  manage_footer: "Alleen eigenaren kunnen verbindingen verwijderen of rollen wijzigen.",
+  manage_footer:
+    "Alleen eigenaren kunnen verbindingen verwijderen of rollen wijzigen.",
   manage_role_editor: "Bewerker",
   manage_role_viewer: "Kijker",
   manage_action_remove: "Verwijderen",
@@ -213,7 +226,8 @@ const nl = {
   manage_role_updated_title: "Rol bijgewerkt",
   manage_role_updated_desc: "Lidrol bijgewerkt naar",
   manage_invite_title: "Uitnodigen voor",
-  manage_invite_desc: "Deel de onderstaande link zodat anderen je boodschappencirkel kunnen joinen. De app opent automatisch als ze die hebben geïnstalleerd.",
+  manage_invite_desc:
+    "Deel de onderstaande link zodat anderen je boodschappencirkel kunnen joinen. De app opent automatisch als ze die hebben geïnstalleerd.",
   manage_copy: "Kopiëren",
   manage_share_link: "Uitnodigingslink delen",
   manage_show_qr: "QR-code tonen",
@@ -261,7 +275,8 @@ const nl = {
   editprofile_gender: "GESLACHT",
   editprofile_dob: "GEBOORTEDATUM",
   editprofile_select: "Selecteren",
-  editprofile_footer: "Jouw profielinformatie is zichtbaar voor je cirkelleden.",
+  editprofile_footer:
+    "Jouw profielinformatie is zichtbaar voor je cirkelleden.",
   editprofile_upload_failed: "Upload mislukt",
   editprofile_update_failed: "Bijwerken mislukt",
   editprofile_no_changes_title: "Geen wijzigingen",
@@ -290,9 +305,11 @@ const nl = {
   security_end_session_title: "Sessie beëindigen",
   security_end_session_message: "Weet je zeker dat je wilt uitloggen van",
   security_logout_other_title: "Andere apparaten uitloggen",
-  security_logout_other_message: "Dit logt alle andere apparaten uit, behalve dit apparaat.",
+  security_logout_other_message:
+    "Dit logt alle andere apparaten uit, behalve dit apparaat.",
   security_logout_all_title: "Uitloggen van alle apparaten",
-  security_logout_all_message: "Je wordt uitgelogd van al je apparaten, inclusief dit apparaat. Je moet opnieuw inloggen.",
+  security_logout_all_message:
+    "Je wordt uitgelogd van al je apparaten, inclusief dit apparaat. Je moet opnieuw inloggen.",
   security_cancel: "Annuleren",
   security_logout: "Uitloggen",
   security_active_now: "Nu actief",
@@ -308,23 +325,30 @@ const nl = {
   notifications_push_title: "Pushmeldingen",
   notifications_push_enabled: "Je ontvangt meldingen",
   notifications_push_disabled: "Alle meldingen zijn gepauzeerd",
-  notifications_paused_banner: "Pushmeldingen zijn uitgeschakeld. Individuele voorkeuren hieronder worden van kracht wanneer je ze opnieuw inschakelt.",
+  notifications_paused_banner:
+    "Pushmeldingen zijn uitgeschakeld. Individuele voorkeuren hieronder worden van kracht wanneer je ze opnieuw inschakelt.",
   notifications_types_section: "MELDINGSTYPEN",
-  notifications_manage_system: "Je kunt systeemmeldingen voor Bagg ook beheren in je apparaatinstellingen.",
+  notifications_manage_system:
+    "Je kunt systeemmeldingen voor Bagg ook beheren in je apparaatinstellingen.",
   notifications_dropdown_title: "Meldingen",
   notifications_dropdown_empty: "Nog geen meldingen",
   notifications_dropdown_mark_all: "Alles als gelezen markeren",
   // Meldingstype items
   notifications_item_shared_list_title: "Updates gedeelde lijst",
-  notifications_item_shared_list_desc: "Wanneer leden items toevoegen of aanvinken",
+  notifications_item_shared_list_desc:
+    "Wanneer leden items toevoegen of aanvinken",
   notifications_item_new_items_title: "Nieuwe items toegevoegd",
-  notifications_item_new_items_desc: "Meldingen wanneer iemand items aan je lijsten toevoegt",
+  notifications_item_new_items_desc:
+    "Meldingen wanneer iemand items aan je lijsten toevoegt",
   notifications_item_price_drop_title: "Prijsdaling meldingen",
-  notifications_item_price_drop_desc: "Melding wanneer gevolgde items in de uitverkoop gaan",
+  notifications_item_price_drop_desc:
+    "Melding wanneer gevolgde items in de uitverkoop gaan",
   notifications_item_reminders_title: "Wekelijkse herinneringen",
-  notifications_item_reminders_desc: "Herinner me om in het weekend te winkelen",
+  notifications_item_reminders_desc:
+    "Herinner me om in het weekend te winkelen",
   notifications_item_promotions_title: "Promoties",
-  notifications_item_promotions_desc: "Deals, kortingen en speciale aanbiedingen",
+  notifications_item_promotions_desc:
+    "Deals, kortingen en speciale aanbiedingen",
   notifications_item_tips_title: "Tips & updates",
   notifications_item_tips_desc: "Winkeltips, nieuws en app-updates",
 
@@ -359,14 +383,6 @@ const nl = {
   qr_failed: "QR-code laden mislukt",
   qr_done: "Klaar",
 
-  // ── ManageConnections Invite────────────────────────────────────────────────────
-  manage_invite_desc: "Deel de onderstaande link zodat anderen je boodschappencirkel kunnen joinen. De app opent automatisch als ze die hebben geïnstalleerd.",
-  manage_copy: "Kopiëren",
-  manage_share_link: "Uitnodigingslink delen",
-  manage_show_qr: "QR-code tonen",
-  manage_contacts: "Via contacten",
-  manage_generating_link: "Link genereren...",
-
   // ── Tab Bar ─────────────────────────────────────────────────────────────────────
   tab_home: "Thuis",
   tab_circle: "Cirkel",
@@ -384,15 +400,18 @@ const nl = {
 
   // ── Location Permission Gate ──────────────────────────────────────────────────
   location_title: "Locatie inschakelen",
-  location_subtitle: "Sta Bagg toe je locatie te gebruiken om winkels in de buurt te vinden en gepersonaliseerde aanbiedingen te ontvangen.",
+  location_subtitle:
+    "Sta Bagg toe je locatie te gebruiken om winkels in de buurt te vinden en gepersonaliseerde aanbiedingen te ontvangen.",
   location_allow: "Locatie toestaan",
   location_skip: "Niet nu",
   location_detecting: "Detecteren...",
   location_success: "Locatie gedetecteerd!",
   location_prompt_title: "Locatie inschakelen",
-  location_prompt_message: "Geef BuyList toegang tot je locatie om winkels in de buurt te vinden en afstanden te tonen.",
+  location_prompt_message:
+    "Geef BuyList toegang tot je locatie om winkels in de buurt te vinden en afstanden te tonen.",
   location_denied_title: "Locatietoegang vereist",
-  location_denied_desc: "Schakel locatie in je apparaatinstellingen in om deze functie te gebruiken.",
+  location_denied_desc:
+    "Schakel locatie in je apparaatinstellingen in om deze functie te gebruiken.",
   location_error: "Locatie kon niet worden gedetecteerd. Probeer het opnieuw.",
 
   // ── Common ────────────────────────────────────────────────────────────────────
@@ -405,6 +424,9 @@ const nl = {
   common_ok: "OK",
   common_yes: "Ja",
   common_no: "Nee",
+  common_archive: "Archiveren",
+  common_unarchive: "Uit archief",
+  common_duplicate: "Dupliceren",
   common_loading: "Laden...",
   common_no_internet_title: "Geen internet",
   common_no_internet_desc: "Controleer je verbinding en probeer het opnieuw.",
@@ -417,7 +439,8 @@ const nl = {
   // ── Leave Circle ──────────────────────────────────────────────────────────────
   circle_leave_btn: "Verlaten",
   circle_leave_confirm_title: "Cirkel Verlaten",
-  circle_leave_confirm_desc: "Als je deze cirkel verlaat, word je verwijderd uit alle gedeelde lijsten. Wil je doorgaan?",
+  circle_leave_confirm_desc:
+    "Als je deze cirkel verlaat, word je verwijderd uit alle gedeelde lijsten. Wil je doorgaan?",
   circle_leave_success_title: "Cirkel Verlaten",
   circle_leave_success_desc: "Je hebt de cirkel succesvol verlaten.",
 };

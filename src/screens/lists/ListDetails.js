@@ -20,6 +20,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import Toast from "react-native-toast-message";
 import { ScrollView, Text, ItemPriorityModal } from "~components/Common";
 import Header from "~components/Header";
+import SelectionModal from "~containers/modals/SelectionModal";
 import { RFValue } from "react-native-responsive-fontsize";
 import { FontFamily } from "~theme/fonts";
 import useOnReconnect from "~hooks/useOnReconnect";
@@ -31,6 +32,7 @@ import {
   deleteItemFromList,
   deleteList,
   updateItemPriority,
+  updateListName,
 } from "~redux/actions/listActions";
 import { clearListsError } from "~redux/reducers/listReducer";
 import { useAlert } from "~context/AlertContext";
@@ -51,6 +53,8 @@ const ListDetailsScreen = ({ navigation, route }) => {
   // Determine if current user is a viewer (read-only) on this list
   const isViewer = list?.userRole?.toLowerCase() === "viewer";
 
+  console.log("isViewer", isViewer);
+
   const [activeTab, setActiveTab] = useState("All Items");
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const isHeaderMenuDismissingRef = useRef(false);
@@ -60,6 +64,9 @@ const ListDetailsScreen = ({ navigation, route }) => {
 
   // Priority modal state
   const [priorityModal, setPriorityModal] = useState({ visible: false, itemId: null, current: "medium" });
+
+  // Rename modal state
+  const [renameModalVisible, setRenameModalVisible] = useState(false);
 
   // Always fetch list by ID when screen is focused to get latest data
   // This ensures we have the most up-to-date list data from the API
@@ -117,6 +124,17 @@ const ListDetailsScreen = ({ navigation, route }) => {
     if (isHeaderMenuDismissingRef.current) return;
     setShowHeaderMenu(prev => !prev);
   }, []);
+
+  const handleRenameList = useCallback(async (newName) => {
+    const trimmed = newName?.trim();
+    if (!trimmed || trimmed === list?.name || !listId) return;
+    try {
+      await dispatch(updateListName({ listId, name: trimmed })).unwrap();
+      dispatch(fetchListById({ listId }));
+    } catch {
+      Toast.show({ type: "error", text1: "Error", text2: "Failed to rename list." });
+    }
+  }, [dispatch, listId, list?.name]);
 
   const handleSetPriority = useCallback(async (selectedPriority) => {
     const { itemId } = priorityModal;
@@ -183,10 +201,15 @@ const ListDetailsScreen = ({ navigation, route }) => {
 
   // Filter items by tab
   const { pendingItems, doneItems } = useMemo(() => {
+    const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
     const items = list?.items || [];
     return {
-      pendingItems: items.filter(i => i.status === "pending"),
-      doneItems: items.filter(i => i.status === "purchased"),
+      pendingItems: items
+        .filter(i => i.status === "pending")
+        .sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 3) - (PRIORITY_ORDER[b.priority] ?? 3)),
+      doneItems: items
+        .filter(i => i.status === "purchased")
+        .sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 3) - (PRIORITY_ORDER[b.priority] ?? 3)),
     };
   }, [list?.items]);
 
@@ -463,7 +486,7 @@ const ListDetailsScreen = ({ navigation, route }) => {
     );
   }
 
-
+  console.log("list", list);
   return (
     <>
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -508,6 +531,18 @@ const ListDetailsScreen = ({ navigation, route }) => {
                 )}
                 popoverStyle={[styles.menuContent, { backgroundColor: colors.card }]}>
                 <View style={{ paddingVertical: 4 }}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      isHeaderMenuDismissingRef.current = true;
+                      pendingActionRef.current = () => {
+                        isHeaderMenuDismissingRef.current = false;
+                        setRenameModalVisible(true);
+                      };
+                      setShowHeaderMenu(false);
+                    }}
+                    style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                    <Text style={[styles.menuItemTitle, { color: colors.textPrimary }]}>Rename</Text>
+                  </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => {
                       isHeaderMenuDismissingRef.current = true;
@@ -701,6 +736,16 @@ const ListDetailsScreen = ({ navigation, route }) => {
         currentPriority={priorityModal.current}
         onClose={() => setPriorityModal(prev => ({ ...prev, visible: false }))}
         onSave={(newPriority) => handleSetPriority(newPriority)}
+      />
+      <SelectionModal
+        isVisible={renameModalVisible}
+        onClose={() => setRenameModalVisible(false)}
+        onSave={handleRenameList}
+        type="input"
+        title="Rename List"
+        initialValue={list?.name}
+        confirmLabel="Rename"
+        cancelLabel="Cancel"
       />
     </>
   );

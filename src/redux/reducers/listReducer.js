@@ -14,6 +14,10 @@ import {
   deleteList,
   fetchRecentActivities,
   updateItemPriority,
+  fetchArchivedLists,
+  toggleArchiveList,
+  duplicateList,
+  updateListName,
 } from "../actions/listActions";
 import { logout } from "./authReducer";
 
@@ -30,9 +34,13 @@ const initialState = {
   // Recent activities feed
   recentActivities: [],
 
+  // Archived lists
+  archivedLists: [],
+
   // Loading states
   loading: false,
   activitiesLoading: false,
+  archiveLoading: false,
 
   // Error state
   error: null,
@@ -583,6 +591,85 @@ const listsSlice = createSlice({
       .addCase(updateItemPriority.rejected, (state, action) => {
         const { previousList, listId, message } = action.payload || {};
         if (listId && previousList) state.listById[listId] = previousList;
+        state.error = message || action.payload;
+      })
+
+      // ============================================
+      // 🗂️ FETCH ARCHIVED LISTS
+      // ============================================
+      .addCase(fetchArchivedLists.pending, state => {
+        state.archiveLoading = true;
+      })
+      .addCase(fetchArchivedLists.fulfilled, (state, action) => {
+        state.archiveLoading = false;
+        const { lists } = normalizeLists(
+          Array.isArray(action.payload) ? action.payload : [],
+        );
+        state.archivedLists = lists;
+      })
+      .addCase(fetchArchivedLists.rejected, state => {
+        state.archiveLoading = false;
+      })
+
+      // ============================================
+      // 📦 TOGGLE ARCHIVE LIST (Optimistic Update)
+      // ============================================
+      .addCase(toggleArchiveList.pending, (state, action) => {
+        const { listId } = action.meta.arg;
+        // Optimistically remove from active lists
+        state.lists = state.lists.filter(l => (l.id || l._id) !== listId);
+        if (state.listById[listId]) {
+          delete state.listById[listId];
+        }
+      })
+      .addCase(toggleArchiveList.fulfilled, state => {
+        state.error = null;
+      })
+      .addCase(toggleArchiveList.rejected, (state, action) => {
+        const { previousLists, previousListById, message } = action.payload || {};
+        if (previousLists) state.lists = previousLists;
+        if (previousListById) state.listById = previousListById;
+        state.error = message || action.payload;
+      })
+
+      // ============================================
+      // 📋 DUPLICATE LIST
+      // ============================================
+      .addCase(duplicateList.fulfilled, (state, action) => {
+        const normalized = normalizeList(action.payload);
+        if (normalized) {
+          const id = normalized.id || normalized._id;
+          state.lists.push(normalized);
+          if (id) state.listById[id] = normalized;
+        }
+        state.error = null;
+      })
+      .addCase(duplicateList.rejected, (state, action) => {
+        state.error = action.payload;
+      })
+
+      // ============================================
+      // ✏️ UPDATE LIST NAME (Optimistic Update)
+      // ============================================
+      .addCase(updateListName.pending, (state, action) => {
+        const { listId, name } = action.meta.arg;
+        if (state.listById[listId]) {
+          state.listById[listId] = { ...state.listById[listId], name };
+        }
+        const idx = state.lists.findIndex(l => (l.id || l._id) === listId);
+        if (idx !== -1) {
+          state.lists = [
+            ...state.lists.slice(0, idx),
+            { ...state.lists[idx], name },
+            ...state.lists.slice(idx + 1),
+          ];
+        }
+      })
+      .addCase(updateListName.fulfilled, state => { state.error = null; })
+      .addCase(updateListName.rejected, (state, action) => {
+        const { previousLists, previousListById, message } = action.payload || {};
+        if (previousLists) state.lists = previousLists;
+        if (previousListById) state.listById = previousListById;
         state.error = message || action.payload;
       })
 

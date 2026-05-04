@@ -6,13 +6,13 @@ import {
   RefreshControl,
   ActivityIndicator,
   TextInput,
+  ScrollView as RNScrollView,
 } from "react-native";
 import {
   Plus,
   Search,
   MoreHorizontal,
   Sparkles,
-  Users,
   Check,
   ListFilter,
   X,
@@ -30,11 +30,15 @@ import {
   fetchAllLists,
   deleteList,
   createList,
+  fetchArchivedLists,
+  toggleArchiveList,
+  duplicateList,
 } from "~redux/actions/listActions";
 import { clearListsError } from "~redux/reducers/listReducer";
 import { useAlert } from "~context/AlertContext";
 import { useTheme } from "~context/ThemeContext";
 import useTranslation from "~hooks/useTranslation";
+import { hexToRgbStr } from "~utils";
 
 // --- Sub Components ---
 
@@ -87,26 +91,40 @@ const ListCard = React.memo(
     item,
     onPress,
     isDeleting,
+    isArchiving,
+    isDuplicating,
+    isArchived,
     menuVisible,
     onOpenMenu,
     onCloseMenu,
-    onRequestDelete,profile
+    onRequestDelete,
+    onRequestArchive,
+    onRequestDuplicate,
+    profile,
+    t,
   }) => {
     const pendingActionRef = React.useRef(null);
     const { colors, isDark } = useTheme();
     const totalItems = item.progress?.total || 0;
-    const completedItems =
-      item.progress?.purchased || 0;
+    const completedItems = item.progress?.purchased || 0;
     const isCompleted = totalItems > 0 && completedItems === totalItems;
     const progressColor = item.type === "personal" ? "#16A34A" : isCompleted ? "#22c55e" : "#0ea5e9";
     const stripColor = item.circle?.color || progressColor;
+
+    const circleColor = item.circle?.color;
+    const circleRgb = hexToRgbStr(circleColor);
+    const badgeBg = circleColor && circleRgb
+      ? `rgba(${circleRgb}, 0.15)`
+      : isDark ? "rgba(14, 165, 233, 0.2)" : "#e0f2fe";
+    const badgeTextColor = circleColor || colors.primary;
+    const circleBadgeLabel = item.circle?.name || "Shared";
 
     return (
       <TouchableOpacity
         key={item.id || item._id}
         style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}
         onPress={onPress}
-        disabled={isDeleting}>
+        disabled={isDeleting || isArchiving || isDuplicating}>
         <View
           style={[
             styles.cardBorderStrip,
@@ -118,13 +136,8 @@ const ListCard = React.memo(
             <View style={styles.titleRow}>
               <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>{item.name}</Text>
               {item.type === "shared" && (
-                <View style={[styles.sharedBadge, { backgroundColor: isDark ? "rgba(14, 165, 233, 0.2)" : "#e0f2fe" }]}>
-                  <Users
-                    size={10}
-                    color="#0ea5e9"
-                    style={{ marginRight: 2 }}
-                  />
-                  <Text style={[styles.sharedText, { color: colors.primary }]}>Shared</Text>
+                <View style={[styles.sharedBadge, { backgroundColor: badgeBg }]}>
+                  <Text style={[styles.sharedText, { color: badgeTextColor }]}>{circleBadgeLabel}</Text>
                 </View>
               )}
             </View>
@@ -148,7 +161,7 @@ const ListCard = React.memo(
                     showPopover();
                     onOpenMenu();
                   }}
-                  disabled={isDeleting}>
+                  disabled={isDeleting || isArchiving || isDuplicating}>
                   <MoreHorizontal size={20} color={colors.iconMuted} />
                 </TouchableOpacity>
               )}
@@ -156,11 +169,29 @@ const ListCard = React.memo(
               <View style={{ paddingVertical: 4 }}>
                 <TouchableOpacity
                   onPress={() => {
+                    pendingActionRef.current = () => onRequestArchive();
+                    onCloseMenu();
+                  }}
+                  style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                  <Text style={[styles.menuItemArchive, { color: colors.textPrimary }]}>{isArchived ? t('common_unarchive') : t('common_archive')}</Text>
+                </TouchableOpacity>
+                {isArchived && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      pendingActionRef.current = () => onRequestDuplicate();
+                      onCloseMenu();
+                    }}
+                    style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                    <Text style={[styles.menuItemArchive, { color: colors.primary }]}>{t('common_duplicate')}</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  onPress={() => {
                     pendingActionRef.current = () => onRequestDelete();
                     onCloseMenu();
                   }}
                   style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-                  <Text style={styles.menuItemDelete}>Delete</Text>
+                  <Text style={styles.menuItemDelete}>{t('common_delete')}</Text>
                 </TouchableOpacity>
               </View>
             </Popover>}
@@ -247,6 +278,9 @@ const ListCard = React.memo(
       prevProps.item.progress?.percentage === nextProps.item.progress?.percentage &&
       prevProps.item.circle?.color === nextProps.item.circle?.color &&
       prevProps.isDeleting === nextProps.isDeleting &&
+      prevProps.isArchiving === nextProps.isArchiving &&
+      prevProps.isDuplicating === nextProps.isDuplicating &&
+      prevProps.isArchived === nextProps.isArchived &&
       prevProps.menuVisible === nextProps.menuVisible
     );
   },
@@ -272,7 +306,7 @@ const formatDate = date => {
 const ListsTab = ({ onQuickAction, navigation, route }) => {
   const dispatch = useDispatch();
   const {profile} = useSelector(state => state.profile);
-  const { lists, loading, error } = useSelector(state => state.lists);
+  const { lists, archivedLists, loading, error } = useSelector(state => state.lists);
   const { showAlert, showError } = useAlert();
   const { colors, isDark } = useTheme();
   const { t } = useTranslation();
@@ -288,6 +322,8 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
   const [isCreatingList, setIsCreatingList] = useState(false);
   const [sortOption, setSortOption] = useState("priority");
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [archivingListId, setArchivingListId] = useState(null);
+  const [duplicatingListId, setDuplicatingListId] = useState(null);
 
 
   const getActiveTabTitle = () => {
@@ -298,18 +334,22 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
         return t("lists_tab_personal");
       case "Shared Lists":
         return t("lists_tab_shared");
+      case "Archived Lists":
+        return t("lists_tab_archived");
       default:
         return activeTab;
     }
   };
   const listCounts = useMemo(() => {
     const totalLists = lists || [];
+    console.log('lists', lists);
     return {
       all: totalLists.length,
       personal: totalLists.filter(item => item.type === "personal").length,
       shared: totalLists.filter(item => item.type === "shared").length,
+      archived: (archivedLists || []).length,
     };
-  }, [lists]);
+  }, [lists, archivedLists]);
 
   const isDismissingRef = useRef(false);
   const isFetchingOnFocusRef = useRef(false);
@@ -345,11 +385,11 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
       if (isFetchingOnFocusRef.current) return;
 
       isFetchingOnFocusRef.current = true;
-      dispatch(fetchAllLists())
-        .unwrap()
-        .catch(() => {
-          // Errors handled by existing `error` effect/toast
-        })
+      Promise.all([
+        dispatch(fetchAllLists()).unwrap(),
+        dispatch(fetchArchivedLists()),
+      ])
+        .catch(() => {})
         .finally(() => {
           isFetchingOnFocusRef.current = false;
         });
@@ -359,6 +399,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
   // Re-fetch lists when internet reconnects
   useOnReconnect(() => {
     dispatch(fetchAllLists());
+    dispatch(fetchArchivedLists());
   });
 
   // Handle navigation params to switch tabs - use useFocusEffect to handle when screen is focused
@@ -459,34 +500,71 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
 
   // Filter and sort lists based on active tab and sort option
   const filteredData = useMemo(() => {
+    if (activeTab === "Archived Lists") {
+      const source = archivedLists || [];
+      if (searchQuery.trim() !== "") {
+        const lowerQuery = searchQuery.toLowerCase();
+        return sortLists(source.filter(item => (item.name || "").toLowerCase().includes(lowerQuery)));
+      }
+      return sortLists(source);
+    }
+
     let filtered = lists.filter(item => {
-      if (activeTab === "Personal Lists") {
-        return item.type === "personal";
-      }
-      if (activeTab === "Shared Lists") {
-        return item.type === "shared";
-      }
+      if (activeTab === "Personal Lists") return item.type === "personal";
+      if (activeTab === "Shared Lists") return item.type === "shared";
       return true;
     });
 
     if (searchQuery.trim() !== "") {
       const lowerQuery = searchQuery.toLowerCase();
-      filtered = filtered.filter(item => 
+      filtered = filtered.filter(item =>
         (item.name || "").toLowerCase().includes(lowerQuery)
       );
     }
 
     return sortLists(filtered);
-  }, [lists, activeTab, sortLists, searchQuery]);
+  }, [lists, archivedLists, activeTab, sortLists, searchQuery]);
 
 
+
+  // Duplicate list handler (archived lists only)
+  const handleDuplicateList = useCallback(async (listId) => {
+    setDuplicatingListId(listId);
+    try {
+      await dispatch(duplicateList({ listId })).unwrap();
+      Toast.show({ type: "success", text1: "List duplicated" });
+      dispatch(fetchAllLists());
+    } catch {
+      // Error handled by useEffect
+    } finally {
+      setDuplicatingListId(null);
+    }
+  }, [dispatch]);
+
+  // Archive list handler
+  const handleArchiveList = useCallback(async (listId, isCurrentlyArchived) => {
+    setArchivingListId(listId);
+    try {
+      await dispatch(toggleArchiveList({ listId })).unwrap();
+      Toast.show({ type: "success", text1: isCurrentlyArchived ? "List unarchived" : "List archived" });
+      dispatch(fetchAllLists());
+      dispatch(fetchArchivedLists());
+    } catch {
+      // Error handled by useEffect
+    } finally {
+      setArchivingListId(null);
+    }
+  }, [dispatch]);
 
   // Pull to refresh
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await dispatch(fetchAllLists()).unwrap();
-    } catch (err) {
+      await Promise.all([
+        dispatch(fetchAllLists()).unwrap(),
+        dispatch(fetchArchivedLists()),
+      ]);
+    } catch {
       // Error handled by useEffect
     } finally {
       setRefreshing(false);
@@ -629,7 +707,10 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
           </TouchableOpacity>
         }
         showTabs={
-          <View style={styles.filtersRow}>
+          <RNScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filtersRow}>
             <FilterTab
               label={t("lists_tab_all")}
               count={listCounts.all}
@@ -638,23 +719,31 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
               colors={colors}
               isDark={isDark}
             />
-            <FilterTab
+           {listCounts.personal > 0 && <FilterTab
               label={t("lists_tab_personal")}
               count={listCounts.personal}
               isActive={activeTab === "Personal Lists"}
               onPress={() => setActiveTab("Personal Lists")}
               colors={colors}
               isDark={isDark}
-            />
-            <FilterTab
+            />}
+           {listCounts.shared > 0 && <FilterTab
               label={t("lists_tab_shared")}
               count={listCounts.shared}
               isActive={activeTab === "Shared Lists"}
               onPress={() => setActiveTab("Shared Lists")}
               colors={colors}
               isDark={isDark}
-            />
-          </View>
+            />}
+           {listCounts.archived > 0 && <FilterTab
+              label={t("lists_tab_archived")}
+              count={listCounts.archived}
+              isActive={activeTab === "Archived Lists"}
+              onPress={() => setActiveTab("Archived Lists")}
+              colors={colors}
+              isDark={isDark}
+            />}
+          </RNScrollView>
         }
       />
 
@@ -846,13 +935,17 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
                 item={item}
                 onPress={() => handleListPress(item.id || item._id)}
                 isDeleting={deletingListId === (item.id || item._id)}
+                isArchiving={archivingListId === (item.id || item._id)}
+                isDuplicating={duplicatingListId === (item.id || item._id)}
+                isArchived={activeTab === "Archived Lists"}
                 menuVisible={activeMenuListId === (item.id || item._id)}
                 onOpenMenu={() => setActiveMenuListId(item.id || item._id)}
                 onCloseMenu={() => setActiveMenuListId(null)}
-                onRequestDelete={() =>
-                  confirmDeleteList(item.id || item._id, item.name)
-                }
+                onRequestDelete={() => confirmDeleteList(item.id || item._id, item.name)}
+                onRequestArchive={() => handleArchiveList(item.id || item._id, activeTab === "Archived Lists")}
+                onRequestDuplicate={() => handleDuplicateList(item.id || item._id)}
                 profile={profile}
+                t={t}
               />
             ))}
 
@@ -1157,6 +1250,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 4,
     minWidth: 160,
+  },
+  menuItemArchive: {
+    fontSize: RFValue(12),
+    fontFamily: FontFamily.medium,
   },
   menuItemDelete: {
     fontSize: RFValue(12),

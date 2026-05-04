@@ -166,3 +166,9 @@ export const formatDistance = (distanceKm, unit = "Kilometers") => {
   if (distanceKm < 1) return `${(distanceKm * 1000).toFixed(0)} m`;
   return `${distanceKm.toFixed(1)} km`;
 };
+
+export const hexToRgbStr = (hex) => {
+  if (!hex) return null;
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : null;
+};
