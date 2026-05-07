@@ -306,10 +306,16 @@ const formatDate = date => {
 const ListsTab = ({ onQuickAction, navigation, route }) => {
   const dispatch = useDispatch();
   const {profile} = useSelector(state => state.profile);
-  const { lists, archivedLists, loading, error } = useSelector(state => state.lists);
+  const lists = useSelector(state => state.lists.lists);
+  const archivedLists = useSelector(state => state.lists.archivedLists);
+  const loading = useSelector(state => state.lists.loading);
+  const error = useSelector(state => state.lists.error);
+  const [filterVersion, setFilterVersion] = useState(0);
   const { showAlert, showError } = useAlert();
   const { colors, isDark } = useTheme();
   const { t } = useTranslation();
+
+  console.log(route);
 
   const [activeTab, setActiveTab] = useState("All Lists");
   const [searchQuery, setSearchQuery] = useState("");
@@ -376,6 +382,16 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
       navigation.navigate("Home");
     }
   }, [openedFromHome, navigation]);
+
+  // When navigating back from ListDetails after a rename, bump filterVersion so filteredData recomputes
+  useFocusEffect(
+    useCallback(() => {
+      if (route?.params?.listNameUpdated) {
+        setFilterVersion(v => v + 1);
+        navigation.setParams({ listNameUpdated: undefined });
+      }
+    }, [route?.params?.listNameUpdated, navigation]),
+  );
 
   // Fetch lists on mount and refresh when screen is focused to get latest data
   useFocusEffect(
@@ -523,7 +539,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
     }
 
     return sortLists(filtered);
-  }, [lists, archivedLists, activeTab, sortLists, searchQuery]);
+  }, [lists, archivedLists, activeTab, sortLists, searchQuery, filterVersion]);
 
 
 

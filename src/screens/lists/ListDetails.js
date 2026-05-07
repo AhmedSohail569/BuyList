@@ -16,9 +16,9 @@ import {
 } from "lucide-react-native";
 import Popover from "react-native-popover-view";
 import { useDispatch, useSelector } from "react-redux";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, CommonActions } from "@react-navigation/native";
 import Toast from "react-native-toast-message";
-import { ScrollView, Text, ItemPriorityModal } from "~components/Common";
+  import { ScrollView, Text, ItemPriorityModal } from "~components/Common";
 import Header from "~components/Header";
 import SelectionModal from "~containers/modals/SelectionModal";
 import { RFValue } from "react-native-responsive-fontsize";
@@ -33,6 +33,7 @@ import {
   deleteList,
   updateItemPriority,
   updateListName,
+  updateItemName,
 } from "~redux/actions/listActions";
 import { clearListsError } from "~redux/reducers/listReducer";
 import { useAlert } from "~context/AlertContext";
@@ -53,7 +54,31 @@ const ListDetailsScreen = ({ navigation, route }) => {
   // Determine if current user is a viewer (read-only) on this list
   const isViewer = list?.userRole?.toLowerCase() === "viewer";
 
-  console.log("isViewer", isViewer);
+
+  const listRenamedRef = useRef(false);
+
+  const handleGoBack = useCallback(() => {
+    if (listRenamedRef.current) {
+      listRenamedRef.current = false;
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{
+            name: "AppTabNavigator",
+            params: {
+              screen: "Lists",
+              params: {
+                screen: "ListsTab",
+                params: { listNameUpdated: true },
+              },
+            },
+          }],
+        })
+      );
+    } else {
+      navigation.goBack();
+    }
+  }, [navigation]);
 
   const [activeTab, setActiveTab] = useState("All Items");
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
@@ -67,6 +92,7 @@ const ListDetailsScreen = ({ navigation, route }) => {
 
   // Rename modal state
   const [renameModalVisible, setRenameModalVisible] = useState(false);
+  const [renameItemModal, setRenameItemModal] = useState({ visible: false, itemId: null, currentName: "" });
 
   // Always fetch list by ID when screen is focused to get latest data
   // This ensures we have the most up-to-date list data from the API
@@ -131,10 +157,22 @@ const ListDetailsScreen = ({ navigation, route }) => {
     try {
       await dispatch(updateListName({ listId, name: trimmed })).unwrap();
       dispatch(fetchListById({ listId }));
+      listRenamedRef.current = true;
     } catch {
       Toast.show({ type: "error", text1: "Error", text2: "Failed to rename list." });
     }
-  }, [dispatch, listId, list?.name]);
+  }, [dispatch, listId, list?.name, navigation]);
+
+  const handleRenameItem = useCallback(async (newName) => {
+    const trimmed = newName?.trim();
+    const { itemId, currentName } = renameItemModal;
+    if (!trimmed || trimmed === currentName || !listId || !itemId) return;
+    try {
+      await dispatch(updateItemName({ listId, itemId, name: trimmed })).unwrap();
+    } catch {
+      Toast.show({ type: "error", text1: "Error", text2: "Failed to rename item." });
+    }
+  }, [dispatch, listId, renameItemModal]);
 
   const handleSetPriority = useCallback(async (selectedPriority) => {
     const { itemId } = priorityModal;
@@ -419,6 +457,17 @@ const ListDetailsScreen = ({ navigation, route }) => {
               )}
               popoverStyle={[styles.menuContent, { backgroundColor: colors.card }]}>
               <View style={{ paddingVertical: 4 }}>
+                {item.status !== "purchased" && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      const currentItem = list?.items?.find(i => (i.id || i._id) === itemId);
+                      pendingActionRef.current = () => setRenameItemModal({ visible: true, itemId, currentName: currentItem?.name || "" });
+                      setActiveItemMenuId(null);
+                    }}
+                    style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                    <Text style={[styles.menuItemTitle, { color: colors.textPrimary }]}>Rename</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity
                   onPress={() => {
                     const currentItem = list?.items?.find(i => (i.id || i._id) === itemId);
@@ -457,6 +506,7 @@ const ListDetailsScreen = ({ navigation, route }) => {
       isActionPending,
       colors,
       isViewer,
+      renameItemModal,
     ],
   );
 
@@ -486,14 +536,13 @@ const ListDetailsScreen = ({ navigation, route }) => {
     );
   }
 
-  console.log("list", list);
   return (
     <>
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Header
         variant="screen"
         title={list?.name || "List"}
-        onBack={() => navigation.goBack()}
+        onBack={handleGoBack}
         rightAction={
           !isViewer ? (
             <View style={styles.headerActions}>
@@ -744,6 +793,16 @@ const ListDetailsScreen = ({ navigation, route }) => {
         type="input"
         title="Rename List"
         initialValue={list?.name}
+        confirmLabel="Rename"
+        cancelLabel="Cancel"
+      />
+      <SelectionModal
+        isVisible={renameItemModal.visible}
+        onClose={() => setRenameItemModal(prev => ({ ...prev, visible: false }))}
+        onSave={handleRenameItem}
+        type="input"
+        title="Rename Item"
+        initialValue={renameItemModal.currentName}
         confirmLabel="Rename"
         cancelLabel="Cancel"
       />

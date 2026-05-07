@@ -18,6 +18,7 @@ import {
   toggleArchiveList,
   duplicateList,
   updateListName,
+  updateItemName,
 } from "../actions/listActions";
 import { logout } from "./authReducer";
 
@@ -44,6 +45,9 @@ const initialState = {
 
   // Error state
   error: null,
+
+  // Pending local name overrides — prevents fetchAllLists from clobbering optimistic renames
+  optimisticNames: {},
 };
 
 // ============================================
@@ -138,6 +142,7 @@ const listsSlice = createSlice({
     clearListsError(state) {
       state.error = null;
     },
+
   },
 
   extraReducers: builder => {
@@ -177,6 +182,19 @@ const listsSlice = createSlice({
         const { lists, listById } = normalizeLists(
           Array.isArray(action.payload) ? action.payload : [],
         );
+        // Merge pending optimistic name overrides so a stale server response
+        // doesn't clobber a rename the user just performed
+        const pending = state.optimisticNames || {};
+        if (Object.keys(pending).length > 0) {
+          lists.forEach((list, i) => {
+            const id = list.id || list._id;
+            if (pending[id]) {
+              lists[i] = { ...list, name: pending[id] };
+              if (listById[id]) listById[id] = { ...listById[id], name: pending[id] };
+            }
+          });
+        }
+        state.optimisticNames = {};
         state.lists = lists;
         state.listById = listById;
       })
@@ -653,6 +671,8 @@ const listsSlice = createSlice({
       // ============================================
       .addCase(updateListName.pending, (state, action) => {
         const { listId, name } = action.meta.arg;
+        if (!state.optimisticNames) state.optimisticNames = {};
+        state.optimisticNames[listId] = name;
         if (state.listById[listId]) {
           state.listById[listId] = { ...state.listById[listId], name };
         }
@@ -665,11 +685,50 @@ const listsSlice = createSlice({
           ];
         }
       })
-      .addCase(updateListName.fulfilled, state => { state.error = null; })
+      .addCase(updateListName.fulfilled, (state, action) => {
+        const { listId, name, data } = action.payload;
+        const confirmedName = data?.name || name;
+        if (state.listById[listId]) {
+          state.listById[listId] = { ...state.listById[listId], name: confirmedName };
+        }
+        const idx = state.lists.findIndex(l => (l.id || l._id) === listId);
+        if (idx !== -1) {
+          state.lists = [
+            ...state.lists.slice(0, idx),
+            { ...state.lists[idx], name: confirmedName },
+            ...state.lists.slice(idx + 1),
+          ];
+        }
+        state.error = null;
+      })
       .addCase(updateListName.rejected, (state, action) => {
-        const { previousLists, previousListById, message } = action.payload || {};
+        const { previousLists, previousListById, message, listId } = action.payload || {};
+        if (listId && state.optimisticNames) delete state.optimisticNames[listId];
         if (previousLists) state.lists = previousLists;
         if (previousListById) state.listById = previousListById;
+        state.error = message || action.payload;
+      })
+
+      // ============================================
+      // UPDATE ITEM NAME (Optimistic Update)
+      // ============================================
+      .addCase(updateItemName.pending, (state, action) => {
+        const { listId, itemId, name } = action.meta.arg;
+        const list = state.listById[listId];
+        if (list?.items) {
+          const updatedItems = list.items.map(item =>
+            (item.id || item._id) === itemId ? { ...item, name } : item,
+          );
+          const updatedList = { ...list, items: updatedItems };
+          state.listById[listId] = updatedList;
+          const idx = state.lists.findIndex(l => (l.id || l._id) === listId);
+          if (idx !== -1) state.lists = [...state.lists.slice(0, idx), updatedList, ...state.lists.slice(idx + 1)];
+        }
+      })
+      .addCase(updateItemName.fulfilled, state => { state.error = null; })
+      .addCase(updateItemName.rejected, (state, action) => {
+        const { previousList, listId, message } = action.payload || {};
+        if (listId && previousList) state.listById[listId] = previousList;
         state.error = message || action.payload;
       })
 

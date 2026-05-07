@@ -251,6 +251,24 @@ export const updateItemPriority = createAsyncThunk(
 );
 
 // ============================================
+// UPDATE ITEM NAME (Optimistic Update)
+// PATCH /api/lists/update-item-name/{listId}/{itemId}
+// ============================================
+export const updateItemName = createAsyncThunk(
+  "lists/updateItemName",
+  async ({ listId, itemId, name }, { rejectWithValue, getState }) => {
+    const previousList = getState().lists.listById[listId] || null;
+    try {
+      await axios.patch(`/lists/update-item-name/${listId}/${itemId}`, { name });
+      return { listId, itemId, name };
+    } catch (err) {
+      return rejectWithValue({ message: getErrorMessage(err), previousList, listId });
+    }
+  },
+  { condition: requireConnectivity },
+);
+
+// ============================================
 // 9. FETCH ARCHIVED LISTS
 // GET /api/lists/archived
 // ============================================
@@ -317,9 +335,11 @@ export const updateListName = createAsyncThunk(
     const previousListById = { ...getState().lists.listById };
     try {
       const response = await axios.patch(`/lists/update-name/${listId}`, { name });
+      console.log("response", response)
       return { listId, name, data: response.data?.data || response.data };
     } catch (err) {
-      return rejectWithValue({ message: getErrorMessage(err), previousLists, previousListById });
+      console.log("err", err)
+      return rejectWithValue({ message: getErrorMessage(err), previousLists, previousListById, listId });
     }
   },
   { condition: requireConnectivity },
