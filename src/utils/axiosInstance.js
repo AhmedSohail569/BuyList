@@ -15,6 +15,8 @@ const axiosInstance = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+console.log("Config.API_BASE_URL", Config.API_BASE_URL);
+
 // ── Request Interceptor — attach access token ──────────────────────────────────
 
 axiosInstance.interceptors.request.use(

@@ -63,11 +63,13 @@ export const loginUser = createAsyncThunk(
               text1: "Joined Circle!",
               text2: "You've been automatically added to the circle",
             });
-          } catch {
+          } catch (error) {
+            console.log("error joining circle", error);
+
             Toast.show({
               type: "error",
               text1: "Couldn't Join Circle",
-              text2: "You can join manually from the invite link",
+              text2: error?.message || error || "Already a member or circle doesn't exist",
             });
           }
         }, 1000);
@@ -223,6 +225,18 @@ export const resendResetOTP = createAsyncThunk(
         message: getErrorMessage(err),
         fields: getValidationErrors(err),
       });
+    }
+  },
+);
+
+export const deleteAccount = createAsyncThunk(
+  "auth/deleteAccount",
+  async (_, { rejectWithValue }) => {
+    try {
+      await axios.delete("/auth/delete-account");
+      return { success: true };
+    } catch (err) {
+      return rejectWithValue(getErrorMessage(err));
     }
   },
 );

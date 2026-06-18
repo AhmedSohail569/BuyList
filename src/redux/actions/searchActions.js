@@ -50,6 +50,7 @@ export const searchLocalStores = createAsyncThunk(
 export const searchOnlineStores = createAsyncThunk(
   "search/searchOnlineStores",
   async ({ query, page = 1, limit = 10 }, { rejectWithValue }) => {
+    console.log("query", query);
     try {
       if (!query?.trim()) {
         return rejectWithValue("Search query is required");

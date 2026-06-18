@@ -3,18 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BuyList Setup</title>
+    <title>Bagg – Opening app...</title>
     <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
-            margin: 0;
+            min-height: 100vh;
             background-color: #f3f4f6;
-            text-align: center;
             padding: 20px;
         }
         .container {
@@ -24,119 +22,161 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             max-width: 400px;
             width: 100%;
+            text-align: center;
         }
-        h1 {
-            color: #111827;
-            margin-bottom: 8px;
-            font-size: 24px;
-        }
-        p {
+        .logo { font-size: 48px; margin-bottom: 20px; }
+        h1   { color: #111827; font-size: 22px; margin-bottom: 8px; }
+        .subtitle {
             color: #6b7280;
-            margin-bottom: 24px;
+            font-size: 14px;
             line-height: 1.5;
-        }
-        .btn {
-            display: inline-block;
-            background-color: #2563eb;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 600;
-            margin: 8px 0;
-            width: 80%;
+            margin-bottom: 28px;
         }
         .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #2563eb;
+            border: 3px solid #e5e7eb;
+            border-top: 3px solid #2563eb;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px auto;
+            width: 36px;
+            height: 36px;
+            animation: spin 0.9s linear infinite;
+            margin: 0 auto 20px;
         }
         @keyframes spin {
-            0% { transform: rotate(0deg); }
+            0%   { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .btn {
+            display: block;
+            background-color: #2563eb;
+            color: white;
+            padding: 14px 20px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 15px;
+            margin: 10px auto;
+            width: 100%;
+            max-width: 280px;
+            transition: opacity 0.15s;
+        }
+        .btn:active { opacity: 0.85; }
+        .btn-secondary {
+            background-color: #f3f4f6;
+            color: #374151;
+            border: 1px solid #e5e7eb;
+        }
+        .store-links { display: none; margin-top: 4px; }
+        .divider { color: #9ca3af; font-size: 12px; margin: 16px 0; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="spinner" id="spinner"></div>
-        <h1 id="status">Redirecting you...</h1>
-        <p id="invite-box" style="display: none; background: #f3f4f6; padding: 12px; border-radius: 8px; font-weight: bold; border: 1px dashed #2563eb; margin-bottom: 24px; color: #2563eb;">
-            Invite Code: <span id="code-span"></span>
-        </p>
+        <div class="logo">🛍️</div>
 
-        <p id="desc">You are being taken to the app store to download BuyList.</p>
-        
-        <div id="manual-links" style="display: none; margin-top: 20px;">
-            <p style="margin-bottom: 12px;">If you aren't redirected automatically, tap below:</p>
-            <a href="https://apps.apple.com/us/app/buylist/id6757783448" class="btn">Download on App Store</a>
-            <!-- Replace the XXXXX below with your actual Google Play package name once published -->
-            <a href="https://play.google.com/store/apps/details?id=com.buylist" class="btn">Get it on Google Play</a>
+        <div id="view-opening">
+            <div class="spinner"></div>
+            <h1>Opening Bagg…</h1>
+            <p class="subtitle">Taking you to your invite. This should only take a moment.</p>
+        </div>
+
+        <div id="view-fallback" style="display:none">
+            <h1 id="fallback-title">Get Bagg</h1>
+            <p class="subtitle" id="fallback-desc">Download the app to start shopping together with your circle.</p>
+            <div class="store-links" id="store-links">
+                <a id="ios-btn"     href="https://apps.apple.com/us/app/buylist/id6757783448" class="btn">Download on App Store</a>
+                <a id="android-btn" href="https://play.google.com/store/apps/details?id=com.buylist" class="btn">Get it on Google Play</a>
+                <div class="divider" id="open-divider" style="display:none">— already have the app? —</div>
+                <a id="open-btn" href="#" class="btn btn-secondary" style="display:none">Open in Bagg</a>
+            </div>
         </div>
     </div>
 
     <script>
-        // Store URLs
-        const IOS_STORE_URL = "https://apps.apple.com/us/app/buylist/id6757783448";
-        // Update this to your actual app package name if it differs
-        const ANDROID_STORE_URL = "https://play.google.com/store/apps/details?id=com.buylist"; 
-        const FALLBACK_URL = "https://getbagg.com";
+        const IOS_STORE     = "https://apps.apple.com/us/app/buylist/id6757783448";
+        const ANDROID_STORE = "https://play.google.com/store/apps/details?id=com.buylist";
 
-        function redirect() {
-            // Check if there is an invite code in the URL
-            const pathParts = window.location.pathname.split('/');
-            let inviteCode = null;
-            if (pathParts.length > 2 && pathParts[1] === 'invite') {
-                inviteCode = pathParts[2]; // e.g., '123XYZ'
-            }
+        const ua        = navigator.userAgent || "";
+        const isIOS     = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+        const isAndroid = /android/i.test(ua);
+        const isMobile  = isIOS || isAndroid;
+
+        const parts      = window.location.pathname.split("/").filter(Boolean);
+        const inviteCode = (parts[0] === "invite" && parts[1]) ? parts[1] : null;
+
+        const appSchemeURL = inviteCode ? `bagg://invite/${inviteCode}` : "bagg://";
+        const storeURL     = isIOS ? IOS_STORE : ANDROID_STORE;
+
+        function showFallback() {
+            document.getElementById("view-opening").style.display  = "none";
+            document.getElementById("view-fallback").style.display = "block";
+            document.getElementById("store-links").style.display   = "block";
 
             if (inviteCode) {
-                document.getElementById('status').innerText = "You've been invited!";
-                document.getElementById('desc').innerText = "Copy the code below, then download the app and enter it during sign up.";
-                document.getElementById('invite-box').style.display = 'block';
-                document.getElementById('code-span').innerHTML = `<a href="https://getbagg.com/invite/${inviteCode}">https://getbagg.com/invite/${inviteCode}</a>`;
-                
-                // Stop the automatic spinner immediately so they can read the code
-                document.getElementById('spinner').style.display = 'none';
-                document.getElementById('manual-links').style.display = 'block';
-                return; // Do not auto-redirect if an invite code is present, force them to tap the download button
+                document.getElementById("fallback-title").innerText = "You've been invited!";
+                document.getElementById("fallback-desc").innerText  =
+                    "Download Bagg to accept your invite and shop together with your circle.";
+                document.getElementById("open-divider").style.display = "block";
+                const openBtn = document.getElementById("open-btn");
+                openBtn.style.display = "block";
+                openBtn.href = appSchemeURL;
             }
 
-            const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-            
-            // Detect iOS
-            if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
-                window.location.replace(IOS_STORE_URL);
-                return;
-            }
-            
-            // Detect Android
-            if (/android/i.test(userAgent)) {
-                window.location.replace(ANDROID_STORE_URL);
-                return;
-            }
-            
-            // Fallback for desktop users
-            document.getElementById('spinner').style.display = 'none';
-            document.getElementById('status').innerText = 'Download BuyList';
-            document.getElementById('manual-links').style.display = 'block';
+            if (isIOS)     document.getElementById("android-btn").style.display = "none";
+            else if (isAndroid) document.getElementById("ios-btn").style.display = "none";
         }
 
-        // Execute redirect immediately
-        window.onload = function() {
-            setTimeout(redirect, 500); // Small 500ms delay to ensure the UI renders first
-            
-            // Show manual links after 3 seconds just in case the redirect gets blocked by the browser
-            setTimeout(() => {
-                document.getElementById('spinner').style.display = 'none';
-                document.getElementById('status').innerText = 'Download BuyList';
-                document.getElementById('manual-links').style.display = 'block';
-            }, 3000);
-        };
+        // Writes invite token to clipboard so the app can retrieve it after an
+        // App Store install/open where no URL is passed to the app (deferred deep link).
+        // Format: "bagg-invite:<code>:<timestamp_ms>"
+        async function stashInviteCode() {
+            if (!inviteCode || !navigator.clipboard) return;
+            try {
+                await navigator.clipboard.writeText(`bagg-invite:${inviteCode}:${Date.now()}`);
+            } catch (_) {
+                // Clipboard write not allowed without a user gesture in some browsers — safe to ignore.
+            }
+        }
+
+        function attemptOpen() {
+            if (!isMobile) { showFallback(); return; }
+
+            // Tracks whether the OS handed off to the app (visibilitychange fired with hidden=true).
+            // Set synchronously inside the handler so the setTimeout callback always reads the
+            // correct value — fixes the Chrome "Allow/Don't allow" dialog race condition.
+            let appWasOpened = false;
+
+            const timerRef = { current: null };
+
+            const onVisibilityChange = () => {
+                if (document.hidden) {
+                    // Page went to background → OS switched to the app.
+                    appWasOpened = true;
+                } else {
+                    // Page returned to foreground → user came back from the app.
+                    clearTimeout(timerRef.current);
+                    showFallback();
+                    document.removeEventListener("visibilitychange", onVisibilityChange);
+                }
+            };
+
+            document.addEventListener("visibilitychange", onVisibilityChange);
+
+            // Fire the custom scheme — OS switches to the app if installed.
+            window.location.href = appSchemeURL;
+
+            // 4 s gives the Chrome "Allow / Don't allow" dialog time to be dismissed.
+            // Only redirect to the store if the app never opened (appWasOpened is set the
+            // instant document.hidden becomes true, before this callback can run).
+            timerRef.current = setTimeout(async () => {
+                if (!appWasOpened) {
+                    // Stash invite in clipboard so the app can pick it up after install/open.
+                    await stashInviteCode();
+                    window.location.replace(storeURL);
+                }
+            }, 4000);
+        }
+
+        setTimeout(attemptOpen, 300);
     </script>
 </body>
 </html>

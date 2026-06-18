@@ -44,11 +44,12 @@ export const appleLogin = createAsyncThunk(
               text1: "Joined Circle!",
               text2: "You've been automatically added to the circle",
             });
-          } catch {
+          } catch (error) {
+            console.log("error joining circle", error);
             Toast.show({
               type: "error",
               text1: "Couldn't Join Circle",
-              text2: "You can join manually from the invite link",
+              text2: error?.message || error || "Already a member or circle doesn't exist",
             });
           }
         }, 1000);

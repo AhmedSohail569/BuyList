@@ -34,24 +34,25 @@ const GetStartedScreen = ({ navigation }) => {
   const { t } = useTranslation();
 
   const [phone, setPhone] = useState("");
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
   const dispatch = useDispatch();
-  const { loading, checkPhoneLoading } = useSelector((state) => state.auth);
+  const { checkPhoneLoading } = useSelector((state) => state.auth);
+
+  const isAnyLoading = googleLoading || appleLoading || checkPhoneLoading;
 
   const handleGoogleLogin = async () => {
-    // Check connectivity
     const isConnected = await checkConnectivity();
-    if (!isConnected) {
-      showNoInternetToast();
-      return;
-    }
+    if (!isConnected) { showNoInternetToast(); return; }
 
+    setGoogleLoading(true);
     try {
       const userInfo = await signInWithGoogle();
       const idToken = userInfo.data?.idToken || userInfo.idToken;
       const user = userInfo.data?.user || userInfo.user;
-      
+
       if (!idToken) throw new Error("No profile fetched from Google");
-      
+
       await dispatch(googleLogin({ token: idToken, user })).unwrap();
     } catch (error) {
       if (error.message !== "User cancelled the login flow.") {
@@ -61,21 +62,20 @@ const GetStartedScreen = ({ navigation }) => {
           text2: error.message || t("common_unexpected_error"),
         });
       }
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
   const handleAppleLogin = async () => {
-    // Check connectivity
     const isConnected = await checkConnectivity();
-    if (!isConnected) {
-      showNoInternetToast();
-      return;
-    }
+    if (!isConnected) { showNoInternetToast(); return; }
 
+    setAppleLoading(true);
     try {
       const authResponse = await signInWithApple();
       const { identityToken, fullName, email } = authResponse;
-      
+
       if (!identityToken) throw new Error("No identity token returned from Apple");
 
       await dispatch(appleLogin({ token: identityToken, fullName, email })).unwrap();
@@ -87,6 +87,8 @@ const GetStartedScreen = ({ navigation }) => {
           text2: error.message || t("common_unexpected_error"),
         });
       }
+    } finally {
+      setAppleLoading(false);
     }
   };
 
@@ -199,6 +201,7 @@ const GetStartedScreen = ({ navigation }) => {
               maxLength={15}
               forceLight
               loading={checkPhoneLoading}
+              disabled={googleLoading || appleLoading}
               onSubmitPhone={handlePhoneSubmit}
               onFocus={handleInputFocus}
               onBlur={handleInputBlur}
@@ -213,12 +216,12 @@ const GetStartedScreen = ({ navigation }) => {
             {t("getstarted_subtitle")}
           </Text>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.socialButton, { backgroundColor: "#5383EC" }]}
             onPress={handleGoogleLogin}
-            disabled={loading}
+            disabled={isAnyLoading}
           >
-            {loading ? (
+            {googleLoading ? (
               <ActivityIndicator color="#FFFFFF" style={{ width: RFValue(30), height: RFValue(30) }} />
             ) : (
               <>
@@ -230,22 +233,24 @@ const GetStartedScreen = ({ navigation }) => {
             )}
           </TouchableOpacity>
 
-          {Platform.OS === "ios" && <TouchableOpacity 
-            style={[styles.socialButton, { backgroundColor: "#000000" }]}
-            onPress={handleAppleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" style={{ width: RFValue(30), height: RFValue(30) }} />
-            ) : (
-              <>
-                <Icon name="apple" size={30} color={"#FFFFFF"} />
-                <Text variant="bodySmall" style={[styles.textStyle, { color: "#FFFFFF" }]}>
-                  {t("getstarted_apple")}
-                </Text>
-              </>
-            )}
-          </TouchableOpacity>}
+          {Platform.OS === "ios" && (
+            <TouchableOpacity
+              style={[styles.socialButton, { backgroundColor: "#000000" }]}
+              onPress={handleAppleLogin}
+              disabled={isAnyLoading}
+            >
+              {appleLoading ? (
+                <ActivityIndicator color="#FFFFFF" style={{ width: RFValue(30), height: RFValue(30) }} />
+              ) : (
+                <>
+                  <Icon name="apple" size={30} color={"#FFFFFF"} />
+                  <Text variant="bodySmall" style={[styles.textStyle, { color: "#FFFFFF" }]}>
+                    {t("getstarted_apple")}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
 
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
             <Text variant="bodySmall" style={[styles.textStyle, { color: "#9CA3AF" }]}>
@@ -253,8 +258,8 @@ const GetStartedScreen = ({ navigation }) => {
             </Text>
             <Text
               variant="link"
-              onPress={() => navigation.replace("Login")}
-              style={[styles.textStyle, { color: "#1E9DF1", fontFamily: FontFamily.regular }]}>
+              onPress={() => !isAnyLoading && navigation.replace("Login")}
+              style={[styles.textStyle, { color: isAnyLoading ? "#C8E6FA" : "#1E9DF1", fontFamily: FontFamily.regular }]}>
               {t("getstarted_login")}
             </Text>
           </View>

@@ -4,12 +4,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   TextInput,
-  Clipboard,
   Share,
   ActivityIndicator,
   Linking,
   Platform,
 } from "react-native";
+import Clipboard from "@react-native-clipboard/clipboard";
 import {
   Search,
   MoreHorizontal,
@@ -192,7 +192,6 @@ const ManageConnectionsScreen = ({ navigation, route }) => {
       const circleName = activeCircle?.name || "our circle";
       await Share.share({
         message: `Join ${circleName} on Bagg! ${inviteLink}`,
-        url: inviteLink,
         title: `Join ${circleName}`,
       });
     } catch (err) {

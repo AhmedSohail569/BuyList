@@ -56,6 +56,9 @@ const ListDetailsScreen = ({ navigation, route }) => {
 
 
   const listRenamedRef = useRef(false);
+  // Tracks the intended status for in-flight toggles so concurrent API responses
+  // don't cause items to flash back to their previous state mid-batch.
+  const optimisticStatusRef = useRef({});
 
   const handleGoBack = useCallback(() => {
     if (listRenamedRef.current) {
@@ -299,35 +302,27 @@ const ListDetailsScreen = ({ navigation, route }) => {
     async itemId => {
       if (!listId || isActionPending(`toggle-${itemId}`)) return;
 
-      const item = list?.items?.find(
-        i => (i.id || i._id) === itemId,
-      );
+      const item = list?.items?.find(i => (i.id || i._id) === itemId);
       if (!item) return;
 
-      const newStatus = item.status === "pending";
+      const isPurchasing = item.status === "pending";
+      // Pin the intended status immediately so concurrent server responses for
+      // other in-flight toggles can't cause this item to flash back to its old state.
+      optimisticStatusRef.current[itemId] = isPurchasing ? "purchased" : "pending";
       setActionPending(`toggle-${itemId}`, true);
 
       try {
-        if (newStatus) {
-          await dispatch(
-            markItemAsPurchased({
-              listId,
-              itemId,
-            }),
-          ).unwrap();
+        if (isPurchasing) {
+          await dispatch(markItemAsPurchased({ listId, itemId })).unwrap();
         } else {
-          await dispatch(
-            markItemAsUnpurchased({
-              listId,
-              itemId,
-            }),
-          ).unwrap();
+          await dispatch(markItemAsUnpurchased({ listId, itemId })).unwrap();
         }
-        // Optimistic update handled by reducer
-      } catch (err) {
-        // Error handled by useEffect, rollback automatic
+      } catch {
+        // On failure, clear the pin so the item reverts to its actual server state.
+        delete optimisticStatusRef.current[itemId];
       } finally {
         setActionPending(`toggle-${itemId}`, false);
+        delete optimisticStatusRef.current[itemId];
       }
     },
     [listId, list, dispatch, isActionPending, setActionPending],
@@ -365,6 +360,9 @@ const ListDetailsScreen = ({ navigation, route }) => {
       const isPending = isActionPending(`toggle-${itemId}`) ||
         isActionPending(`delete-${itemId}`);
       const isMenuOpen = activeItemMenuId === itemId;
+      // Prefer the locally-pinned intended status over Redux state so the UI
+      // stays stable while other concurrent toggle API calls are still in-flight.
+      const effectiveStatus = optimisticStatusRef.current[itemId] ?? item.status;
 
       return (
         <View style={styles.itemRow}>
@@ -374,7 +372,7 @@ const ListDetailsScreen = ({ navigation, route }) => {
               onPress={() => toggleItemStatus(itemId)}
               activeOpacity={0.8}
               disabled={isPending}>
-              {item.status === "purchased" ? (
+              {effectiveStatus === "purchased" ? (
                 <View style={[styles.checkedCircle, { backgroundColor: colors.success }]}>
                   <Check size={12} color="#fff" strokeWidth={3} />
                 </View>
@@ -389,7 +387,7 @@ const ListDetailsScreen = ({ navigation, route }) => {
               style={[
                 styles.itemName,
                 { color: colors.textPrimary },
-                item.status === "purchased" && [styles.itemNameStrike, { color: colors.textSecondary }],
+                effectiveStatus === "purchased" && [styles.itemNameStrike, { color: colors.textSecondary }],
               ]}
               numberOfLines={3}
               ellipsizeMode="tail">
@@ -397,7 +395,7 @@ const ListDetailsScreen = ({ navigation, route }) => {
             </Text>
             <View style={styles.itemMetaRow}>
               <Text style={[styles.itemMetaText, { color: colors.textMuted }]}>
-                {item.status === "purchased"
+                {effectiveStatus === "purchased"
                   ? item.purchasedBy?.username
                     ? `Completed by ${item.purchasedBy.username}`
                     : "Completed"
@@ -457,7 +455,7 @@ const ListDetailsScreen = ({ navigation, route }) => {
               )}
               popoverStyle={[styles.menuContent, { backgroundColor: colors.card }]}>
               <View style={{ paddingVertical: 4 }}>
-                {item.status !== "purchased" && (
+                {effectiveStatus !== "purchased" && (
                   <TouchableOpacity
                     onPress={() => {
                       const currentItem = list?.items?.find(i => (i.id || i._id) === itemId);
@@ -483,7 +481,7 @@ const ListDetailsScreen = ({ navigation, route }) => {
                     setActiveItemMenuId(null);
                   }}
                   style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-                  <Text style={[styles.menuItemTitle, { color: colors.textPrimary }]}>{item.status === "purchased" ? "Pending" : "Completed"}</Text>
+                  <Text style={[styles.menuItemTitle, { color: colors.textPrimary }]}>{effectiveStatus === "purchased" ? "Pending" : "Completed"}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => {

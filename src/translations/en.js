@@ -31,7 +31,7 @@ const en = {
   home_ads_offers: "Ads & Offers",
   home_quick_create: "Create",
   home_quick_lists: "Lists",
-  home_quick_circle: "Circle",
+  home_quick_circle: "Circles",
   home_quick_search: "Search",
   home_activity_in: "in",
   home_nearby_stores: "Nearby Stores",
@@ -163,7 +163,7 @@ const en = {
   listdetails_cancel: "Cancel",
 
   // ── Circle ──────────────────────────────────────────────────────────────────
-  circle_title: "Your Circle",
+  circle_title: "Your Circles",
   circle_subtitle: "Shared shopping with your household",
   circle_manage_btn: "Manage Circle",
   circle_connections: "Connections",
@@ -222,6 +222,7 @@ const en = {
   manage_share_link: "Share Invite Link",
   manage_show_qr: "Show QR Code",
   manage_contacts: "From Contacts",
+  manage_whatsapp: "WhatsApp",
   manage_link_copied_title: "Link Copied!",
   manage_link_copied_desc: "Invite link copied to clipboard",
   manage_no_link_title: "No Invite Link",
@@ -232,6 +233,7 @@ const en = {
   // ── Settings ─────────────────────────────────────────────────────────────────
   settings_title: "Settings",
   settings_section_account: "ACCOUNT",
+  settings_section_account_management: "ACCOUNT MANAGEMENT",
   settings_section_preferences: "PREFERENCES",
   settings_section_bagg_features: "BAGG FEATURES",
   settings_section_location: "LOCATION",
@@ -373,7 +375,7 @@ const en = {
 
   // ── Tab Bar ─────────────────────────────────────────────────────────────────────
   tab_home: "Home",
-  tab_circle: "Circle",
+  tab_circle: "Circles",
   tab_lists: "Lists",
   tab_search: "Search",
   tab_settings: "Settings",
@@ -389,7 +391,7 @@ const en = {
   // ── Location Permission Gate ──────────────────────────────────────────────────
   location_title: "Enable Location",
   location_subtitle: "Allow Bagg to access your location to find nearby stores and get personalized offers.",
-  location_allow: "Allow Location",
+  location_allow: "Continue",
   location_skip: "Not Now",
   location_detecting: "Detecting...",
   location_success: "Location detected!",
@@ -398,6 +400,13 @@ const en = {
   location_denied_title: "Location Access Needed",
   location_denied_desc: "Please enable location in your device settings to use this feature.",
   location_error: "Could not detect location. Please try again.",
+
+  settings_delete_account: "Delete Account",
+  settings_delete_account_title: "Delete Account",
+  settings_delete_account_button: "Delete",
+  settings_delete_account_message: "This will permanently delete your account and all associated data. This action cannot be undone.",
+  settings_delete_account_failed: "Failed to Delete Account",
+  settings_deleting_account: "Deleting account...",
 
   // ── Common ────────────────────────────────────────────────────────────────────
   common_cancel: "Cancel",

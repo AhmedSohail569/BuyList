@@ -10,7 +10,6 @@ import {
     StyleSheet,
     Modal,
     TouchableOpacity,
-    TouchableWithoutFeedback,
     Animated,
     Dimensions,
     Platform,
@@ -25,7 +24,6 @@ import { useTheme } from "~context/ThemeContext";
 import useTranslation from "~hooks/useTranslation";
 import useLocation from "~hooks/useLocation";
 import {
-    setLocation,
     setPermissionGranted,
     dismissLocationPrompt,
 } from "~redux/reducers/locationReducer";
@@ -43,7 +41,6 @@ const LocationPermissionGate = ({ enabled = true }) => {
     );
 
     const {
-        detectLocation,
         requestLocationPermission,
         loading: locationLoading,
     } = useLocation();
@@ -144,7 +141,8 @@ const LocationPermissionGate = ({ enabled = true }) => {
     }, [dispatch]);
 
     /**
-     * Handle "Enable Location" press
+     * Handle "Continue" press — triggers the system permission dialog.
+     * Modal always closes after the flow completes (granted or denied).
      */
     const handleEnableLocation = useCallback(async () => {
         setChecking(true);
@@ -153,18 +151,16 @@ const LocationPermissionGate = ({ enabled = true }) => {
 
         if (granted) {
             dispatch(setPermissionGranted(true));
-            hideModal();
-
             Toast.show({
                 type: "success",
                 text1: t("location_title"),
                 text2: t("location_success"),
             });
-
-            // Fetch and store location in background
             fetchAndStoreLocation();
         } else {
-            // Permission denied or blocked — modal stays for user to try again or dismiss
+            // User was shown the system dialog (or Settings alert) and declined.
+            // Record the decision so the modal does not reappear.
+            dispatch(dismissLocationPrompt());
             Toast.show({
                 type: "info",
                 text1: t("location_denied_title"),
@@ -172,21 +168,15 @@ const LocationPermissionGate = ({ enabled = true }) => {
             });
         }
 
+        hideModal();
         setChecking(false);
     }, [
         requestLocationPermission,
         dispatch,
         hideModal,
         fetchAndStoreLocation,
+        t,
     ]);
-
-    /**
-     * Handle "Not Now" press
-     */
-    const handleDismiss = useCallback(() => {
-        dispatch(dismissLocationPrompt());
-        hideModal();
-    }, [dispatch, hideModal]);
 
     if (!visible) return null;
 
@@ -195,127 +185,94 @@ const LocationPermissionGate = ({ enabled = true }) => {
             transparent
             visible={visible}
             animationType="none"
-            onRequestClose={handleDismiss}
             statusBarTranslucent>
-            <TouchableWithoutFeedback onPress={handleDismiss}>
+            <Animated.View
+                style={[
+                    styles.overlay,
+                    { opacity: opacityAnim, backgroundColor: colors.modalOverlay },
+                ]}>
                 <Animated.View
                     style={[
-                        styles.overlay,
-                        { opacity: opacityAnim, backgroundColor: colors.modalOverlay },
+                        styles.container,
+                        {
+                            backgroundColor: colors.modalBackground,
+                            shadowColor: colors.shadowColor,
+                            transform: [{ scale: scaleAnim }],
+                        },
                     ]}>
-                    <TouchableWithoutFeedback>
-                        <Animated.View
+                    {/* Location Icon */}
+                    <View
+                        style={[
+                            styles.iconContainer,
+                            {
+                                backgroundColor: isDark
+                                    ? "rgba(30, 157, 241, 0.15)"
+                                    : "#EBF5FF",
+                            },
+                        ]}>
+                        <Icon
+                            name="location"
+                            size={RFValue(36)}
+                            color="#1E9DF1"
+                        />
+                    </View>
+
+                    {/* Title */}
+                    <Text
+                        style={[styles.title, { color: colors.textPrimary }]}>
+                        {t("location_title")}
+                    </Text>
+
+                    {/* Message */}
+                    <Text
+                        style={[styles.message, { color: colors.textSecondary }]}>
+                        {t("location_subtitle")}
+                    </Text>
+
+                    {/* Features list */}
+                    <View style={styles.featuresList}>
+                        {[
+                            "🛒  Find stores near you",
+                            "🏷️  Compare prices in your area",
+                            "📍  Get distance-based results",
+                        ].map((feature, index) => (
+                            <View key={index} style={styles.featureRow}>
+                                <Text
+                                    style={[
+                                        styles.featureText,
+                                        { color: colors.textSecondary },
+                                    ]}>
+                                    {feature}
+                                </Text>
+                            </View>
+                        ))}
+                    </View>
+
+                    {/* Continue button */}
+                    <View style={styles.buttonContainer}>
+                        <TouchableOpacity
+                            activeOpacity={0.7}
+                            onPress={handleEnableLocation}
+                            disabled={checking || locationLoading}
                             style={[
-                                styles.container,
-                                {
-                                    backgroundColor: colors.modalBackground,
-                                    shadowColor: colors.shadowColor,
-                                    transform: [{ scale: scaleAnim }],
-                                },
+                                styles.button,
+                                styles.enableButton,
+                                { backgroundColor: "#1E9DF1" },
+                                (checking || locationLoading) && { opacity: 0.6 },
                             ]}>
-                            {/* Location Icon */}
-                            <View
-                                style={[
-                                    styles.iconContainer,
-                                    {
-                                        backgroundColor: isDark
-                                            ? "rgba(30, 157, 241, 0.15)"
-                                            : "#EBF5FF",
-                                    },
-                                ]}>
-                                <Icon
-                                    name="location"
-                                    size={RFValue(36)}
-                                    color="#1E9DF1"
-                                />
-                            </View>
-
-                            {/* Title */}
-                            <Text
-                                style={[styles.title, { color: colors.textPrimary }]}>
-                                {t("location_title")}
+                            <Icon
+                                name="navigate"
+                                size={RFValue(14)}
+                                color="#FFFFFF"
+                                style={{ marginRight: 6 }}
+                            />
+                            <Text style={[styles.buttonText, { color: "#FFFFFF" }]}>
+                                {checking ? t("location_detecting") : t("location_allow")}
                             </Text>
-
-                            {/* Message */}
-                            <Text
-                                style={[styles.message, { color: colors.textSecondary }]}>
-                                {t("location_subtitle")}
-                            </Text>
-
-                            {/* Features list */}
-                            <View style={styles.featuresList}>
-                                {[
-                                    "🛒  Find stores near you",
-                                    "🏷️  Compare prices in your area",
-                                    "📍  Get distance-based results",
-                                ].map((feature, index) => (
-                                    <View key={index} style={styles.featureRow}>
-                                        {/* <Icon
-                                            name="checkmark-circle"
-                                            size={RFValue(14)}
-                                            color="#4CAF50"
-                                        /> */}
-                                        <Text
-                                            style={[
-                                                styles.featureText,
-                                                { color: colors.textSecondary },
-                                            ]}>
-                                            {feature}
-                                        </Text>
-                                    </View>
-                                ))}
-                            </View>
-
-                            {/* Buttons */}
-                            <View style={styles.buttonContainer}>
-                                {/* Not Now */}
-                                <TouchableOpacity
-                                    activeOpacity={0.7}
-                                    onPress={handleDismiss}
-                                    disabled={checking}
-                                    style={[
-                                        styles.button,
-                                        styles.skipButton,
-                                        {
-                                            backgroundColor: isDark ? colors.surface : "#F5F5F5",
-                                            borderColor: colors.border,
-                                        },
-                                    ]}>
-                                    <Text
-                                        style={[
-                                            styles.buttonText,
-                                            { color: colors.textPrimary },
-                                        ]}>
-                                        {t("location_skip")}
-                                    </Text>
-                                </TouchableOpacity>
-
-                                {/* Enable */}
-                                <TouchableOpacity
-                                    activeOpacity={0.7}
-                                    onPress={handleEnableLocation}
-                                    disabled={checking || locationLoading}
-                                    style={[
-                                        styles.button,
-                                        styles.enableButton,
-                                        { backgroundColor: "#1E9DF1" },
-                                        (checking || locationLoading) && { opacity: 0.6 },
-                                    ]}>
-                                    <Icon
-                                        name="navigate"
-                                        size={RFValue(14)}
-                                        color="#FFFFFF"
-                                        style={{ marginRight: 6 }}
-                                    />
-                                    <Text style={[styles.buttonText, { color: "#FFFFFF" }]}>
-                                        {checking ? t("location_detecting") : t("location_allow")}
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
-                        </Animated.View>
-                    </TouchableWithoutFeedback>
+                        </TouchableOpacity>
+                    </View>
                 </Animated.View>
-            </TouchableWithoutFeedback>
+            </Animated.View>
         </Modal>
     );
 };
@@ -385,10 +342,6 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         alignItems: "center",
         justifyContent: "center",
-    },
-    skipButton: {
-        borderWidth: 1,
-        flex: 0.5,
     },
     enableButton: {},
     buttonText: {

@@ -13,6 +13,7 @@ import {
   HelpCircle,
   FileText,
   LogOut,
+  Trash2,
   ChevronRight,
 } from "lucide-react-native";
 import Header from "~components/Header";
@@ -22,7 +23,7 @@ import { FontFamily } from "~theme/fonts";
 import { useState, useMemo } from "react";
 import SelectionModal from "~containers/modals/SelectionModal";
 import { DISTANCE_OPTIONS } from "~constants";
-import { logoutAndPurge } from "~redux/store";
+import { logoutAndPurge, deleteAccountAndPurge } from "~redux/store";
 import { useAlert } from "~context/AlertContext";
 import { useTheme } from "~context/ThemeContext";
 import { setDistanceUnit, setLanguage } from "~redux/reducers/settingsReducer";
@@ -102,7 +103,7 @@ const SettingsSection = ({ title, children }) => {
   );
 };
 
-const SettingsTab = ({ onQuickAction, navigation }) => {
+const SettingsTab = ({ navigation }) => {
   const { t } = useTranslation();
   const { showAlert, showError } = useAlert();
   const { colors, isDark, toggleTheme } = useTheme();
@@ -119,6 +120,7 @@ const SettingsTab = ({ onQuickAction, navigation }) => {
            allCircles.find(c => c.owner?._id === user?._id);
   }, [allCircles, user]);
 
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState(null); // 'language' | 'distance'
 
@@ -139,6 +141,31 @@ const SettingsTab = ({ onQuickAction, navigation }) => {
 
   // Get display label for current language
   const languageLabel = LANGUAGE_OPTIONS.find(l => l.value === language)?.label || "English";
+
+  const handleDeleteAccount = () => {
+    showAlert({
+      title: t("settings_delete_account_title"),
+      message: t("settings_delete_account_message"),
+      type: "error",
+      buttons: [
+        { text: t("settings_cancel"), style: "cancel" },
+        {
+          text: t("settings_delete_account_button"),
+          style: "destructive",
+          onPress: async () => {
+            setIsDeletingAccount(true);
+            try {
+              await deleteAccountAndPurge();
+            } catch (err) {
+              showError(t("settings_delete_account_failed"), err?.message || t("common_unexpected_error"));
+            } finally {
+              setIsDeletingAccount(false);
+            }
+          },
+        },
+      ],
+    });
+  };
 
   const handleLogout = () => {
     showAlert({
@@ -228,7 +255,7 @@ const SettingsTab = ({ onQuickAction, navigation }) => {
 
         {/* BAGG FEATURES */}
         <SettingsSection title={t("settings_section_bagg_features")}>
-          <SettingsOption
+          {/* <SettingsOption
             icon={Users}
             color="#EC4899"
             label={t("settings_manage_circle")}
@@ -241,7 +268,7 @@ const SettingsTab = ({ onQuickAction, navigation }) => {
                 navigation.navigate("CircleTab");
               }
             }}
-          />
+          /> */}
           <SettingsOption
             icon={List}
             color="#14B8A6"
@@ -291,6 +318,24 @@ const SettingsTab = ({ onQuickAction, navigation }) => {
             isLast
           />
         </SettingsSection>
+
+        
+        
+        <SettingsSection title={t("settings_section_account_management")}>
+          <SettingsOption
+            icon={Trash2}
+            color="#EF4444"
+            label={t("settings_delete_account")}
+            onPress={isDeletingAccount ? undefined : handleDeleteAccount}
+            rightComponent={
+              isDeletingAccount
+                ? <ActivityIndicator size="small" color={colors.textDisabled} />
+                : undefined
+            }
+            isLast
+          />
+        </SettingsSection>
+
 
         {/* LOGOUT BUTTON */}
         <TouchableOpacity

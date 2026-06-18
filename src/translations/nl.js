@@ -31,7 +31,7 @@ const nl = {
   home_ads_offers: "Advertenties & aanbiedingen",
   home_quick_create: "Aanmaken",
   home_quick_lists: "Lijsten",
-  home_quick_circle: "Cirkel",
+  home_quick_circle: "Cirkels",
   home_quick_search: "Zoeken",
   home_activity_in: "in",
   home_nearby_stores: "Winkels in de buurt",
@@ -166,7 +166,7 @@ const nl = {
   listdetails_cancel: "Annuleren",
 
   // ── Circle ──────────────────────────────────────────────────────────────────
-  circle_title: "Jouw cirkel",
+  circle_title: "Jouw cirkels",
   circle_subtitle: "Samen boodschappen doen met je huishouden",
   circle_manage_btn: "Cirkel beheren",
   circle_connections: "Verbindingen",
@@ -232,6 +232,7 @@ const nl = {
   manage_share_link: "Uitnodigingslink delen",
   manage_show_qr: "QR-code tonen",
   manage_contacts: "Via contacten",
+  manage_whatsapp: "WhatsApp",
   manage_link_copied_title: "Link gekopieerd!",
   manage_link_copied_desc: "Uitnodigingslink gekopieerd naar klembord",
   manage_no_link_title: "Geen uitnodigingslink",
@@ -242,6 +243,7 @@ const nl = {
   // ── Settings ─────────────────────────────────────────────────────────────────
   settings_title: "Instellingen",
   settings_section_account: "ACCOUNT",
+  settings_section_account_management: "ACCOUNTBEHEER",
   settings_section_preferences: "VOORKEUREN",
   settings_section_bagg_features: "BAGG-FUNCTIES",
   settings_section_location: "LOCATIE",
@@ -385,7 +387,7 @@ const nl = {
 
   // ── Tab Bar ─────────────────────────────────────────────────────────────────────
   tab_home: "Thuis",
-  tab_circle: "Cirkel",
+  tab_circle: "Cirkels",
   tab_lists: "Lijsten",
   tab_search: "Zoeken",
   tab_settings: "Instellingen",
@@ -402,7 +404,7 @@ const nl = {
   location_title: "Locatie inschakelen",
   location_subtitle:
     "Sta Bagg toe je locatie te gebruiken om winkels in de buurt te vinden en gepersonaliseerde aanbiedingen te ontvangen.",
-  location_allow: "Locatie toestaan",
+  location_allow: "Doorgaan",
   location_skip: "Niet nu",
   location_detecting: "Detecteren...",
   location_success: "Locatie gedetecteerd!",
@@ -413,6 +415,13 @@ const nl = {
   location_denied_desc:
     "Schakel locatie in je apparaatinstellingen in om deze functie te gebruiken.",
   location_error: "Locatie kon niet worden gedetecteerd. Probeer het opnieuw.",
+
+  settings_delete_account: "Account verwijderen",
+  settings_delete_account_title: "Account verwijderen",
+  settings_delete_account_button: "Verwijderen",
+  settings_delete_account_message: "Dit verwijdert je account en alle bijbehorende gegevens permanent. Deze actie kan niet ongedaan worden gemaakt.",
+  settings_delete_account_failed: "Account verwijderen mislukt",
+  settings_deleting_account: "Account verwijderen...",
 
   // ── Common ────────────────────────────────────────────────────────────────────
   common_cancel: "Annuleren",

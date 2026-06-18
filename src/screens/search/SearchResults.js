@@ -248,11 +248,13 @@ const SearchResultsScreen = ({ navigation, route }) => {
   const handleAddToList = useCallback(
     async (listId) => {
       if (!selectedItem || !listId) return;
-      const name = selectedItem.name;
+      const itemName = selectedItem.isOnline
+        ? selectedItem.name
+        : `${searchQuery} From ${selectedItem.name}`;
       setSelectedItem(null);
       try {
-        await dispatch(addItemsToList({ listId, items: [{ name: `${searchQuery} From ${selectedItem?.name}` }] })).unwrap();
-        Toast.show({ type: "success", text1: "Added", text2: `${searchQuery} from ${selectedItem?.name} added to your list` });
+        await dispatch(addItemsToList({ listId, items: [{ name: itemName }] })).unwrap();
+        Toast.show({ type: "success", text1: "Added", text2: `${itemName} added to your list` });
       } catch (err) {
         Toast.show({
           type: "error",
@@ -261,7 +263,7 @@ const SearchResultsScreen = ({ navigation, route }) => {
         });
       }
     },
-    [dispatch, selectedItem],
+    [dispatch, selectedItem, searchQuery],
   );
 
   useEffect(() => {
@@ -370,7 +372,7 @@ const SearchResultsScreen = ({ navigation, route }) => {
                   styles.addButton,
                   { backgroundColor: colors.textPrimary },
                 ]}
-                onPress={() => setSelectedItem({ name: item.title || item.product_link })}>
+                onPress={() => setSelectedItem({ name: item.title || item.product_link, isOnline: true })}>
                 <Plus size={20} color={colors.textInverse} />
               </TouchableOpacity>
             </View>
@@ -507,7 +509,7 @@ const SearchResultsScreen = ({ navigation, route }) => {
                   styles.addButton,
                   { backgroundColor: colors.textPrimary },
                 ]}
-                onPress={() => setSelectedItem({ name: item.name })}>
+                onPress={() => setSelectedItem({ name: item.name, isOnline: false })}>
                 <Plus size={20} color={colors.textInverse} />
               </TouchableOpacity>
             </View>
@@ -756,7 +758,11 @@ const SearchResultsScreen = ({ navigation, route }) => {
       {/* Add to List Modal */}
       <AddToListModal
         isVisible={!!selectedItem}
-        itemName={`${searchQuery} From ${selectedItem?.name}`}
+        itemName={
+          selectedItem?.isOnline
+            ? selectedItem.name
+            : `${searchQuery} From ${selectedItem?.name}`
+        }
         onClose={() => setSelectedItem(null)}
         onSelect={handleAddToList}
       />

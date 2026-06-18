@@ -69,7 +69,7 @@ const OTPVerficationScreen = ({ navigation, route }) => {
               dispatch(clearPendingLoginCredentials());
               Toast.show({
                 type: "success",
-                text1: "Welcome Back!",
+                text1: "Welcome!",
                 text2: "You have been logged in successfully",
                 props: { forceLight: true },
               });

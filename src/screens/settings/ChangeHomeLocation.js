@@ -33,6 +33,7 @@ import useLocation from "~hooks/useLocation";
 import { updateZone } from "~redux/actions/authActions";
 import { setLocation } from "~redux/reducers/locationReducer";
 import {
+    geocodeAddress,
     forwardGeocode,
     reverseGeocode,
     formatAddress,
@@ -42,9 +43,6 @@ import {
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-// Default location (San Francisco)
-const DEFAULT_LAT = 37.7749;
-const DEFAULT_LNG = -122.4194;
 const DEFAULT_DELTA = 0.006;
 
 // ============================================
@@ -63,18 +61,18 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
     // Get the saved home address (zone) from ownedCircles or user
     const savedHomeAddress = ownedCircles?.owner?.zone || user?.zone || "";
 
-    // Selected location - initialize with defaults, will be updated via useEffect if home address exists
     const [selectedAddress, setSelectedAddress] = useState(savedHomeAddress);
-    const [selectedCoords, setSelectedCoords] = useState({
-        latitude: DEFAULT_LAT,
-        longitude: DEFAULT_LNG,
-    });
+    // null until the owner's zone is geocoded — no hardcoded fallback
+    const [selectedCoords, setSelectedCoords] = useState(null);
 
     // Track whether location permission is granted (to safely enable showsUserLocation)
     const [hasLocationPermission, setHasLocationPermission] = useState(false);
 
-    // Track if we're loading the initial home location
-    const [, setLoadingHomeLocation] = useState(false);
+    // true while we are geocoding the saved zone address
+    const [geocoding, setGeocoding] = useState(!!savedHomeAddress);
+    // Guard so the geocode only runs once — prevents re-triggering if the selector
+    // value changes due to re-renders after the first successful geocode.
+    const geocodedRef = useRef(false);
 
     // Search state
     const [searchQuery, setSearchQuery] = useState("");
@@ -123,43 +121,47 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
     }, [sheetBottom]);
 
     // ============================================
-    // Load saved home address on mount
+    // Load saved home address — runs whenever savedHomeAddress first becomes available.
+    // The geocodedRef guard ensures we only geocode once even if the selector value
+    // changes due to re-renders after the first successful load.
     // ============================================
     useEffect(() => {
+        if (!savedHomeAddress || geocodedRef.current) {
+            setGeocoding(false);
+            return;
+        }
+
+        geocodedRef.current = true;
+        setGeocoding(true);
+
         const loadHomeLocation = async () => {
-            if (!savedHomeAddress) {
-                // No saved home address, use default location
-                return;
-            }
-
-            setLoadingHomeLocation(true);
             try {
-                // Forward geocode the saved home address to get coordinates
-                const results = await forwardGeocode(savedHomeAddress);
+                // Use the Geocoding API directly — it natively resolves Plus Codes
+                // (e.g. "F798+RM8, Johar Town, Lahore") unlike Places Autocomplete.
+                let result = await geocodeAddress(savedHomeAddress);
 
-                if (results && results.length > 0) {
-                    const firstResult = results[0];
-                    const coords = {
-                        latitude: firstResult.lat,
-                        longitude: firstResult.lon,
-                    };
+                // Fallback: strip a leading Plus Code and retry with the plain address
+                if (!result) {
+                    const stripped = savedHomeAddress.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,8},?\s*/i, "").trim();
+                    if (stripped && stripped !== savedHomeAddress) {
+                        result = await geocodeAddress(stripped);
+                    }
+                }
+
+                if (result) {
+                    const coords = { latitude: result.lat, longitude: result.lon };
                     setSelectedCoords(coords);
-
-                    // Animate map to the geocoded home location
-                    setTimeout(() => {
-                        animateToCoords(coords.latitude, coords.longitude);
-                    }, 300);
+                    setTimeout(() => animateToCoords(coords.latitude, coords.longitude), 300);
                 }
             } catch {
-                // Keep default location if geocoding fails
+                // geocoding failed — coords stay null, user can search/detect manually
             } finally {
-                setLoadingHomeLocation(false);
+                setGeocoding(false);
             }
         };
 
         loadHomeLocation();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Run only once on mount
+    }, [savedHomeAddress, animateToCoords, setGeocoding]);
 
     // ============================================
     // Debounced forward geocode on query change
@@ -452,75 +454,86 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
 
             {/* ======================== MAP ======================== */}
             <View style={styles.mapWrapper}>
-                <MapView
-                    ref={mapRef}
-                    style={styles.map}
-                    provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
-                    initialRegion={{
-                        latitude: selectedCoords.latitude,
-                        longitude: selectedCoords.longitude,
-                        latitudeDelta: DEFAULT_DELTA,
-                        longitudeDelta: DEFAULT_DELTA,
-                    }}
-                    onPress={() => Keyboard.dismiss()}
-                    onRegionChange={handleRegionChange}
-                    onRegionChangeComplete={handleRegionChangeComplete}
-                    showsUserLocation={hasLocationPermission}
-                    showsMyLocationButton={false}
-                    showsCompass={false}
-                    mapType="standard"
-                    userInterfaceStyle={isDark ? "dark" : "light"}
-                    onMapReady={() => setIsMapReady(true)}
-                    // Shift the map's logical centre to match the visual area above the sheet
-                    mapPadding={isMapReady ? { top: 0, left: 0, right: 0, bottom: bottomSheetHeight } : undefined}
-                />
+                {geocoding ? (
+                    /* Geocoding the owner's zone — show spinner until coords are ready */
+                    <View style={[styles.mapPlaceholder, { backgroundColor: colors.backgroundSecondary, paddingBottom: bottomSheetHeight }]}>
+                        <ActivityIndicator size="large" color={colors.primary} />
+                        <Text style={[styles.mapPlaceholderText, { color: colors.textSecondary }]}>
+                            Loading home location…
+                        </Text>
+                    </View>
+                ) : selectedCoords ? (
+                    /* Coords available — render interactive map */
+                    <>
+                        <MapView
+                            ref={mapRef}
+                            style={styles.map}
+                            provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
+                            initialRegion={{
+                                latitude: selectedCoords.latitude,
+                                longitude: selectedCoords.longitude,
+                                latitudeDelta: DEFAULT_DELTA,
+                                longitudeDelta: DEFAULT_DELTA,
+                            }}
+                            onPress={() => Keyboard.dismiss()}
+                            onRegionChange={handleRegionChange}
+                            onRegionChangeComplete={handleRegionChangeComplete}
+                            showsUserLocation={hasLocationPermission}
+                            showsMyLocationButton={false}
+                            showsCompass={false}
+                            mapType="standard"
+                            userInterfaceStyle={isDark ? "dark" : "light"}
+                            onMapReady={() => setIsMapReady(true)}
+                            mapPadding={isMapReady ? { top: 0, left: 0, right: 0, bottom: bottomSheetHeight } : undefined}
+                        />
 
-                {/* Center-pinned marker — always at the visual centre of the visible map */}
-                <View
-                    style={[styles.centerMarkerContainer, { bottom: bottomSheetHeight }]}
-                    pointerEvents="none">
-                    {/* Address bubble — sits above the marker */}
-                    {(selectedAddress || reverseLoading) && (
+                        {/* Center-pinned marker */}
                         <View
-                            style={[
-                                styles.addressBubble,
-                                {
-                                    backgroundColor: isDark ? colors.card : "#FFFFFF",
-                                    shadowColor: colors.shadowColor,
-                                },
-                            ]}>
-                            {reverseLoading ? (
-                                <ActivityIndicator size="small" color={colors.primary} />
-                            ) : (
-                                <Text
+                            style={[styles.centerMarkerContainer, { bottom: bottomSheetHeight }]}
+                            pointerEvents="none">
+                            {(selectedAddress || reverseLoading) && (
+                                <View
                                     style={[
-                                        styles.addressBubbleText,
-                                        { color: colors.textPrimary },
-                                    ]}
-                                    numberOfLines={1}>
-                                    {selectedAddress}
-                                </Text>
+                                        styles.addressBubble,
+                                        {
+                                            backgroundColor: isDark ? colors.card : "#FFFFFF",
+                                            shadowColor: colors.shadowColor,
+                                        },
+                                    ]}>
+                                    {reverseLoading ? (
+                                        <ActivityIndicator size="small" color={colors.primary} />
+                                    ) : (
+                                        <Text
+                                            style={[styles.addressBubbleText, { color: colors.textPrimary }]}
+                                            numberOfLines={1}>
+                                            {selectedAddress}
+                                        </Text>
+                                    )}
+                                </View>
                             )}
+                            <View style={styles.addressMarkerSpacer} />
+                            <Animated.View style={{ transform: [{ scale: markerScale }] }}>
+                                <View style={styles.customMarker}>
+                                    <View style={[styles.markerCircle, isDragging && styles.markerCircleDragging]}>
+                                        <Icon name="navigate" size={RFValue(16)} color="#FFFFFF" />
+                                    </View>
+                                    <View style={[styles.markerTail, isDragging && styles.markerTailDragging]} />
+                                </View>
+                            </Animated.View>
+                            <View style={[styles.markerShadowDot, isDragging && styles.markerShadowDotDragging]} />
                         </View>
-                    )}
+                    </>
+                ) : (
+                    /* No zone set yet — prompt user to search or detect */
+                    <View style={[styles.mapPlaceholder, { backgroundColor: colors.backgroundSecondary, paddingBottom: bottomSheetHeight }]}>
+                        <Icon name="location-outline" size={RFValue(36)} color={colors.textMuted} />
+                        <Text style={[styles.mapPlaceholderText, { color: colors.textSecondary }]}>
+                            Search for an address or detect your location below
+                        </Text>
+                    </View>
+                )}
 
-                    <View style={styles.addressMarkerSpacer} />
-
-                    {/* Marker pin */}
-                    <Animated.View style={{ transform: [{ scale: markerScale }] }}>
-                        <View style={styles.customMarker}>
-                            <View style={[styles.markerCircle, isDragging && styles.markerCircleDragging]}>
-                                <Icon name="navigate" size={RFValue(16)} color="#FFFFFF" />
-                            </View>
-                            <View style={[styles.markerTail, isDragging && styles.markerTailDragging]} />
-                        </View>
-                    </Animated.View>
-                    {/* Marker shadow dot */}
-                    <View style={[styles.markerShadowDot, isDragging && styles.markerShadowDotDragging]} />
-                </View>
-
-
-                {/* Detect Location FAB */}
+                {/* Detect Location FAB — always visible so user can pick a location */}
                 <TouchableOpacity
                     activeOpacity={0.8}
                     style={[
@@ -531,7 +544,7 @@ const ChangeHomeLocationScreen = ({ navigation }) => {
                         },
                     ]}
                     onPress={handleDetectLocation}
-                    disabled={detectingLocation}>
+                    disabled={detectingLocation || geocoding}>
                     {detectingLocation ? (
                         <ActivityIndicator size="small" color={colors.primary} />
                     ) : (
@@ -935,6 +948,19 @@ const styles = StyleSheet.create({
         color: "#FFFFFF",
         fontSize: RFValue(14),
         fontFamily: FontFamily.bold,
+    },
+    mapPlaceholder: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        gap: RFValue(12),
+        paddingHorizontal: RFValue(32),
+    },
+    mapPlaceholderText: {
+        fontSize: RFValue(12),
+        fontFamily: FontFamily.regular,
+        textAlign: "center",
+        lineHeight: RFValue(18),
     },
 });
 

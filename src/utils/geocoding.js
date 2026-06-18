@@ -8,6 +8,31 @@ import Config from "react-native-config";
 const GOOGLE_GEOCODING_BASE = "https://maps.googleapis.com/maps/api";
 
 /**
+ * Geocode a single address string → { lat, lon, display_name, formatted_address, address_components }
+ * Uses the Google Geocoding API directly, which supports Plus Codes (Open Location Codes).
+ * Returns null on failure.
+ */
+export const geocodeAddress = async (address) => {
+  try {
+    const url = `${GOOGLE_GEOCODING_BASE}/geocode/json?address=${encodeURIComponent(address)}&key=${Config.GOOGLE_MAPS_API_KEY}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.status !== "OK" || !data.results?.length) return null;
+    const result = data.results[0];
+    return {
+      lat: result.geometry.location.lat,
+      lon: result.geometry.location.lng,
+      display_name: result.formatted_address,
+      formatted_address: result.formatted_address,
+      address_components: result.address_components,
+    };
+  } catch {
+    return null;
+  }
+};
+
+/**
  * Forward geocode: address string → list of results
  * Uses Google Places Autocomplete → Place Details for coordinates
  */

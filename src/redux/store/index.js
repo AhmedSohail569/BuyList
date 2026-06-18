@@ -131,6 +131,21 @@ export const logoutAllAndPurge = async () => {
   persistor.purge();
 };
 
+// ─── deleteAccountAndPurge ────────────────────────────────────────────────────
+// Permanently deletes the user's account on the server then wipes local state.
+export const deleteAccountAndPurge = async () => {
+  const { deleteAccount } = await import("../actions/authActions");
+
+  const result = await store.dispatch(deleteAccount());
+
+  if (deleteAccount.rejected.match(result)) {
+    throw new Error(result.payload || "Failed to delete account. Please try again.");
+  }
+
+  store.dispatch(logout());
+  persistor.purge();
+};
+
 // ─── forceLogoutAndPurge ───────────────────────────────────────────────────────
 // Bypass server — used by the 401 interceptor when the token is already expired.
 export const forceLogoutAndPurge = () => {

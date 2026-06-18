@@ -6,8 +6,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Linking } from "react-native";
 
 // Constants
-const PENDING_INVITE_KEY = "@bagg_pending_invite";
-const INVITE_URL_PATTERN = /\/invite\/([A-Za-z0-9-_]+)/;
+const PENDING_INVITE_KEY          = "@bagg_pending_invite";
+const INVITE_URL_PATTERN          = /\/invite\/([A-Za-z0-9-_]+)/;
 
 /**
  * Parse invite code from deep link URL.
@@ -101,3 +101,4 @@ export const isInviteLink = (url) => {
 export const openAppSettings = () => {
     Linking.openSettings().catch(() => { });
 };
+

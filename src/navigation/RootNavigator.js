@@ -1,5 +1,6 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { Linking } from "react-native";
+import BootSplash from "react-native-bootsplash";
 import { useSelector, useDispatch } from "react-redux";
 import {
   NavigationContainer,
@@ -67,9 +68,29 @@ const RootNavigator = () => {
   const dispatch = useDispatch();
   const processedUrlRef = useRef(null);
   const isProcessingInviteRef = useRef(false);
+  const [authResolved, setAuthResolved] = useState(false);
+  const navReadyRef = useRef(false);
+  const splashHiddenRef = useRef(false);
 
   // Sequential permission flow: notifications first, then location
   const { locationReady } = usePermissions();
+
+  // Hide splash once both navigation is ready and auth state is resolved.
+  // Using a ref guard ensures hide() is called exactly once.
+  const tryHideSplash = useCallback(() => {
+    if (splashHiddenRef.current || !navReadyRef.current || !authResolved) return;
+    splashHiddenRef.current = true;
+    BootSplash.hide({ fade: true });
+  }, [authResolved]);
+
+  useEffect(() => {
+    tryHideSplash();
+  }, [tryHideSplash]);
+
+  const handleNavigationReady = useCallback(() => {
+    navReadyRef.current = true;
+    tryHideSplash();
+  }, [tryHideSplash]);
 
   // Fetch profile on app start if user has a token but no profile loaded
   useEffect(() => {
@@ -82,11 +103,14 @@ const RootNavigator = () => {
         }
       } catch {
         // Token check failed — user will remain on onboarding
+      } finally {
+        setAuthResolved(true);
       }
     };
 
     fetchProfileIfLoggedIn();
-  }, [accessToken, user, dispatch]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Deep link handler ────────────────────────────────────────────────────
   const handleDeepLink = useCallback(
@@ -230,7 +254,7 @@ const RootNavigator = () => {
 
   return (
     <PermissionsProvider locationReady={locationReady}>
-      <NavigationContainer ref={navigationRef} linking={linking}>
+      <NavigationContainer ref={navigationRef} linking={linking} onReady={handleNavigationReady}>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           {!user ? (
             <Stack.Screen
