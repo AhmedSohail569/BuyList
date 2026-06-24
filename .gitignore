@@ -48,6 +48,9 @@ yarn-error.log
 .env.staging
 .env.*.local
 
+# Google OAuth client secrets - NEVER commit these!
+android/app/client_secret_*.json
+
 # fastlane
 #
 # It is recommended to not store the screenshots in the git repo. Instead, use fastlane to re-generate the
