@@ -6,6 +6,7 @@ export const Images = {
   getStartedBg: require("./images/onboarding/getStartedBackground.png"),
   location: require("./images/onboarding/location.png"),
   successIcon: require("./images/onboarding/successIcon.png"),
+  users2: require("./images/home/users2.png"),
 
   //home
   storesPlaceholder: require("./images/home/storesPlaceholder.png"),

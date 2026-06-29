@@ -349,6 +349,60 @@ export const leaveCircle = createAsyncThunk(
 );
 
 // ============================================
+// 14. FETCH CIRCLE JOIN REQUESTS (pending invitations to me)
+// GET /circles/join-requests
+// ============================================
+export const fetchCircleRequests = createAsyncThunk(
+  "circles/fetchCircleRequests",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get("/circles/join-requests");
+      return response.data?.data || response.data || [];
+    } catch (err) {
+      return rejectWithValue(getErrorMessage(err));
+    }
+  },
+);
+
+// ============================================
+// 15. ACCEPT CIRCLE JOIN REQUEST
+// POST /circles/join-requests/{requestId}/accept
+// ============================================
+export const acceptCircleRequest = createAsyncThunk(
+  "circles/acceptCircleRequest",
+  async ({ requestId }, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(
+        `/circles/join-requests/${requestId}/accept`,
+      );
+      return { requestId, data: response.data?.data || response.data };
+    } catch (err) {
+      return rejectWithValue(getErrorMessage(err));
+    }
+  },
+  { condition: requireConnectivity },
+);
+
+// ============================================
+// 16. REJECT CIRCLE JOIN REQUEST
+// POST /circles/join-requests/{requestId}/reject
+// ============================================
+export const rejectCircleRequest = createAsyncThunk(
+  "circles/rejectCircleRequest",
+  async ({ requestId }, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(
+        `/circles/join-requests/${requestId}/reject`,
+      );
+      return { requestId, data: response.data?.data || response.data };
+    } catch (err) {
+      return rejectWithValue(getErrorMessage(err));
+    }
+  },
+  { condition: requireConnectivity },
+);
+
+// ============================================
 // 13. TOGGLE CIRCLE NOTIFICATIONS
 // PATCH /notifications/toggle-circle-notifications/{circleId}
 // ============================================

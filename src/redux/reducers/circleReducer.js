@@ -19,6 +19,9 @@ import {
   fetchAllConnections,
   leaveCircle,
   toggleCircleNotifications,
+  fetchCircleRequests,
+  acceptCircleRequest,
+  rejectCircleRequest,
 } from "../actions/circleActions";
 import {
   getCircleInviteLink,
@@ -66,6 +69,11 @@ const initialState = {
   inviteLinkLoading: false,
   inviteQRLoading: false,
   joiningCircle: false,
+
+  // Circle join requests (pending invites sent TO me)
+  circleRequests: [],
+  circleRequestsLoading: false,
+  circleRequestsActioning: {}, // { [requestId]: true } while accepting/rejecting
 };
 
 // ============================================
@@ -648,6 +656,62 @@ const circleSlice = createSlice({
             ? { ...circle, isNotificationMuted: !circle.isNotificationMuted }
             : circle,
         );
+        state.error = action.payload;
+      })
+
+      // ============================================
+      // 14. FETCH CIRCLE JOIN REQUESTS
+      // ============================================
+      .addCase(fetchCircleRequests.pending, state => {
+        state.circleRequestsLoading = true;
+      })
+      .addCase(fetchCircleRequests.fulfilled, (state, action) => {
+        state.circleRequestsLoading = false;
+        state.circleRequests = Array.isArray(action.payload) ? action.payload : [];
+      })
+      .addCase(fetchCircleRequests.rejected, state => {
+        state.circleRequestsLoading = false;
+      })
+
+      // ============================================
+      // 15. ACCEPT CIRCLE JOIN REQUEST (Optimistic)
+      // ============================================
+      .addCase(acceptCircleRequest.pending, (state, action) => {
+        const { requestId } = action.meta.arg;
+        state.circleRequestsActioning[requestId] = true;
+        // Optimistically remove from list
+        state.circleRequests = state.circleRequests.filter(
+          r => (r._id || r.id) !== requestId,
+        );
+      })
+      .addCase(acceptCircleRequest.fulfilled, (state, action) => {
+        const { requestId } = action.payload;
+        delete state.circleRequestsActioning[requestId];
+      })
+      .addCase(acceptCircleRequest.rejected, (state, action) => {
+        const { requestId } = action.meta.arg;
+        delete state.circleRequestsActioning[requestId];
+        state.error = action.payload;
+      })
+
+      // ============================================
+      // 16. REJECT CIRCLE JOIN REQUEST (Optimistic)
+      // ============================================
+      .addCase(rejectCircleRequest.pending, (state, action) => {
+        const { requestId } = action.meta.arg;
+        state.circleRequestsActioning[requestId] = true;
+        // Optimistically remove from list
+        state.circleRequests = state.circleRequests.filter(
+          r => (r._id || r.id) !== requestId,
+        );
+      })
+      .addCase(rejectCircleRequest.fulfilled, (state, action) => {
+        const { requestId } = action.payload;
+        delete state.circleRequestsActioning[requestId];
+      })
+      .addCase(rejectCircleRequest.rejected, (state, action) => {
+        const { requestId } = action.meta.arg;
+        delete state.circleRequestsActioning[requestId];
         state.error = action.payload;
       });
   },

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import {useEffect, useMemo, useState, useCallback} from "react";
 import {
   View,
   Text,
@@ -19,27 +19,28 @@ import {
 } from "lucide-react-native";
 import Header from "~components/Header";
 import SearchBar from "~components/SearchBar";
-import { ScrollView } from "~components/Common";
+import {ScrollView} from "~components/Common";
 import NearbyStores from "~containers/sections/NearbyStores";
 import YourLists from "~containers/sections/YourLists";
-import { RFValue } from "react-native-responsive-fontsize";
-import { FontFamily } from "~theme/fonts";
-import { useSelector, useDispatch } from "react-redux";
-import { fetchRecentActivities, fetchAllLists } from "~redux/actions/listActions";
+import {RFValue} from "react-native-responsive-fontsize";
+import {FontFamily} from "~theme/fonts";
+import {useSelector, useDispatch} from "react-redux";
+import {fetchRecentActivities, fetchAllLists} from "~redux/actions/listActions";
 // import { fetchPersonalizedRecommendations } from "~redux/actions/recommendationsActions";
-import { getProfile } from "~redux/actions/profileActions";
-import { fetchNotifications } from "~redux/actions/notificationActions";
-import { useTheme } from "~context/ThemeContext";
+import {getProfile} from "~redux/actions/profileActions";
+import {fetchNotifications} from "~redux/actions/notificationActions";
+import {useTheme} from "~context/ThemeContext";
 import AdsOffersCarousel from "~components/AdsOffersCarousel";
 import NotificationsDropdown from "~components/NotificationsDropdown";
+import CircleRequestsDropdown from "~components/CircleRequestsDropdown";
 import useOnReconnect from "~hooks/useOnReconnect";
-import { fetchBanners, searchLocalStores } from "~redux/actions/searchActions";
+import {fetchBanners, searchLocalStores} from "~redux/actions/searchActions";
 import useScreenFetch from "~hooks/useScreenFetch";
 import Avatar from "~components/Avatar";
-import { normalizeActivity } from "~utils/display";
+import {normalizeActivity} from "~utils/display";
 import useTranslation from "~hooks/useTranslation";
 
-const { width } = Dimensions.get("window");
+const {width} = Dimensions.get("window");
 
 const BEST_PRICES = [
   {
@@ -60,26 +61,28 @@ const BEST_PRICES = [
   },
 ];
 
-
-const HomeTab = ({ onQuickAction, navigation }) => {
+const HomeTab = ({onQuickAction, navigation}) => {
   const dispatch = useDispatch();
-  const { t } = useTranslation();
+  const {t} = useTranslation();
 
-  const { colors, isDark } = useTheme();
-  const { user } = useSelector(state => state.auth);
-  const { profile } = useSelector(state => state.profile);
-  const { recentActivities } = useSelector(state => state.lists);
-  const { homeBanners, localResults } = useSelector((state) => state.search);
-  const { latitude, longitude } = useSelector((state) => state.location);
-  const { homeItems: forYouItems, loading: recsLoading } = useSelector(
-    (state) => state.recommendations,
+  const {colors, isDark} = useTheme();
+  const {user} = useSelector(state => state.auth);
+  const {profile} = useSelector(state => state.profile);
+  const {recentActivities} = useSelector(state => state.lists);
+  const {homeBanners, localResults} = useSelector(state => state.search);
+  const {latitude, longitude} = useSelector(state => state.location);
+  const {homeItems: forYouItems, loading: recsLoading} = useSelector(
+    state => state.recommendations,
   );
 
   // Notification dropdown state
   const [showNotifications, setShowNotifications] = useState(false);
 
+  // Circle requests dropdown state
+  const [showCircleRequests, setShowCircleRequests] = useState(false);
 
- 
+  // Circle requests from Redux
+  const {circleRequests} = useSelector(state => state.circles);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -118,9 +121,9 @@ const HomeTab = ({ onQuickAction, navigation }) => {
             lat: latitude,
             lng: longitude,
             limit: 5,
-            silent: true
-          })
-        )
+            silent: true,
+          }),
+        ),
       );
     }
 
@@ -146,7 +149,9 @@ const HomeTab = ({ onQuickAction, navigation }) => {
   // Normalize activities for display (limit to 2 for home screen)
   const circleUpdates = useMemo(() => {
     const activities = Array.isArray(recentActivities) ? recentActivities : [];
-    return activities.slice(0, 2).map((activity, index) => normalizeActivity(activity, index, t));
+    return activities
+      .slice(0, 2)
+      .map((activity, index) => normalizeActivity(activity, index, t));
   }, [recentActivities, t]);
 
   const navigateToTab = tabName => {
@@ -164,20 +169,26 @@ const HomeTab = ({ onQuickAction, navigation }) => {
     if (tabNav?.navigate) {
       tabNav.navigate("Lists", {
         screen: "ListsTab",
-        params: { openCreateListModal: true },
+        params: {openCreateListModal: true},
       });
       return;
     }
     navigation.navigate("Lists", {
       screen: "ListsTab",
-      params: { openCreateListModal: true },
+      params: {openCreateListModal: true},
     });
   };
 
   // Quick action colors for dark/light mode
   const quickActionColors = {
-    create: { bg: isDark ? "rgba(37, 99, 235, 0.2)" : "#DBEAFE", icon: "#2563EB" },
-    lists: { bg: isDark ? "rgba(147, 51, 234, 0.2)" : "#F3E8FF", icon: "#9333EA" },
+    create: {
+      bg: isDark ? "rgba(37, 99, 235, 0.2)" : "#DBEAFE",
+      icon: "#2563EB",
+    },
+    lists: {
+      bg: isDark ? "rgba(147, 51, 234, 0.2)" : "#F3E8FF",
+      icon: "#9333EA",
+    },
     circle: {
       bg: isDark ? "rgba(234, 88, 12, 0.2)" : "#FFEDD5",
       icon: "#EA580C",
@@ -188,17 +199,20 @@ const HomeTab = ({ onQuickAction, navigation }) => {
     },
   };
 
-
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, {backgroundColor: colors.background}]}>
       <Header
         variant="home"
         greeting={t("home_good_morning")}
         userName={profile?.username || user?.username || "User"}
-        avatar={profile?.profilePicture ? { uri: profile.profilePicture } : null}
+        avatar={profile?.profilePicture ? {uri: profile.profilePicture} : null}
         rightIcon="notifications-outline"
-        notificationBadge={profile?.hasUnreadNotifications || user?.hasUnreadNotifications}
+        notificationBadge={
+          profile?.hasUnreadNotifications || user?.hasUnreadNotifications
+        }
         onRightPress={() => setShowNotifications(true)}
+        onCircleRequestPress={() => setShowCircleRequests(true)}
+        circleRequestBadge={circleRequests?.length > 0}
       />
 
       <SearchBar
@@ -220,7 +234,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
             color={quickActionColors.create.bg}
             iconColor={quickActionColors.create.icon}
             labelColor={colors.textSecondary}
-            onPress={() => navigateToListsAndOpenCreate()}  
+            onPress={() => navigateToListsAndOpenCreate()}
           />
           <ActionIcon
             id="lists"
@@ -251,11 +265,10 @@ const HomeTab = ({ onQuickAction, navigation }) => {
           />
         </View>
 
-
         <YourLists navigation={navigation} />
 
-          {/* --- SECTION: Circle Updates --- */}
-        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+        {/* --- SECTION: Circle Updates --- */}
+        <Text style={[styles.sectionTitle, {color: colors.textPrimary}]}>
           {t("home_circle_updates")}
         </Text>
         <View
@@ -267,7 +280,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
             },
           ]}>
           {circleUpdates.length === 0 ? (
-            <Text style={[styles.emptyUpdateText, { color: colors.textMuted }]}>
+            <Text style={[styles.emptyUpdateText, {color: colors.textMuted}]}>
               {t("home_no_updates")}
             </Text>
           ) : (
@@ -278,7 +291,7 @@ const HomeTab = ({ onQuickAction, navigation }) => {
                   styles.updateRow,
                   index !== 0 && [
                     styles.updateSeparator,
-                    { borderTopColor: colors.divider },
+                    {borderTopColor: colors.divider},
                   ],
                 ]}>
                 <View>
@@ -289,20 +302,20 @@ const HomeTab = ({ onQuickAction, navigation }) => {
                     colors={colors}
                   />
                   <View
-                    style={[styles.onlineDot, { borderColor: colors.card }]}
+                    style={[styles.onlineDot, {borderColor: colors.card}]}
                   />
                 </View>
                 <View style={styles.updateContent}>
                   <Text
-                    style={[styles.updateText, { color: colors.textSecondary }]}>
+                    style={[styles.updateText, {color: colors.textSecondary}]}>
                     <Text
-                      style={[styles.boldText, { color: colors.textPrimary }]}>
+                      style={[styles.boldText, {color: colors.textPrimary}]}>
                       {item.userName}
                     </Text>{" "}
                     {item.actionText}
                     {item.targetText ? ` in ${item.targetText}` : ""}
                   </Text>
-                  <Text style={[styles.timeText, { color: colors.textMuted }]}>
+                  <Text style={[styles.timeText, {color: colors.textMuted}]}>
                     {item.timeText}
                   </Text>
                 </View>
@@ -311,8 +324,11 @@ const HomeTab = ({ onQuickAction, navigation }) => {
           )}
         </View>
 
-
-        {localResults.length !== 0 && <View style={{ left: RFValue(-16), width: width }}><NearbyStores navigation={navigation} /></View>}
+        {localResults.length !== 0 && (
+          <View style={{left: RFValue(-16), width: width}}>
+            <NearbyStores navigation={navigation} />
+          </View>
+        )}
 
         {/* {homeBanners && homeBanners.length > 0 && (
                 <View style={{ left: RFValue(-16), width: width }}>
@@ -334,9 +350,6 @@ const HomeTab = ({ onQuickAction, navigation }) => {
                     />
                   </View>
                 )} */}
-
-
-      
 
         {/* --- SECTION: Best Online Prices --- */}
         {/* <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
@@ -477,28 +490,43 @@ const HomeTab = ({ onQuickAction, navigation }) => {
         visible={showNotifications}
         onClose={() => setShowNotifications(false)}
       />
+
+      {/* Circle Requests dropdown modal */}
+      <CircleRequestsDropdown
+        visible={showCircleRequests}
+        onClose={() => setShowCircleRequests(false)}
+        onSeeAll={() => navigation.navigate("Circle")}
+      />
     </View>
   );
 };
 
-const ActionIcon = ({ id, icon: Icon, label, color, iconColor, labelColor, onPress }) => (
+const ActionIcon = ({
+  id,
+  icon: Icon,
+  label,
+  color,
+  iconColor,
+  labelColor,
+  onPress,
+}) => (
   <TouchableOpacity style={styles.actionItem} onPress={() => onPress(id)}>
-    <View style={[styles.actionIconCircle, { backgroundColor: color }]}>
+    <View style={[styles.actionIconCircle, {backgroundColor: color}]}>
       <Icon size={24} color={iconColor} />
     </View>
-    <Text style={[styles.actionLabel, { color: labelColor }]}>{label}</Text>
+    <Text style={[styles.actionLabel, {color: labelColor}]}>{label}</Text>
   </TouchableOpacity>
 );
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: {flex: 1},
 
   quickActions: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: 20,
   },
-  actionItem: { alignItems: "center" },
+  actionItem: {alignItems: "center"},
   actionIconCircle: {
     width: 60,
     height: 60,
@@ -507,7 +535,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
-  actionLabel: { fontSize: 12, fontWeight: "600" },
+  actionLabel: {fontSize: 12, fontWeight: "600"},
 
   // Dev Token Section
   tokenCard: {
@@ -590,7 +618,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 24,
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.03,
     shadowRadius: 2,
     elevation: 2,
@@ -682,7 +710,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 12,
     flexDirection: "row",
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.03,
     shadowRadius: 2,
     elevation: 2,
