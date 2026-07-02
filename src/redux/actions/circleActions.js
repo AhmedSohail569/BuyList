@@ -2,10 +2,10 @@
  * Circle Management Async Thunks
  * Handles all circle-related API operations with optimistic updates
  */
-import { createAsyncThunk } from "@reduxjs/toolkit";
+import {createAsyncThunk} from "@reduxjs/toolkit";
 import axios from "~utils/axiosInstance";
-import { getErrorMessage } from "~utils";
-import { requireConnectivity } from "~utils/network";
+import {getErrorMessage} from "~utils";
+import {requireConnectivity} from "~utils/network";
 
 // ============================================
 // 1️⃣ GET USER OWNED CIRCLE
@@ -13,7 +13,7 @@ import { requireConnectivity } from "~utils/network";
 // ============================================
 export const fetchownedCircles = createAsyncThunk(
   "circles/fetchownedCircles",
-  async (_, { rejectWithValue }) => {
+  async (_, {rejectWithValue}) => {
     try {
       const response = await axios.get("/circles/owned");
       console.log("response==>", response);
@@ -31,7 +31,7 @@ export const fetchownedCircles = createAsyncThunk(
 // ============================================
 export const fetchAllCircles = createAsyncThunk(
   "circles/fetchAllCircles",
-  async (_, { rejectWithValue }) => {
+  async (_, {rejectWithValue}) => {
     try {
       const response = await axios.get("/circles/my-circles");
       console.log("responseAllCircles==>", response);
@@ -48,7 +48,7 @@ export const fetchAllCircles = createAsyncThunk(
 // ============================================
 export const fetchCircleMembers = createAsyncThunk(
   "circles/fetchCircleMembers",
-  async ({ circleId }, { rejectWithValue }) => {
+  async ({circleId}, {rejectWithValue}) => {
     try {
       const response = await axios.get(`/circles/members/${circleId}`);
       return {
@@ -68,9 +68,10 @@ export const fetchCircleMembers = createAsyncThunk(
 // ============================================
 export const removeMemberFromCircle = createAsyncThunk(
   "circles/removeMember",
-  async ({ circleId, memberId }, { rejectWithValue, getState }) => {
+  async ({circleId, memberId}, {rejectWithValue, getState}) => {
     // Store previous members for rollback
-    const previousMembers = getState().circles.membersByCircleId[circleId] || [];
+    const previousMembers =
+      getState().circles.membersByCircleId[circleId] || [];
 
     try {
       const response = await axios.delete(
@@ -84,10 +85,10 @@ export const removeMemberFromCircle = createAsyncThunk(
     } catch (err) {
       const message = getErrorMessage(err);
       // Return previous members for rollback
-      return rejectWithValue({ message, previousMembers, circleId });
+      return rejectWithValue({message, previousMembers, circleId});
     }
   },
-  { condition: requireConnectivity },
+  {condition: requireConnectivity},
 );
 
 // ============================================
@@ -96,10 +97,12 @@ export const removeMemberFromCircle = createAsyncThunk(
 // ============================================
 export const editCircleName = createAsyncThunk(
   "circles/editCircleName",
-  async ({ circleId, name }, { rejectWithValue, getState }) => {
+  async ({circleId, name}, {rejectWithValue, getState}) => {
     // Store previous state for rollback
     const state = getState().circles;
-    const previousownedCircles = Array.isArray(state.ownedCircles) ? [...state.ownedCircles] : state.ownedCircles;
+    const previousownedCircles = Array.isArray(state.ownedCircles)
+      ? [...state.ownedCircles]
+      : state.ownedCircles;
     const previousAllCircles = [...state.allCircles];
 
     try {
@@ -123,7 +126,7 @@ export const editCircleName = createAsyncThunk(
       });
     }
   },
-  { condition: requireConnectivity },
+  {condition: requireConnectivity},
 );
 
 // ============================================
@@ -132,9 +135,13 @@ export const editCircleName = createAsyncThunk(
 // ============================================
 export const addMemberToCircle = createAsyncThunk(
   "circles/addMember",
-  async ({ circleId, userId, role = "member", tempMember }, { rejectWithValue, getState }) => {
+  async (
+    {circleId, userId, role = "member", tempMember},
+    {rejectWithValue, getState},
+  ) => {
     // Store previous members for rollback
-    const previousMembers = getState().circles.membersByCircleId[circleId] || [];
+    const previousMembers =
+      getState().circles.membersByCircleId[circleId] || [];
 
     try {
       const response = await axios.post(`/circles/${circleId}/members`, {
@@ -149,10 +156,10 @@ export const addMemberToCircle = createAsyncThunk(
     } catch (err) {
       const message = getErrorMessage(err);
       // Return previous members for rollback
-      return rejectWithValue({ message, previousMembers, circleId });
+      return rejectWithValue({message, previousMembers, circleId});
     }
   },
-  { condition: requireConnectivity },
+  {condition: requireConnectivity},
 );
 
 // ============================================
@@ -161,14 +168,15 @@ export const addMemberToCircle = createAsyncThunk(
 // ============================================
 export const updateMemberRole = createAsyncThunk(
   "circles/updateMemberRole",
-  async ({ circleId, memberId, role }, { rejectWithValue, getState }) => {
+  async ({circleId, memberId, role}, {rejectWithValue, getState}) => {
     // Store previous members for rollback
-    const previousMembers = getState().circles.membersByCircleId[circleId] || [];
+    const previousMembers =
+      getState().circles.membersByCircleId[circleId] || [];
 
     try {
       const response = await axios.put(
         `/circles/members/${circleId}/${memberId}`,
-        { role },
+        {role},
       );
       return {
         circleId,
@@ -179,10 +187,10 @@ export const updateMemberRole = createAsyncThunk(
     } catch (err) {
       const message = getErrorMessage(err);
       // Return previous members for rollback
-      return rejectWithValue({ message, previousMembers, circleId });
+      return rejectWithValue({message, previousMembers, circleId});
     }
   },
-  { condition: requireConnectivity },
+  {condition: requireConnectivity},
 );
 
 // ============================================
@@ -192,7 +200,7 @@ export const updateMemberRole = createAsyncThunk(
 // ============================================
 export const updateCircleDefaultMemberRole = createAsyncThunk(
   "circles/updateCircleDefaultMemberRole",
-  async ({ circleId, defaultMemberRole }, { rejectWithValue }) => {
+  async ({circleId, defaultMemberRole}, {rejectWithValue}) => {
     try {
       const normalizedRole = String(defaultMemberRole || "").toLowerCase();
       if (!circleId) {
@@ -216,7 +224,7 @@ export const updateCircleDefaultMemberRole = createAsyncThunk(
       return rejectWithValue(message);
     }
   },
-  { condition: requireConnectivity },
+  {condition: requireConnectivity},
 );
 
 // ============================================
@@ -225,7 +233,7 @@ export const updateCircleDefaultMemberRole = createAsyncThunk(
 // ============================================
 export const setDefaultCircle = createAsyncThunk(
   "circles/setDefaultCircle",
-  async ({ circleId }, { rejectWithValue }) => {
+  async ({circleId}, {rejectWithValue}) => {
     try {
       if (!circleId) {
         return rejectWithValue("Circle not found");
@@ -233,13 +241,13 @@ export const setDefaultCircle = createAsyncThunk(
 
       await axios.put(`/circles/set-default/${circleId}`);
 
-      return { circleId };
+      return {circleId};
     } catch (err) {
       const message = getErrorMessage(err);
       return rejectWithValue(message);
     }
   },
-  { condition: requireConnectivity },
+  {condition: requireConnectivity},
 );
 
 // ============================================
@@ -248,7 +256,7 @@ export const setDefaultCircle = createAsyncThunk(
 // ============================================
 export const deleteCircle = createAsyncThunk(
   "circles/deleteCircle",
-  async ({ circleId }, { rejectWithValue }) => {
+  async ({circleId}, {rejectWithValue}) => {
     try {
       if (!circleId) {
         return rejectWithValue("Circle not found");
@@ -256,13 +264,13 @@ export const deleteCircle = createAsyncThunk(
 
       await axios.delete(`/circles/delete-circle/${circleId}`);
 
-      return { circleId };
+      return {circleId};
     } catch (err) {
       const message = getErrorMessage(err);
       return rejectWithValue(message);
     }
   },
-  { condition: requireConnectivity },
+  {condition: requireConnectivity},
 );
 
 // ============================================
@@ -272,7 +280,7 @@ export const deleteCircle = createAsyncThunk(
 // ============================================
 export const createCircle = createAsyncThunk(
   "circles/createCircle",
-  async ({ name, color }, { rejectWithValue }) => {
+  async ({name, color}, {rejectWithValue}) => {
     try {
       if (!name) {
         return rejectWithValue("Circle name is required");
@@ -289,7 +297,7 @@ export const createCircle = createAsyncThunk(
       return rejectWithValue(message);
     }
   },
-  { condition: requireConnectivity },
+  {condition: requireConnectivity},
 );
 
 // ============================================
@@ -298,7 +306,7 @@ export const createCircle = createAsyncThunk(
 // ============================================
 export const fetchCirclesPicker = createAsyncThunk(
   "circles/fetchCirclesPicker",
-  async (_, { rejectWithValue }) => {
+  async (_, {rejectWithValue}) => {
     try {
       const response = await axios.get("/circles/picker");
       console.log("response", response.data?.data || response.data);
@@ -315,7 +323,7 @@ export const fetchCirclesPicker = createAsyncThunk(
 // ============================================
 export const fetchAllConnections = createAsyncThunk(
   "circles/fetchAllConnections",
-  async (_, { rejectWithValue }) => {
+  async (_, {rejectWithValue}) => {
     try {
       const response = await axios.get("/circles/all-connections");
       return response.data?.data || response.data;
@@ -331,7 +339,7 @@ export const fetchAllConnections = createAsyncThunk(
 // ============================================
 export const leaveCircle = createAsyncThunk(
   "circles/leaveCircle",
-  async ({ circleId }, { rejectWithValue }) => {
+  async ({circleId}, {rejectWithValue}) => {
     try {
       if (!circleId) {
         return rejectWithValue("Circle not found");
@@ -339,13 +347,13 @@ export const leaveCircle = createAsyncThunk(
 
       await axios.post(`/circles/leave/${circleId}`);
 
-      return { circleId };
+      return {circleId};
     } catch (err) {
       const message = getErrorMessage(err);
       return rejectWithValue(message);
     }
   },
-  { condition: requireConnectivity },
+  {condition: requireConnectivity},
 );
 
 // ============================================
@@ -354,9 +362,9 @@ export const leaveCircle = createAsyncThunk(
 // ============================================
 export const fetchCircleRequests = createAsyncThunk(
   "circles/fetchCircleRequests",
-  async (_, { rejectWithValue }) => {
+  async (_, {rejectWithValue}) => {
     try {
-      const response = await axios.get("/circles/join-requests");
+      const response = await axios.get("/invitations/pending");
       return response.data?.data || response.data || [];
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
@@ -366,40 +374,44 @@ export const fetchCircleRequests = createAsyncThunk(
 
 // ============================================
 // 15. ACCEPT CIRCLE JOIN REQUEST
-// POST /circles/join-requests/{requestId}/accept
+// POST /invitations/respond/{requestId}
+// Body: { action: "accept" }
 // ============================================
 export const acceptCircleRequest = createAsyncThunk(
   "circles/acceptCircleRequest",
-  async ({ requestId }, { rejectWithValue }) => {
+  async ({requestId}, {rejectWithValue}) => {
     try {
       const response = await axios.post(
-        `/circles/join-requests/${requestId}/accept`,
+        `/invitations/respond/${requestId}`,
+        {action: "accept"},
       );
-      return { requestId, data: response.data?.data || response.data };
+      return {requestId, data: response.data?.data || response.data};
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
     }
   },
-  { condition: requireConnectivity },
+  {condition: requireConnectivity},
 );
 
 // ============================================
 // 16. REJECT CIRCLE JOIN REQUEST
-// POST /circles/join-requests/{requestId}/reject
+// POST /invitations/respond/{requestId}
+// Body: { action: "reject" }
 // ============================================
 export const rejectCircleRequest = createAsyncThunk(
   "circles/rejectCircleRequest",
-  async ({ requestId }, { rejectWithValue }) => {
+  async ({requestId}, {rejectWithValue}) => {
     try {
       const response = await axios.post(
-        `/circles/join-requests/${requestId}/reject`,
+        `/invitations/respond/${requestId}`,
+        {action: "reject"},
       );
-      return { requestId, data: response.data?.data || response.data };
+      return {requestId, data: response.data?.data || response.data};
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
     }
   },
-  { condition: requireConnectivity },
+  {condition: requireConnectivity},
 );
 
 // ============================================
@@ -408,22 +420,26 @@ export const rejectCircleRequest = createAsyncThunk(
 // ============================================
 export const toggleCircleNotifications = createAsyncThunk(
   "circles/toggleCircleNotifications",
-  async ({ circleId }, { rejectWithValue }) => {
+  async ({circleId}, {rejectWithValue}) => {
     try {
       if (!circleId) {
         return rejectWithValue("Circle not found");
       }
 
-      const response = await axios.patch(`/notifications/toggle-circle-notifications/${circleId}`);
-      
-      return { 
+      const response = await axios.patch(
+        `/notifications/toggle-circle-notifications/${circleId}`,
+      );
+
+      return {
         circleId,
-        isNotificationMuted: response.data?.data?.isNotificationMuted ?? response.data?.isNotificationMuted
+        isNotificationMuted:
+          response.data?.data?.isNotificationMuted ??
+          response.data?.isNotificationMuted,
       };
     } catch (err) {
       const message = getErrorMessage(err);
       return rejectWithValue(message);
     }
   },
-  { condition: requireConnectivity },
+  {condition: requireConnectivity},
 );

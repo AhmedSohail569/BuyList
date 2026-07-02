@@ -61,7 +61,7 @@ const BEST_PRICES = [
   },
 ];
 
-const HomeTab = ({onQuickAction, navigation}) => {
+const HomeTab = ({onQuickAction, navigation, route}) => {
   const dispatch = useDispatch();
   const {t} = useTranslation();
 
@@ -80,6 +80,14 @@ const HomeTab = ({onQuickAction, navigation}) => {
 
   // Circle requests dropdown state
   const [showCircleRequests, setShowCircleRequests] = useState(false);
+
+  useEffect(() => {
+    if (route.params?.openCircleRequests) {
+      setShowCircleRequests(true);
+      // Clear the param so it doesn't immediately reopen if the user closes it and the component re-renders
+      navigation.setParams({ openCircleRequests: undefined });
+    }
+  }, [route.params?.openCircleRequests, navigation]);
 
   // Circle requests from Redux
   const {circleRequests} = useSelector(state => state.circles);
@@ -495,7 +503,7 @@ const HomeTab = ({onQuickAction, navigation}) => {
       <CircleRequestsDropdown
         visible={showCircleRequests}
         onClose={() => setShowCircleRequests(false)}
-        onSeeAll={() => navigation.navigate("Circle")}
+        onSeeAll={() => navigation.navigate("AllCircleRequest")}
       />
     </View>
   );

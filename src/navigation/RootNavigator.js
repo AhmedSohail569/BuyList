@@ -1,23 +1,24 @@
-import { useEffect, useRef, useCallback, useState } from "react";
-import { Linking } from "react-native";
+import {useEffect, useRef, useCallback, useState} from "react";
+import {Linking} from "react-native";
 import BootSplash from "react-native-bootsplash";
-import { useSelector, useDispatch } from "react-redux";
+import {useSelector, useDispatch} from "react-redux";
 import {
   NavigationContainer,
   createNavigationContainerRef,
 } from "@react-navigation/native";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import {createNativeStackNavigator} from "@react-navigation/native-stack";
 import Toast from "react-native-toast-message";
 
 import OnboardingNavigator from "./OnboardingNavigator";
 import AppNavigator from "./AppNavigator";
-import { getProfile } from "~redux/actions/profileActions";
-import { getAccessToken } from "~utils";
+import {getProfile} from "~redux/actions/profileActions";
+import {getAccessToken} from "~utils";
 import usePermissions from "~hooks/usePermissions";
-import { PermissionsProvider } from "~context/PermissionsContext";
-import { joinCircleViaInvite } from "~redux/actions/inviteActions";
+import {PermissionsProvider} from "~context/PermissionsContext";
+import {fetchInvitations, createInvite} from "~redux/actions/inviteActions";
 import {
   fetchAllCircles,
+  fetchCircleRequests,
 } from "~redux/actions/circleActions";
 import {
   parseInviteLink,
@@ -43,7 +44,7 @@ const linking = {
           AppTabNavigator: {
             screens: {
               Circle: "circle",
-              Lists: 'lists'
+              Lists: "lists",
             },
           },
           ManageConnections: "manage-connections",
@@ -64,7 +65,7 @@ const linking = {
 };
 
 const RootNavigator = () => {
-  const { user, accessToken } = useSelector((state) => state.auth);
+  const {user, accessToken} = useSelector(state => state.auth);
   const dispatch = useDispatch();
   const processedUrlRef = useRef(null);
   const isProcessingInviteRef = useRef(false);
@@ -73,14 +74,15 @@ const RootNavigator = () => {
   const splashHiddenRef = useRef(false);
 
   // Sequential permission flow: notifications first, then location
-  const { locationReady } = usePermissions();
+  const {locationReady} = usePermissions();
 
   // Hide splash once both navigation is ready and auth state is resolved.
   // Using a ref guard ensures hide() is called exactly once.
   const tryHideSplash = useCallback(() => {
-    if (splashHiddenRef.current || !navReadyRef.current || !authResolved) return;
+    if (splashHiddenRef.current || !navReadyRef.current || !authResolved)
+      return;
     splashHiddenRef.current = true;
-    BootSplash.hide({ fade: true });
+    BootSplash.hide({fade: true});
   }, [authResolved]);
 
   useEffect(() => {
@@ -109,12 +111,12 @@ const RootNavigator = () => {
     };
 
     fetchProfileIfLoggedIn();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Deep link handler ────────────────────────────────────────────────────
   const handleDeepLink = useCallback(
-    async (url) => {
+    async url => {
       if (!url || !isInviteLink(url)) return;
 
       // Prevent processing the same URL twice (e.g. initial + listener)
@@ -136,29 +138,33 @@ const RootNavigator = () => {
       if (user) {
         // Authenticated → join circle immediately
         try {
-          Toast.show({
-            type: "info",
-            text1: "Joining Circle...",
-            text2: "Please wait",
-          });
-
+          // Toast.show({
+          //   type: "info",
+          //   text1: "Joining Circle...",
+          //   text2: "Please wait",
+          // });
 
           isProcessingInviteRef.current = true;
-          await dispatch(joinCircleViaInvite({ inviteCode })).unwrap();
+          await dispatch(createInvite({inviteCode})).unwrap();
 
           // Refresh circle data immediately after joining
           dispatch(fetchAllCircles());
+          dispatch(fetchCircleRequests());
 
-          Toast.show({
-            type: "success",
-            text1: "Joined Circle!",
-            text2: "You have been added to the circle.",
-          });
+          // Toast.show({
+          //   type: "success",
+          //   text1: "Invite Sent!",
+          //   text2: "Your request to join the circle has been sent.",
+          // });
 
           // Navigate to circle screen
           if (navigationRef.isReady()) {
             navigationRef.navigate("AppTabNavigator", {
               screen: "Home",
+              params: {
+                screen: "HomeTab",
+                params: {openCircleRequests: true},
+              },
             });
           }
         } catch (err) {
@@ -199,7 +205,7 @@ const RootNavigator = () => {
     handleInitialURL();
 
     // 2. Handle URLs that arrive while the app is already open (warm start)
-    const sub = Linking.addEventListener("url", ({ url }) => {
+    const sub = Linking.addEventListener("url", ({url}) => {
       handleDeepLink(url);
     });
 
@@ -217,26 +223,32 @@ const RootNavigator = () => {
       await clearPendingInvite();
 
       try {
-        Toast.show({
-          type: "info",
-          text1: "Joining Circle...",
-          text2: "Processing your pending invite.",
-        });
+        // Toast.show({
+        //   type: "info",
+        //   text1: "Joining Circle...",
+        //   text2: "Processing your pending invite.",
+        // });
 
         isProcessingInviteRef.current = true;
-        await dispatch(joinCircleViaInvite({ inviteCode: pendingCode })).unwrap();
+        await dispatch(createInvite({inviteCode: pendingCode})).unwrap();
 
         // Refresh circle data immediately after joining
         dispatch(fetchAllCircles());
 
-        Toast.show({
-          type: "success",
-          text1: "Joined Circle!",
-          text2: "You have been added to the circle.",
-        });
+        // Toast.show({
+        //   type: "success",
+        //   text1: "Joined Circle!",
+        //   text2: "You have been added to the circle.",
+        // });
 
         if (navigationRef.isReady()) {
-          navigationRef.navigate("AppTabNavigator", { screen: "Home" });
+          navigationRef.navigate("AppTabNavigator", {
+            screen: "Home",
+            params: {
+              screen: "HomeTab",
+              params: {openCircleRequests: true},
+            },
+          });
         }
       } catch (err) {
         Toast.show({
@@ -254,8 +266,11 @@ const RootNavigator = () => {
 
   return (
     <PermissionsProvider locationReady={locationReady}>
-      <NavigationContainer ref={navigationRef} linking={linking} onReady={handleNavigationReady}>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <NavigationContainer
+        ref={navigationRef}
+        linking={linking}
+        onReady={handleNavigationReady}>
+        <Stack.Navigator screenOptions={{headerShown: false}}>
           {!user ? (
             <Stack.Screen
               name="OnboardingNavigator"

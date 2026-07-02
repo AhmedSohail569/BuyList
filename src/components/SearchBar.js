@@ -31,6 +31,7 @@ const SearchBar = ({
   iconColor,
   showSearchButton = false,
   onMicPress,
+  hideMic = false,
 }) => {
   const { colors, isDark } = useTheme();
   const defaultIconColor = iconColor || colors.iconMuted;
@@ -179,24 +180,28 @@ const SearchBar = ({
               style={{ position: "absolute", right: 15 }}
             />
           )}
-          <View style={styles.searchActions}>
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            
-            {showSearchButton && value?.length >= 3 && (
-              <TouchableOpacity onPress={onSubmitEditing}>
-                <Search size={20} color={colors.primary} />
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity
-              onPress={onMicPress ? onMicPress : (!editable ? toggleListening : null)}>
-              {isListening ? (
-                <Square size={20} color={colors.error} fill={colors.error} />
-              ) : (
-                <Mic size={20} color={colors.primary} />
+          {(showSearchButton || !hideMic) && (
+            <View style={styles.searchActions}>
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              
+              {showSearchButton && value?.length >= 3 && (
+                <TouchableOpacity onPress={onSubmitEditing}>
+                  <Search size={20} color={colors.primary} />
+                </TouchableOpacity>
               )}
-            </TouchableOpacity>
-          </View>
+
+              {!hideMic && (
+                <TouchableOpacity
+                  onPress={onMicPress ? onMicPress : (!editable ? toggleListening : null)}>
+                  {isListening ? (
+                    <Square size={20} color={colors.error} fill={colors.error} />
+                  ) : (
+                    <Mic size={20} color={colors.primary} />
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
         </Container>
       )}
 
@@ -224,7 +229,7 @@ const SearchBar = ({
               returnKeyType="search"
             />
           </View>
-         {editable && <TouchableOpacity
+         {editable && !hideMic && <TouchableOpacity
             onPress={toggleListening}
             style={[
               styles.iconButton,

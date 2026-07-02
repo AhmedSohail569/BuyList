@@ -422,6 +422,18 @@ const en = {
   common_unarchive: "Unarchive",
   common_loading: "Loading...",
   common_duplicate: "Duplicate",
+  common_share: "Share",
+  common_unshare: "Unshare",
+  common_unshared_list: "Unshared List",
+  common_select_circle: "Select Circle",
+  common_share_success: "List shared successfully",
+  common_share_failed: "Share failed",
+  common_unshare_success: "List unshared successfully",
+  common_unshare_failed: "Unshare failed",
+  common_unshare_confirm: "Are you sure you want to unshare this list from {{circleName}}?",
+  common_sharing: "Sharing...",
+  common_unsharing: "Unsharing...",
+  common_something_went_wrong: "Something went wrong",
   common_no_internet_title: "No Internet",
   common_no_internet_desc: "Please check your connection and try again.",
   common_unexpected_error: "An unexpected error occurred",
@@ -429,6 +441,9 @@ const en = {
   common_allow: "Allow",
   common_recently: "Recently",
   common_just_now: "Just now",
+  common_today: "Today",
+  common_yesterday: "Yesterday",
+  common_type_comment: "Type a comment...",
 
   // ── Activity Feed ──────────────────────────────────────────────────────────────
   activity_purchase_items: "marked {{count}} {{noun}} as completed",
@@ -449,6 +464,18 @@ const en = {
   circle_leave_confirm_desc: "Leaving this circle will remove you from all shared lists. Do you want to continue?",
   circle_leave_success_title: "Circle Left",
   circle_leave_success_desc: "You have successfully left the circle.",
+
+  // ── Circle Requests ───────────────────────────────────────────────────────────
+  circle_requests_title: "All Requests",
+  circle_requests_search_placeholder: "Search request...",
+  circle_requests_empty: "No circle requests",
+  circle_requests_empty_search: "No requests found for \"{{query}}\"",
+  circle_requests_invited_by: "{{name}} invited you",
+  circle_requests_invited_you: "Invited you",
+  circle_requests_accept: "Accept",
+  circle_requests_reject: "Reject",
+  circle_requests_dropdown_title: "Circle Requests",
+  circle_requests_see_all: "See all circle requests",
 };
 
 export default en;

@@ -31,17 +31,35 @@ export const BottomModal = ({
   loading = false,
 }) => {
   const {colors, isDark} = useTheme();
-  const { t } = useTranslation();
+  const {t} = useTranslation();
   const dispatch = useDispatch();
-  const { pickerCircles, pickerLoading } = useSelector(state => state.circles || {});
+  const {pickerCircles, pickerLoading} = useSelector(
+    state => state.circles || {},
+  );
 
   const CIRCLE_COLORS = [
-    "#0EA5E9", "#EF4444", "#6B7280", "#22C55E", "#0369A1", 
-    "#FACC15", "#A855F7", "#F97316", "#EA580C", "#EC4899", 
-    "#F87171", "#2563EB", "#166534", "#B91C1C", "#92400E", 
-    "#4F46E5", "#BE185D", "#0284C7", "#C084FC", "#1F2937"
+    "#0EA5E9",
+    "#EF4444",
+    "#6B7280",
+    "#22C55E",
+    "#0369A1",
+    "#FACC15",
+    "#A855F7",
+    "#F97316",
+    "#EA580C",
+    "#EC4899",
+    "#F87171",
+    "#2563EB",
+    "#166534",
+    "#B91C1C",
+    "#92400E",
+    "#4F46E5",
+    "#BE185D",
+    "#0284C7",
+    "#C084FC",
+    "#1F2937",
   ];
-  
+
   // --- STATE: Filter Mode ---
   const [selectedSort, setSelectedSort] = useState("Relevance");
   const [minPrice, setMinPrice] = useState("0");
@@ -56,21 +74,22 @@ export const BottomModal = ({
   const [isShared, setIsShared] = useState(false);
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
   const [showCircleDropdown, setShowCircleDropdown] = useState(false);
-  const [circleDropdownDirection, setCircleDropdownDirection] = useState("down");
+  const [circleDropdownDirection, setCircleDropdownDirection] =
+    useState("down");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCircleId, setSelectedCircleId] = useState(null);
 
   // --- STATE: Create Circle Mode ---
   const [circleName, setCircleName] = useState("");
   const [selectedColor, setSelectedColor] = useState(CIRCLE_COLORS[0]);
-  
+
   // --- STATE: Keyboard Management ---
   const [avoidKeyboard, setAvoidKeyboard] = useState(true);
-  
+
   // --- Error States ---
   const [listNameError, setListNameError] = useState("");
   const [itemsError, setItemsError] = useState("");
-  
+
   // --- Refs ---
   const scrollViewRef = useRef(null);
   const circleDropdownRef = useRef(null);
@@ -135,7 +154,7 @@ export const BottomModal = ({
       return;
     }
 
-    setItems([...items, { name: trimmedItem, priority: "medium" }]);
+    setItems([...items, {name: trimmedItem, priority: "medium"}]);
     setNewItem("");
     if (itemsError) setItemsError("");
   };
@@ -146,7 +165,9 @@ export const BottomModal = ({
   };
 
   const handleItemPriority = (index, p) => {
-    setItems(prev => prev.map((item, i) => i === index ? { ...item, priority: p } : item));
+    setItems(prev =>
+      prev.map((item, i) => (i === index ? {...item, priority: p} : item)),
+    );
   };
 
   const handleCreateList = async () => {
@@ -156,7 +177,7 @@ export const BottomModal = ({
     if (!listName.trim()) {
       setListNameError(t("lists_validation_name"));
       hasError = true;
-      
+
       // Auto-scroll to top so the list name error is visible
       scrollViewRef.current?.scrollTo({y: 0, animated: true});
     }
@@ -170,14 +191,17 @@ export const BottomModal = ({
 
     if (isSubmitting || loading) return;
     setIsSubmitting(true);
-   
+
     try {
       // Await parent handler so we can prevent double submit.
       await Promise.resolve(
         onApply({
           name: listName.trim(),
           category: selectedCategory,
-          items: items.map(item => ({ name: item.name, priority: item.priority })),
+          items: items.map(item => ({
+            name: item.name,
+            priority: item.priority,
+          })),
           priority: priority,
           shareWithCircle: isShared,
           circleId: isShared ? selectedCircleId : undefined,
@@ -195,10 +219,12 @@ export const BottomModal = ({
 
     setIsSubmitting(true);
     try {
-      await Promise.resolve(onApply({
-        name: circleName.trim(),
-        color: selectedColor,
-      }));
+      await Promise.resolve(
+        onApply({
+          name: circleName.trim(),
+          color: selectedColor,
+        }),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -208,17 +234,21 @@ export const BottomModal = ({
   const renderFilterContent = () => (
     <>
       <View style={styles.modalHeader}>
-        <Text style={[styles.modalTitle, {color: colors.textPrimary}]}>{t("modal_filters_title")}</Text>
+        <Text style={[styles.modalTitle, {color: colors.textPrimary}]}>
+          {t("modal_filters_title")}
+        </Text>
         <TouchableOpacity onPress={onClose} hitSlop={10}>
           <X size={24} color={colors.iconMuted} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
+      <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}>
+        contentContainerStyle={{flexGrow: 1, paddingBottom: 20}}>
         {/* Sort Section */}
-        <Text style={[styles.sectionLabel, {color: colors.textMuted}]}>{t("modal_sort_label")}</Text>
+        <Text style={[styles.sectionLabel, {color: colors.textMuted}]}>
+          {t("modal_sort_label")}
+        </Text>
         <View style={styles.chipsContainer}>
           {sortOptions.map(option => {
             const isActive = selectedSort === option;
@@ -228,15 +258,29 @@ export const BottomModal = ({
                 style={[
                   styles.chip,
                   {
-                    backgroundColor: isActive ? (isDark ? colors.textPrimary : "#000000") : colors.modalBackground,
-                    borderColor: isActive ? (isDark ? colors.textPrimary : "#000000") : colors.border,
+                    backgroundColor: isActive
+                      ? isDark
+                        ? colors.textPrimary
+                        : "#000000"
+                      : colors.modalBackground,
+                    borderColor: isActive
+                      ? isDark
+                        ? colors.textPrimary
+                        : "#000000"
+                      : colors.border,
                   },
                 ]}
                 onPress={() => setSelectedSort(option)}>
                 <Text
                   style={[
                     styles.chipText,
-                    {color: isActive ? (isDark ? colors.background : "#ffffff") : colors.textSecondary},
+                    {
+                      color: isActive
+                        ? isDark
+                          ? colors.background
+                          : "#ffffff"
+                        : colors.textSecondary,
+                    },
                   ]}>
                   {option}
                 </Text>
@@ -246,10 +290,21 @@ export const BottomModal = ({
         </View>
 
         {/* Price Range Section */}
-        <Text style={[styles.sectionLabel, {color: colors.textMuted}]}>{t("modal_price_label")}</Text>
+        <Text style={[styles.sectionLabel, {color: colors.textMuted}]}>
+          {t("modal_price_label")}
+        </Text>
         <View style={styles.priceRow}>
-          <View style={[styles.priceInputContainer, {backgroundColor: colors.surfaceSecondary, borderColor: colors.border}]}>
-            <Text style={[styles.currencyPrefix, {color: colors.textMuted}]}>$</Text>
+          <View
+            style={[
+              styles.priceInputContainer,
+              {
+                backgroundColor: colors.surfaceSecondary,
+                borderColor: colors.border,
+              },
+            ]}>
+            <Text style={[styles.currencyPrefix, {color: colors.textMuted}]}>
+              $
+            </Text>
             <TextInput
               style={[styles.priceInput, {color: colors.textPrimary}]}
               value={minPrice}
@@ -258,9 +313,20 @@ export const BottomModal = ({
               placeholderTextColor={colors.inputPlaceholder}
             />
           </View>
-          <Text style={[styles.priceSeparator, {color: colors.textMuted}]}>–</Text>
-          <View style={[styles.priceInputContainer, {backgroundColor: colors.surfaceSecondary, borderColor: colors.border}]}>
-            <Text style={[styles.currencyPrefix, {color: colors.textMuted}]}>$</Text>
+          <Text style={[styles.priceSeparator, {color: colors.textMuted}]}>
+            –
+          </Text>
+          <View
+            style={[
+              styles.priceInputContainer,
+              {
+                backgroundColor: colors.surfaceSecondary,
+                borderColor: colors.border,
+              },
+            ]}>
+            <Text style={[styles.currencyPrefix, {color: colors.textMuted}]}>
+              $
+            </Text>
             <TextInput
               style={[styles.priceInput, {color: colors.textPrimary}]}
               value={maxPrice}
@@ -271,11 +337,16 @@ export const BottomModal = ({
         </View>
 
         {/* Footer Buttons - Moved inside scroll */}
-        <View style={[styles.modalFooter, { marginTop: 10 }]}>
+        <View style={[styles.modalFooter, {marginTop: 10}]}>
           <TouchableOpacity
-            style={[styles.resetButton, {backgroundColor: colors.surfaceSecondary}]}
+            style={[
+              styles.resetButton,
+              {backgroundColor: colors.surfaceSecondary},
+            ]}
             onPress={handleResetFilter}>
-            <Text style={[styles.resetButtonText, {color: colors.textPrimary}]}>{t("modal_reset")}</Text>
+            <Text style={[styles.resetButtonText, {color: colors.textPrimary}]}>
+              {t("modal_reset")}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.applyButton, {backgroundColor: colors.primary}]}
@@ -283,7 +354,9 @@ export const BottomModal = ({
               onApply({sort: selectedSort, minPrice, maxPrice});
               onClose();
             }}>
-            <Text style={styles.applyButtonText}>{t("modal_show_results")}</Text>
+            <Text style={styles.applyButtonText}>
+              {t("modal_show_results")}
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -293,19 +366,31 @@ export const BottomModal = ({
   const renderCreateListContent = () => (
     <>
       <View style={styles.modalHeader}>
-        <Text style={[styles.modalTitle, {color: colors.textPrimary}]}>{t("modal_new_list")}</Text>
+        <Text style={[styles.modalTitle, {color: colors.textPrimary}]}>
+          {t("modal_new_list")}
+        </Text>
         <TouchableOpacity onPress={onClose} hitSlop={10}>
           <X size={24} color={colors.iconMuted} />
         </TouchableOpacity>
       </View>
-      <ScrollView 
+      <ScrollView
         ref={scrollViewRef}
-        showsVerticalScrollIndicator={false} 
+        showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}>
+        contentContainerStyle={{flexGrow: 1, paddingBottom: 20}}>
         {/* List Name */}
-        <Text style={[styles.inputLabel, {color: colors.textMuted}]}>{t("modal_list_name")} <Text style={{color: "#ef4444"}}>*</Text></Text>
-        <View style={[styles.inputContainer, {backgroundColor: colors.surfaceSecondary, borderColor: listNameError ? "#ef4444" : colors.border, marginBottom: listNameError ? 4 : 20}]}>
+        <Text style={[styles.inputLabel, {color: colors.textMuted}]}>
+          {t("modal_list_name")} <Text style={{color: "#ef4444"}}>*</Text>
+        </Text>
+        <View
+          style={[
+            styles.inputContainer,
+            {
+              backgroundColor: colors.surfaceSecondary,
+              borderColor: listNameError ? "#ef4444" : colors.border,
+              marginBottom: listNameError ? 4 : 20,
+            },
+          ]}>
           <TextInput
             style={[styles.textInput, {color: colors.textPrimary}]}
             placeholder={t("modal_list_name_placeholder")}
@@ -313,7 +398,7 @@ export const BottomModal = ({
             value={listName}
             onFocus={() => setAvoidKeyboard(false)}
             onBlur={() => setAvoidKeyboard(true)}
-            onChangeText={(text) => {
+            onChangeText={text => {
               setListName(text);
               if (listNameError) setListNameError("");
             }}
@@ -324,7 +409,9 @@ export const BottomModal = ({
         ) : null}
 
         {/* Category */}
-        <Text style={[styles.inputLabel, {color: colors.textMuted}]}>{t("modal_category")}</Text>
+        <Text style={[styles.inputLabel, {color: colors.textMuted}]}>
+          {t("modal_category")}
+        </Text>
         <View style={styles.chipsContainer}>
           {categoryOptions.map(cat => {
             const isActive = selectedCategory === cat;
@@ -334,8 +421,16 @@ export const BottomModal = ({
                 style={[
                   styles.categoryChip,
                   {
-                    backgroundColor: isActive ? (isDark ? "rgba(14, 165, 233, 0.2)" : "#eff6ff") : colors.modalBackground,
-                    borderColor: isActive ? (isDark ? "rgba(14, 165, 233, 0.3)" : "#eff6ff") : colors.border,
+                    backgroundColor: isActive
+                      ? isDark
+                        ? "rgba(14, 165, 233, 0.2)"
+                        : "#eff6ff"
+                      : colors.modalBackground,
+                    borderColor: isActive
+                      ? isDark
+                        ? "rgba(14, 165, 233, 0.3)"
+                        : "#eff6ff"
+                      : colors.border,
                   },
                 ]}
                 onPress={() => setSelectedCategory(cat)}>
@@ -355,19 +450,31 @@ export const BottomModal = ({
         <View style={[styles.divider, {backgroundColor: colors.divider}]} />
         <View style={styles.toggleRow}>
           <View style={styles.toggleLeft}>
-            <View style={[styles.iconCircle, {backgroundColor: isDark ? "rgba(14, 165, 233, 0.2)" : "#eff6ff"}]}>
+            <View
+              style={[
+                styles.iconCircle,
+                {
+                  backgroundColor: isDark
+                    ? "rgba(14, 165, 233, 0.2)"
+                    : "#eff6ff",
+                },
+              ]}>
               <Users size={20} color={colors.primary} />
             </View>
             <View>
-              <Text style={[styles.toggleTitle, {color: colors.textPrimary}]}>{t("modal_share")}</Text>
-              <Text style={[styles.toggleSubtitle, {color: colors.textMuted}]}>{t("modal_share_circle_subtitle")}</Text>
+              <Text style={[styles.toggleTitle, {color: colors.textPrimary}]}>
+                {t("modal_share")}
+              </Text>
+              <Text style={[styles.toggleSubtitle, {color: colors.textMuted}]}>
+                {t("modal_share_circle_subtitle")}
+              </Text>
             </View>
           </View>
           <Switch
             trackColor={{false: colors.border, true: colors.primary}}
             thumbColor={"#ffffff"}
             ios_backgroundColor={colors.border}
-            onValueChange={(val) => {
+            onValueChange={val => {
               setIsShared(val);
               setSelectedCircleId(null);
               if (val) dispatch(fetchCirclesPicker());
@@ -376,38 +483,72 @@ export const BottomModal = ({
             style={styles.switch}
           />
         </View>
-        
+
         {/* Circle Picker — shown only when sharing is on */}
         {isShared && (
           <View style={styles.dropdownContainer}>
             {pickerLoading ? (
-              <Text style={[styles.circlePickerLoading, {color: colors.textMuted, marginLeft: 0, marginBottom: 16}]}>{t("modal_share_loading")}</Text>
+              <Text
+                style={[
+                  styles.circlePickerLoading,
+                  {color: colors.textMuted, marginLeft: 0, marginBottom: 16},
+                ]}>
+                {t("modal_share_loading")}
+              </Text>
             ) : pickerCircles.length === 0 ? (
-              <Text style={[styles.circlePickerLoading, {color: colors.textMuted, marginLeft: 0, marginBottom: 16}]}>{t("modal_share_no_circles")}</Text>
+              <Text
+                style={[
+                  styles.circlePickerLoading,
+                  {color: colors.textMuted, marginLeft: 0, marginBottom: 16},
+                ]}>
+                {t("modal_share_no_circles")}
+              </Text>
             ) : (
               <>
                 <TouchableOpacity
                   ref={circleDropdownRef}
-                  style={[styles.dropdownInput, {backgroundColor: colors.surfaceSecondary, borderColor: colors.border, marginBottom: 16}]}
+                  style={[
+                    styles.dropdownInput,
+                    {
+                      backgroundColor: colors.surfaceSecondary,
+                      borderColor: colors.border,
+                      marginBottom: 16,
+                    },
+                  ]}
                   onPress={() => {
                     if (!showCircleDropdown) {
-                      circleDropdownRef.current?.measureInWindow((_x, y, _w, h) => {
-                        const spaceBelow = height - (y + h);
-                        setCircleDropdownDirection(spaceBelow >= 220 ? "down" : "up");
-                      });
+                      circleDropdownRef.current?.measureInWindow(
+                        (_x, y, _w, h) => {
+                          const spaceBelow = height - (y + h);
+                          setCircleDropdownDirection(
+                            spaceBelow >= 220 ? "down" : "up",
+                          );
+                        },
+                      );
                     }
                     setShowCircleDropdown(!showCircleDropdown);
                   }}>
-                  <Text style={[styles.inputText, {color: selectedCircleId ? colors.textPrimary : colors.textSecondary}]}>
-                    {selectedCircleId 
-                      ? pickerCircles.find(c => c._id === selectedCircleId)?.name 
+                  <Text
+                    style={[
+                      styles.inputText,
+                      {
+                        color: selectedCircleId
+                          ? colors.textPrimary
+                          : colors.textSecondary,
+                      },
+                    ]}>
+                    {selectedCircleId
+                      ? pickerCircles.find(c => c._id === selectedCircleId)
+                          ?.name
                       : t("modal_share_select_circle")}
                   </Text>
                   <ChevronDown
                     size={20}
                     color={colors.iconMuted}
                     style={{
-                      transform: [{rotate: showCircleDropdown ? "180deg" : "0deg"}],
+                      transform: [
+                        {rotate: showCircleDropdown ? "180deg" : "0deg"},
+                      ],
                     }}
                   />
                 </TouchableOpacity>
@@ -418,14 +559,21 @@ export const BottomModal = ({
                       onPress={() => setShowCircleDropdown(false)}>
                       <View style={styles.dropdownBackdrop} />
                     </TouchableWithoutFeedback>
-                    <View style={[
-                      styles.dropdownMenu,
-                      {backgroundColor: colors.modalBackground, borderColor: colors.border},
-                      circleDropdownDirection === "down"
-                        ? {top: 52, bottom: null}
-                        : {bottom: 52, top: null},
-                    ]}>
-                      <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                    <View
+                      style={[
+                        styles.dropdownMenu,
+                        {
+                          backgroundColor: colors.modalBackground,
+                          borderColor: colors.border,
+                        },
+                        circleDropdownDirection === "down"
+                          ? {top: 52, bottom: null}
+                          : {bottom: 52, top: null},
+                      ]}>
+                      <ScrollView
+                        style={{maxHeight: 200}}
+                        nestedScrollEnabled
+                        showsVerticalScrollIndicator={false}>
                         {pickerCircles.map(circle => {
                           const isSelected = selectedCircleId === circle._id;
                           return (
@@ -433,23 +581,49 @@ export const BottomModal = ({
                               key={circle._id}
                               style={[
                                 styles.dropdownOption,
-                                {borderBottomColor: colors.divider, flexDirection: "row", alignItems: "center"},
-                                isSelected && {backgroundColor: isDark ? "rgba(14, 165, 233, 0.15)" : "#eff6ff"},
+                                {
+                                  borderBottomColor: colors.divider,
+                                  flexDirection: "row",
+                                  alignItems: "center",
+                                },
+                                isSelected && {
+                                  backgroundColor: isDark
+                                    ? "rgba(14, 165, 233, 0.15)"
+                                    : "#eff6ff",
+                                },
                               ]}
                               onPress={() => {
-                                setSelectedCircleId(isSelected ? null : circle._id);
+                                setSelectedCircleId(
+                                  isSelected ? null : circle._id,
+                                );
                                 setShowCircleDropdown(false);
                               }}>
-                              <View style={[styles.circleColorDot, {backgroundColor: circle.color || colors.primary, marginRight: 8}]} />
+                              <View
+                                style={[
+                                  styles.circleColorDot,
+                                  {
+                                    backgroundColor:
+                                      circle.color || colors.primary,
+                                    marginRight: 8,
+                                  },
+                                ]}
+                              />
                               <Text
                                 style={[
                                   styles.dropdownOptionText,
-                                  {flex: 1, color: isSelected ? colors.primary : colors.textPrimary},
+                                  {
+                                    flex: 1,
+                                    color: isSelected
+                                      ? colors.primary
+                                      : colors.textPrimary,
+                                  },
                                 ]}
                                 numberOfLines={1}>
                                 {circle.name}
                               </Text>
-                              {isSelected && <Check size={16} color={colors.primary} />}
+                              {isSelected && (
+                                <Check size={16} color={colors.primary} />
+                              )}
                             </TouchableOpacity>
                           );
                         })}
@@ -463,8 +637,18 @@ export const BottomModal = ({
         )}
 
         {/* Add Items */}
-        <Text style={[styles.inputLabel, {color: colors.textMuted}]}>{t("modal_add_items")} <Text style={{color: "#ef4444"}}>*</Text></Text>
-        <View style={[styles.inputContainer, {backgroundColor: colors.surfaceSecondary, borderColor: itemsError ? "#ef4444" : colors.border, marginBottom: 12}]}>
+        <Text style={[styles.inputLabel, {color: colors.textMuted}]}>
+          {t("modal_add_items")} <Text style={{color: "#ef4444"}}>*</Text>
+        </Text>
+        <View
+          style={[
+            styles.inputContainer,
+            {
+              backgroundColor: colors.surfaceSecondary,
+              borderColor: itemsError ? "#ef4444" : colors.border,
+              marginBottom: 12,
+            },
+          ]}>
           <TextInput
             style={[styles.textInput, {color: colors.textPrimary}]}
             placeholder={t("modal_add_item_placeholder")}
@@ -479,31 +663,43 @@ export const BottomModal = ({
           <TouchableOpacity
             style={[
               styles.plusIconBadge,
-              {backgroundColor: newItem.trim() ? colors.primary : colors.border},
+              {
+                backgroundColor: newItem.trim()
+                  ? colors.primary
+                  : colors.border,
+              },
             ]}
             onPress={handleAddItem}
             disabled={!newItem.trim()}>
-            <Plus size={16} color={newItem.trim() ? "#ffffff" : colors.iconMuted} />
+            <Plus
+              size={16}
+              color={newItem.trim() ? "#ffffff" : colors.iconMuted}
+            />
           </TouchableOpacity>
         </View>
 
-        {itemsError ? (
-          <Text style={styles.errorText}>{itemsError}</Text>
-        ) : null}
+        {itemsError ? <Text style={styles.errorText}>{itemsError}</Text> : null}
 
         {/* Display Added Items */}
         {items.length > 0 && (
-          <View style={[styles.itemsContainerList, { borderColor: colors.divider, backgroundColor: colors.surfaceSecondary }]}>
+          <View
+            style={[
+              styles.itemsContainerList,
+              {
+                borderColor: colors.divider,
+                backgroundColor: colors.surfaceSecondary,
+              },
+            ]}>
             {items.map((item, index) => (
               <View
                 key={index}
                 style={[
                   styles.itemListItem,
-                  { borderBottomColor: colors.divider },
-                  index === items.length - 1 && { borderBottomWidth: 0 },
+                  {borderBottomColor: colors.divider},
+                  index === items.length - 1 && {borderBottomWidth: 0},
                 ]}>
                 <Text
-                  style={[styles.itemListItemText, { color: colors.textPrimary }]}
+                  style={[styles.itemListItemText, {color: colors.textPrimary}]}
                   numberOfLines={1}
                   ellipsizeMode="tail">
                   {item.name}
@@ -511,27 +707,43 @@ export const BottomModal = ({
                 <View style={styles.itemPriorityRow}>
                   {["low", "medium", "high"].map(p => {
                     const isActive = item.priority === p;
-                    const color = p === "high" ? "#EF4444" : p === "medium" ? "#FFFFFF" : "#16A34A";
-                    const bgActive = p === "high" ? "#EF44441F" : p === "medium" ? "#1E9DF1" : "#16A34A1F";
+                    const color =
+                      p === "high"
+                        ? "#EF4444"
+                        : p === "medium"
+                        ? "#FFFFFF"
+                        : "#16A34A";
+                    const bgActive =
+                      p === "high"
+                        ? "#EF44441F"
+                        : p === "medium"
+                        ? "#1E9DF1"
+                        : "#16A34A1F";
                     return (
                       <TouchableOpacity
                         key={p}
                         onPress={() => handleItemPriority(index, p)}
                         style={[
                           styles.itemPriorityBtn,
-                          isActive && { backgroundColor: bgActive },
-                          !isActive && { borderColor: colors.border, backgroundColor: colors.surfaceSecondary },
+                          isActive && {backgroundColor: bgActive},
+                          !isActive && {
+                            borderColor: colors.border,
+                            backgroundColor: colors.surfaceSecondary,
+                          },
                         ]}>
-                        <Text style={[
-                          styles.itemPriorityText,
-                          { color: isActive ? color : colors.textMuted },
-                        ]}>
+                        <Text
+                          style={[
+                            styles.itemPriorityText,
+                            {color: isActive ? color : colors.textMuted},
+                          ]}>
                           {p.charAt(0).toUpperCase() + p.slice(1)}
                         </Text>
                       </TouchableOpacity>
                     );
                   })}
-                  <TouchableOpacity onPress={() => handleRemoveItem(index)} hitSlop={8}>
+                  <TouchableOpacity
+                    onPress={() => handleRemoveItem(index)}
+                    hitSlop={8}>
                     <X size={16} color={colors.textMuted} />
                   </TouchableOpacity>
                 </View>
@@ -541,13 +753,25 @@ export const BottomModal = ({
         )}
 
         {/* Set Priority */}
-        <Text style={[styles.inputLabel, {color: colors.textMuted}]}>{t("modal_set_priority")}</Text>
+        <Text style={[styles.inputLabel, {color: colors.textMuted}]}>
+          {t("modal_set_priority")}
+        </Text>
         <View style={styles.dropdownContainer}>
           <TouchableOpacity
-            style={[styles.dropdownInput, {backgroundColor: colors.surfaceSecondary, borderColor: colors.border}]}
+            style={[
+              styles.dropdownInput,
+              {
+                backgroundColor: colors.surfaceSecondary,
+                borderColor: colors.border,
+              },
+            ]}
             onPress={() => setShowPriorityDropdown(!showPriorityDropdown)}>
             <Text style={[styles.inputText, {color: colors.textSecondary}]}>
-              {t("modal_priority_" + (priorityOptions.find(opt => opt.value === priority)?.value || "medium"))}
+              {t(
+                "modal_priority_" +
+                  (priorityOptions.find(opt => opt.value === priority)?.value ||
+                    "medium"),
+              )}
             </Text>
             <ChevronDown
               size={20}
@@ -564,14 +788,25 @@ export const BottomModal = ({
                 onPress={() => setShowPriorityDropdown(false)}>
                 <View style={styles.dropdownBackdrop} />
               </TouchableWithoutFeedback>
-              <View style={[styles.dropdownMenu, {backgroundColor: colors.modalBackground, borderColor: colors.border}]}>
+              <View
+                style={[
+                  styles.dropdownMenu,
+                  {
+                    backgroundColor: colors.modalBackground,
+                    borderColor: colors.border,
+                  },
+                ]}>
                 {priorityOptions.map(option => (
                   <TouchableOpacity
                     key={option.value}
                     style={[
                       styles.dropdownOption,
                       {borderBottomColor: colors.divider},
-                      priority === option.value && {backgroundColor: isDark ? "rgba(14, 165, 233, 0.15)" : "#eff6ff"},
+                      priority === option.value && {
+                        backgroundColor: isDark
+                          ? "rgba(14, 165, 233, 0.15)"
+                          : "#eff6ff",
+                      },
                     ]}
                     onPress={() => {
                       setPriority(option.value);
@@ -580,7 +815,12 @@ export const BottomModal = ({
                     <Text
                       style={[
                         styles.dropdownOptionText,
-                        {color: priority === option.value ? colors.primary : colors.textMuted},
+                        {
+                          color:
+                            priority === option.value
+                              ? colors.primary
+                              : colors.textMuted,
+                        },
                       ]}>
                       {t("modal_priority_" + option.value)}
                     </Text>
@@ -592,7 +832,7 @@ export const BottomModal = ({
         </View>
 
         {/* Footer Button - Moved inside scroll */}
-        <View style={[styles.modalFooterSingle, { marginTop: 10 }]}>
+        <View style={[styles.modalFooterSingle, {marginTop: 10}]}>
           <TouchableOpacity
             style={[
               styles.createButton,
@@ -602,7 +842,9 @@ export const BottomModal = ({
             onPress={handleCreateList}
             disabled={loading || isSubmitting}>
             <Text style={styles.createButtonText}>
-              {loading || isSubmitting ? t("modal_creating_list") : t("modal_create_list")}
+              {loading || isSubmitting
+                ? t("modal_creating_list")
+                : t("modal_create_list")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -613,19 +855,35 @@ export const BottomModal = ({
   const renderCreateCircleContent = () => (
     <>
       <View style={styles.modalHeader}>
-        <Text style={[styles.modalTitle, {color: colors.textPrimary}]}>{t("circle_create_title")}</Text>
+        <Text style={[styles.modalTitle, {color: colors.textPrimary}]}>
+          {t("circle_create_title")}
+        </Text>
         <TouchableOpacity onPress={onClose} hitSlop={10}>
           <X size={24} color={colors.iconMuted} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
-        showsVerticalScrollIndicator={false} 
+      <ScrollView
+        showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{flexGrow: 1, paddingBottom: 20}}>
         {/* Circle Name */}
-        <Text style={[styles.inputLabel, {color: colors.textMuted, marginBottom: 8}]}>{t("circle_create_name_label")}</Text>
-        <View style={[styles.inputContainer, {backgroundColor: colors.surfaceSecondary, borderColor: colors.border, marginBottom: 20}]}>
+        <Text
+          style={[
+            styles.inputLabel,
+            {color: colors.textMuted, marginBottom: 8},
+          ]}>
+          {t("circle_create_name_label")}
+        </Text>
+        <View
+          style={[
+            styles.inputContainer,
+            {
+              backgroundColor: colors.surfaceSecondary,
+              borderColor: colors.border,
+              marginBottom: 20,
+            },
+          ]}>
           <TextInput
             style={[styles.textInput, {color: colors.textPrimary}]}
             placeholder={t("circle_create_name_placeholder")}
@@ -639,14 +897,22 @@ export const BottomModal = ({
         </View>
 
         {/* Color Grid */}
-        <Text style={[styles.inputLabel, {color: colors.textMuted, marginBottom: 10}]}>{t("circle_create_color_label")}</Text>
+        <Text
+          style={[
+            styles.inputLabel,
+            {color: colors.textMuted, marginBottom: 10},
+          ]}>
+          {t("circle_create_color_label")}
+        </Text>
         <View style={styles.colorGrid}>
           {CIRCLE_COLORS.map(color => (
             <TouchableOpacity
               key={color}
               style={[styles.colorOption, {backgroundColor: color}]}
               onPress={() => setSelectedColor(color)}>
-              {selectedColor === color && <Check size={RFValue(14)} color="#fff" />}
+              {selectedColor === color && (
+                <Check size={RFValue(14)} color="#fff" />
+              )}
             </TouchableOpacity>
           ))}
         </View>
@@ -657,12 +923,15 @@ export const BottomModal = ({
             style={[
               styles.createButton,
               {backgroundColor: colors.primary},
-              (loading || isSubmitting || !circleName.trim()) && styles.createButtonDisabled,
+              (loading || isSubmitting || !circleName.trim()) &&
+                styles.createButtonDisabled,
             ]}
             onPress={handleCreateCircle}
             disabled={loading || isSubmitting || !circleName.trim()}>
             <Text style={styles.createButtonText}>
-              {loading || isSubmitting ? t("circle_create_btn_loading") : t("circle_create_btn")}
+              {loading || isSubmitting
+                ? t("circle_create_btn_loading")
+                : t("circle_create_btn")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -687,7 +956,10 @@ export const BottomModal = ({
         <View
           style={[
             styles.modalContent,
-            {backgroundColor: colors.modalBackground, shadowColor: colors.shadowColor},
+            {
+              backgroundColor: colors.modalBackground,
+              shadowColor: colors.shadowColor,
+            },
           ]}>
           {type === "createList"
             ? renderCreateListContent()
@@ -1067,7 +1339,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     marginTop: 8,
-    justifyContent: 'center'
+    justifyContent: "center",
   },
   colorOption: {
     width: (width - 40 - 64) / 8, // 8 items per row, 7 gaps of ~8-9px

@@ -137,6 +137,13 @@ export const lightColors = {
   // Profile card
   profileCardBackground: "#F9FAFB",
   profileCardBorder: "#F3F4F6",
+
+  // Message chat
+  msgMyBubble: "rgba(224, 242, 254, 1)",   // light blue bubble (me)
+  msgMyName: "rgba(3, 105, 161, 1)",        // dark blue name label
+  msgMyText: "rgba(30, 58, 138, 1)",        // navy blue message text
+  msgOtherText: "rgba(75, 85, 99, 1)",      // dark gray text for others
+  msgTimestamp: "rgba(156, 163, 175, 1)",   // muted gray timestamp
 };
 
 // Dark theme colors - Based on reference screenshot
@@ -235,6 +242,13 @@ export const darkColors = {
   // Profile card
   profileCardBackground: "#1E293B",
   profileCardBorder: "#334155",
+
+  // Message chat
+  msgMyBubble: "rgba(30, 58, 138, 0.25)",  // muted dark blue bubble (me)
+  msgMyName: "#60A5FA",                     // lighter blue name label
+  msgMyText: "#93C5FD",                     // light blue message text
+  msgOtherText: "#CBD5E1",                  // light gray text for others
+  msgTimestamp: "#64748B",                  // muted slate timestamp
 };
 
 // Theme type definitions

@@ -17,6 +17,7 @@ import LegalScreen from "~screens/settings/Legal";
 import ListDetailsScreen from "~screens/lists/ListDetails";
 import ManageConnectionsScreen from "~screens/circle/ManageConnections";
 import AllConnectionsScreen from "~screens/circle/AllConnections";
+import AllCircleRequestScreen from "~screens/circle/AllCircleRequest";
 import PriceCheckScreen from "~screens/home/PriceCheckScreen";
 import AIRecommendationsScreen from "~screens/home/AIRecommendations";
 
@@ -80,6 +81,11 @@ export default () => {
         <Stack.Screen
           name="AllConnections"
           component={AllConnectionsScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AllCircleRequest"
+          component={AllCircleRequestScreen}
           options={{ headerShown: false }}
         />
         <Stack.Screen

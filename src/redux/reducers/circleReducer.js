@@ -2,7 +2,7 @@
  * Circle Management Slice
  * Handles circle state with optimistic updates and rollback logic
  */
-import { createSlice } from "@reduxjs/toolkit";
+import {createSlice} from "@reduxjs/toolkit";
 import {
   fetchownedCircles,
   fetchAllCircles,
@@ -26,10 +26,10 @@ import {
 import {
   getCircleInviteLink,
   getCircleInviteQR,
-  joinCircleViaInvite,
+  createInvite,
 } from "../actions/inviteActions";
-import { updateZone } from "../actions/authActions";
-import { logout } from "./authReducer";
+import {updateZone} from "../actions/authActions";
+import {logout} from "./authReducer";
 
 // ============================================
 // INITIAL STATE
@@ -118,7 +118,9 @@ const circleSlice = createSlice({
       })
       .addCase(fetchownedCircles.fulfilled, (state, action) => {
         state.loading = false;
-        state.ownedCircles = Array.isArray(action.payload) ? action.payload : [];
+        state.ownedCircles = Array.isArray(action.payload)
+          ? action.payload
+          : [];
       })
       .addCase(fetchownedCircles.rejected, (state, action) => {
         state.loading = false;
@@ -149,9 +151,11 @@ const circleSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchCircleMembers.fulfilled, (state, action) => {
-        const { circleId, members } = action.payload;
+        const {circleId, members} = action.payload;
         state.membersLoading = false;
-        state.membersByCircleId[circleId] = Array.isArray(members) ? members : [];
+        state.membersByCircleId[circleId] = Array.isArray(members)
+          ? members
+          : [];
         // Track that we've loaded members for this circle
         if (!state.loadedMemberCircleIds.includes(circleId)) {
           state.loadedMemberCircleIds.push(circleId);
@@ -167,7 +171,7 @@ const circleSlice = createSlice({
       // ============================================
       // OPTIMISTIC: Remove member immediately on pending
       .addCase(removeMemberFromCircle.pending, (state, action) => {
-        const { circleId, memberId } = action.meta.arg;
+        const {circleId, memberId} = action.meta.arg;
         const currentMembers = state.membersByCircleId[circleId] || [];
         // Optimistically remove the member
         state.membersByCircleId[circleId] = currentMembers.filter(
@@ -180,7 +184,7 @@ const circleSlice = createSlice({
       })
       // ROLLBACK: Restore previous members on failure
       .addCase(removeMemberFromCircle.rejected, (state, action) => {
-        const { previousMembers, circleId, message } = action.payload || {};
+        const {previousMembers, circleId, message} = action.payload || {};
         if (circleId && previousMembers) {
           // Rollback to previous state
           state.membersByCircleId[circleId] = previousMembers;
@@ -193,13 +197,13 @@ const circleSlice = createSlice({
       // ============================================
       // OPTIMISTIC: Update name immediately on pending
       .addCase(editCircleName.pending, (state, action) => {
-        const { circleId, name } = action.meta.arg;
+        const {circleId, name} = action.meta.arg;
 
         // Update in ownedCircles if it matches
         if (state.ownedCircles && Array.isArray(state.ownedCircles)) {
           state.ownedCircles = state.ownedCircles.map(circle =>
             circle.id === circleId || circle._id === circleId
-              ? { ...circle, name }
+              ? {...circle, name}
               : circle,
           );
         }
@@ -207,14 +211,14 @@ const circleSlice = createSlice({
         // Update in allCircles array
         state.allCircles = state.allCircles.map(circle =>
           circle.id === circleId || circle._id === circleId
-            ? { ...circle, name }
+            ? {...circle, name}
             : circle,
         );
       })
       .addCase(editCircleName.fulfilled, (state, action) => {
         // Name already updated optimistically
         // Only update name and updatedAt from response, preserve all other data
-        const { circleId, response } = action.payload;
+        const {circleId, response} = action.payload;
         if (response) {
           // Extract only name and updatedAt from response
           const updates = {};
@@ -230,13 +234,13 @@ const circleSlice = createSlice({
             if (state.ownedCircles && Array.isArray(state.ownedCircles)) {
               state.ownedCircles = state.ownedCircles.map(circle =>
                 circle.id === circleId || circle._id === circleId
-                  ? { ...circle, ...updates }
+                  ? {...circle, ...updates}
                   : circle,
               );
             }
             state.allCircles = state.allCircles.map(circle =>
               circle.id === circleId || circle._id === circleId
-                ? { ...circle, ...updates }
+                ? {...circle, ...updates}
                 : circle,
             );
           }
@@ -245,7 +249,7 @@ const circleSlice = createSlice({
       })
       // ROLLBACK: Restore previous circle data on failure
       .addCase(editCircleName.rejected, (state, action) => {
-        const { previousownedCircles, previousAllCircles, message } =
+        const {previousownedCircles, previousAllCircles, message} =
           action.payload || {};
         if (previousownedCircles !== undefined) {
           state.ownedCircles = previousownedCircles;
@@ -261,18 +265,18 @@ const circleSlice = createSlice({
       // ============================================
       // OPTIMISTIC: Add temporary member immediately on pending
       .addCase(addMemberToCircle.pending, (state, action) => {
-        const { circleId, tempMember } = action.meta.arg;
+        const {circleId, tempMember} = action.meta.arg;
         if (tempMember) {
           const currentMembers = state.membersByCircleId[circleId] || [];
           // Add temporary member with a temp flag
           state.membersByCircleId[circleId] = [
             ...currentMembers,
-            { ...tempMember, _isOptimistic: true },
+            {...tempMember, _isOptimistic: true},
           ];
         }
       })
       .addCase(addMemberToCircle.fulfilled, (state, action) => {
-        const { circleId, member, tempMemberId } = action.payload;
+        const {circleId, member, tempMemberId} = action.payload;
         const currentMembers = state.membersByCircleId[circleId] || [];
 
         if (tempMemberId) {
@@ -293,7 +297,7 @@ const circleSlice = createSlice({
       })
       // ROLLBACK: Restore previous members on failure
       .addCase(addMemberToCircle.rejected, (state, action) => {
-        const { previousMembers, circleId, message } = action.payload || {};
+        const {previousMembers, circleId, message} = action.payload || {};
         if (circleId && previousMembers) {
           // Rollback to previous state
           state.membersByCircleId[circleId] = previousMembers;
@@ -306,24 +310,24 @@ const circleSlice = createSlice({
       // ============================================
       // OPTIMISTIC: Update role immediately on pending
       .addCase(updateMemberRole.pending, (state, action) => {
-        const { circleId, memberId, role } = action.meta.arg;
+        const {circleId, memberId, role} = action.meta.arg;
         const currentMembers = state.membersByCircleId[circleId] || [];
         // Optimistically update the member's role
         state.membersByCircleId[circleId] = currentMembers.map(member =>
           member.id === memberId || member._id === memberId
-            ? { ...member, role }
+            ? {...member, role}
             : member,
         );
       })
       .addCase(updateMemberRole.fulfilled, (state, action) => {
         // Role already updated optimistically
         // Optionally merge with server response
-        const { circleId, memberId, response } = action.payload;
+        const {circleId, memberId, response} = action.payload;
         if (response) {
           const currentMembers = state.membersByCircleId[circleId] || [];
           state.membersByCircleId[circleId] = currentMembers.map(member =>
             member.id === memberId || member._id === memberId
-              ? { ...member, ...response }
+              ? {...member, ...response}
               : member,
           );
         }
@@ -331,7 +335,7 @@ const circleSlice = createSlice({
       })
       // ROLLBACK: Restore previous members on failure
       .addCase(updateMemberRole.rejected, (state, action) => {
-        const { previousMembers, circleId, message } = action.payload || {};
+        const {previousMembers, circleId, message} = action.payload || {};
         if (circleId && previousMembers) {
           // Rollback to previous state
           state.membersByCircleId[circleId] = previousMembers;
@@ -346,14 +350,14 @@ const circleSlice = createSlice({
         state.loading = true;
         state.error = null;
 
-        const { circleId, defaultMemberRole } = action.meta.arg || {};
+        const {circleId, defaultMemberRole} = action.meta.arg || {};
         if (!circleId) return;
 
         // Optimistically update in ownedCircles if it matches
         if (state.ownedCircles && Array.isArray(state.ownedCircles)) {
           state.ownedCircles = state.ownedCircles.map(circle =>
             circle.id === circleId || circle._id === circleId
-              ? { ...circle, defaultMemberRole }
+              ? {...circle, defaultMemberRole}
               : circle,
           );
         }
@@ -361,7 +365,7 @@ const circleSlice = createSlice({
         // Optimistically update in allCircles array
         state.allCircles = state.allCircles.map(circle =>
           circle.id === circleId || circle._id === circleId
-            ? { ...circle, defaultMemberRole }
+            ? {...circle, defaultMemberRole}
             : circle,
         );
       })
@@ -369,26 +373,28 @@ const circleSlice = createSlice({
         state.loading = false;
         state.error = null;
 
-        const { circleId, defaultMemberRole, response } = action.payload || {};
+        const {circleId, defaultMemberRole, response} = action.payload || {};
         if (!circleId) return;
 
         const updates = {};
-        if (defaultMemberRole !== undefined) updates.defaultMemberRole = defaultMemberRole;
-        if (response?.updatedAt !== undefined) updates.updatedAt = response.updatedAt;
+        if (defaultMemberRole !== undefined)
+          updates.defaultMemberRole = defaultMemberRole;
+        if (response?.updatedAt !== undefined)
+          updates.updatedAt = response.updatedAt;
 
         if (Object.keys(updates).length === 0) return;
 
         if (state.ownedCircles && Array.isArray(state.ownedCircles)) {
           state.ownedCircles = state.ownedCircles.map(circle =>
             circle.id === circleId || circle._id === circleId
-              ? { ...circle, ...updates }
+              ? {...circle, ...updates}
               : circle,
           );
         }
 
         state.allCircles = state.allCircles.map(circle =>
           circle.id === circleId || circle._id === circleId
-            ? { ...circle, ...updates }
+            ? {...circle, ...updates}
             : circle,
         );
       })
@@ -421,7 +427,7 @@ const circleSlice = createSlice({
       // ============================================
       // 🔟 GET INVITE LINK
       // ============================================
-      .addCase(getCircleInviteLink.pending, (state) => {
+      .addCase(getCircleInviteLink.pending, state => {
         state.inviteLinkLoading = true;
         state.error = null;
       })
@@ -438,7 +444,7 @@ const circleSlice = createSlice({
       // ============================================
       // 1️⃣1️⃣ GET INVITE QR CODE
       // ============================================
-      .addCase(getCircleInviteQR.pending, (state) => {
+      .addCase(getCircleInviteQR.pending, state => {
         state.inviteQRLoading = true;
         state.error = null;
       })
@@ -454,11 +460,11 @@ const circleSlice = createSlice({
       // ============================================
       // 1️⃣2️⃣ JOIN CIRCLE VIA INVITE
       // ============================================
-      .addCase(joinCircleViaInvite.pending, (state) => {
+      .addCase(createInvite.pending, state => {
         state.joiningCircle = true;
         state.error = null;
       })
-      .addCase(joinCircleViaInvite.fulfilled, (state, action) => {
+      .addCase(createInvite.fulfilled, (state, action) => {
         state.joiningCircle = false;
         // Add the new circle to allCircles
         // if (action.payload.circle) {
@@ -470,7 +476,7 @@ const circleSlice = createSlice({
         //   }
         // }
       })
-      .addCase(joinCircleViaInvite.rejected, (state, action) => {
+      .addCase(createInvite.rejected, (state, action) => {
         state.joiningCircle = false;
         state.error = action.payload;
       })
@@ -487,19 +493,19 @@ const circleSlice = createSlice({
         state.error = null;
       })
       .addCase(setDefaultCircle.fulfilled, (state, action) => {
-        const { circleId } = action.payload;
+        const {circleId} = action.payload;
         state.loading = false;
-        
+
         // Update allCircles: set isDefault true for this ID, false for others
         state.allCircles = state.allCircles.map(circle => ({
           ...circle,
-          isDefault: (circle._id === circleId || circle.id === circleId)
+          isDefault: circle._id === circleId || circle.id === circleId,
         }));
 
         // Update ownedCircles: set isDefault true for this ID, false for others
         state.ownedCircles = state.ownedCircles.map(circle => ({
           ...circle,
-          isDefault: (circle._id === circleId || circle.id === circleId)
+          isDefault: circle._id === circleId || circle.id === circleId,
         }));
       })
       .addCase(setDefaultCircle.rejected, (state, action) => {
@@ -514,17 +520,17 @@ const circleSlice = createSlice({
         state.error = null;
       })
       .addCase(deleteCircle.fulfilled, (state, action) => {
-        const { circleId } = action.payload;
+        const {circleId} = action.payload;
         state.loading = false;
-        
+
         // Remove from allCircles
         state.allCircles = state.allCircles.filter(
-          circle => circle._id !== circleId && circle.id !== circleId
+          circle => circle._id !== circleId && circle.id !== circleId,
         );
 
         // Remove from ownedCircles
         state.ownedCircles = state.ownedCircles.filter(
-          circle => circle._id !== circleId && circle.id !== circleId
+          circle => circle._id !== circleId && circle.id !== circleId,
         );
       })
       .addCase(deleteCircle.rejected, (state, action) => {
@@ -551,18 +557,18 @@ const circleSlice = createSlice({
         state.error = action.payload;
       })
       // ── fetchCirclesPicker ─────────────────
-      .addCase(fetchCirclesPicker.pending, (state) => {
+      .addCase(fetchCirclesPicker.pending, state => {
         state.pickerLoading = true;
       })
       .addCase(fetchCirclesPicker.fulfilled, (state, action) => {
         state.pickerLoading = false;
         state.pickerCircles = action.payload || [];
       })
-      .addCase(fetchCirclesPicker.rejected, (state) => {
+      .addCase(fetchCirclesPicker.rejected, state => {
         state.pickerLoading = false;
       })
       // ── fetchAllConnections ─────────────────
-      .addCase(fetchAllConnections.pending, (state) => {
+      .addCase(fetchAllConnections.pending, state => {
         state.connectionsLoading = true;
       })
       .addCase(fetchAllConnections.fulfilled, (state, action) => {
@@ -581,17 +587,17 @@ const circleSlice = createSlice({
         state.error = null;
       })
       .addCase(leaveCircle.fulfilled, (state, action) => {
-        const { circleId } = action.payload;
+        const {circleId} = action.payload;
         state.loading = false;
-        
+
         // Remove from allCircles
         state.allCircles = state.allCircles.filter(
-          circle => circle._id !== circleId && circle.id !== circleId
+          circle => circle._id !== circleId && circle.id !== circleId,
         );
 
         // Remove from ownedCircles (just in case)
         state.ownedCircles = state.ownedCircles.filter(
-          circle => circle._id !== circleId && circle.id !== circleId
+          circle => circle._id !== circleId && circle.id !== circleId,
         );
       })
       .addCase(leaveCircle.rejected, (state, action) => {
@@ -602,13 +608,13 @@ const circleSlice = createSlice({
       // 13. TOGGLE CIRCLE NOTIFICATIONS (Optimistic Update)
       // ============================================
       .addCase(toggleCircleNotifications.pending, (state, action) => {
-        const { circleId } = action.meta.arg;
+        const {circleId} = action.meta.arg;
 
         // Optimistically toggle isNotificationMuted in ownedCircles
         if (state.ownedCircles && Array.isArray(state.ownedCircles)) {
           state.ownedCircles = state.ownedCircles.map(circle =>
             circle.id === circleId || circle._id === circleId
-              ? { ...circle, isNotificationMuted: !circle.isNotificationMuted }
+              ? {...circle, isNotificationMuted: !circle.isNotificationMuted}
               : circle,
           );
         }
@@ -616,44 +622,44 @@ const circleSlice = createSlice({
         // Optimistically toggle isNotificationMuted in allCircles
         state.allCircles = state.allCircles.map(circle =>
           circle.id === circleId || circle._id === circleId
-            ? { ...circle, isNotificationMuted: !circle.isNotificationMuted }
+            ? {...circle, isNotificationMuted: !circle.isNotificationMuted}
             : circle,
         );
       })
       .addCase(toggleCircleNotifications.fulfilled, (state, action) => {
-        const { circleId, isNotificationMuted } = action.payload;
-        
+        const {circleId, isNotificationMuted} = action.payload;
+
         // Sync with server response just in case
         if (isNotificationMuted !== undefined) {
           if (state.ownedCircles && Array.isArray(state.ownedCircles)) {
             state.ownedCircles = state.ownedCircles.map(circle =>
               circle.id === circleId || circle._id === circleId
-                ? { ...circle, isNotificationMuted }
+                ? {...circle, isNotificationMuted}
                 : circle,
             );
           }
           state.allCircles = state.allCircles.map(circle =>
             circle.id === circleId || circle._id === circleId
-              ? { ...circle, isNotificationMuted }
+              ? {...circle, isNotificationMuted}
               : circle,
           );
         }
         state.error = null;
       })
       .addCase(toggleCircleNotifications.rejected, (state, action) => {
-        const { circleId } = action.meta.arg;
-        
+        const {circleId} = action.meta.arg;
+
         // Rollback optimistic toggle on failure
         if (state.ownedCircles && Array.isArray(state.ownedCircles)) {
           state.ownedCircles = state.ownedCircles.map(circle =>
             circle.id === circleId || circle._id === circleId
-              ? { ...circle, isNotificationMuted: !circle.isNotificationMuted }
+              ? {...circle, isNotificationMuted: !circle.isNotificationMuted}
               : circle,
           );
         }
         state.allCircles = state.allCircles.map(circle =>
           circle.id === circleId || circle._id === circleId
-            ? { ...circle, isNotificationMuted: !circle.isNotificationMuted }
+            ? {...circle, isNotificationMuted: !circle.isNotificationMuted}
             : circle,
         );
         state.error = action.payload;
@@ -667,7 +673,9 @@ const circleSlice = createSlice({
       })
       .addCase(fetchCircleRequests.fulfilled, (state, action) => {
         state.circleRequestsLoading = false;
-        state.circleRequests = Array.isArray(action.payload) ? action.payload : [];
+        state.circleRequests = Array.isArray(action.payload)
+          ? action.payload
+          : [];
       })
       .addCase(fetchCircleRequests.rejected, state => {
         state.circleRequestsLoading = false;
@@ -677,7 +685,7 @@ const circleSlice = createSlice({
       // 15. ACCEPT CIRCLE JOIN REQUEST (Optimistic)
       // ============================================
       .addCase(acceptCircleRequest.pending, (state, action) => {
-        const { requestId } = action.meta.arg;
+        const {requestId} = action.meta.arg;
         state.circleRequestsActioning[requestId] = true;
         // Optimistically remove from list
         state.circleRequests = state.circleRequests.filter(
@@ -685,11 +693,11 @@ const circleSlice = createSlice({
         );
       })
       .addCase(acceptCircleRequest.fulfilled, (state, action) => {
-        const { requestId } = action.payload;
+        const {requestId} = action.payload;
         delete state.circleRequestsActioning[requestId];
       })
       .addCase(acceptCircleRequest.rejected, (state, action) => {
-        const { requestId } = action.meta.arg;
+        const {requestId} = action.meta.arg;
         delete state.circleRequestsActioning[requestId];
         state.error = action.payload;
       })
@@ -698,7 +706,7 @@ const circleSlice = createSlice({
       // 16. REJECT CIRCLE JOIN REQUEST (Optimistic)
       // ============================================
       .addCase(rejectCircleRequest.pending, (state, action) => {
-        const { requestId } = action.meta.arg;
+        const {requestId} = action.meta.arg;
         state.circleRequestsActioning[requestId] = true;
         // Optimistically remove from list
         state.circleRequests = state.circleRequests.filter(
@@ -706,11 +714,11 @@ const circleSlice = createSlice({
         );
       })
       .addCase(rejectCircleRequest.fulfilled, (state, action) => {
-        const { requestId } = action.payload;
+        const {requestId} = action.payload;
         delete state.circleRequestsActioning[requestId];
       })
       .addCase(rejectCircleRequest.rejected, (state, action) => {
-        const { requestId } = action.meta.arg;
+        const {requestId} = action.meta.arg;
         delete state.circleRequestsActioning[requestId];
         state.error = action.payload;
       });

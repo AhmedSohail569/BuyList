@@ -436,6 +436,18 @@ const nl = {
   common_archive: "Archiveren",
   common_unarchive: "Uit archief",
   common_duplicate: "Dupliceren",
+  common_share: "Delen",
+  common_unshare: "Niet meer delen",
+  common_unshared_list: "Lijst niet meer delen",
+  common_select_circle: "Selecteer cirkel",
+  common_share_success: "Lijst succesvol gedeeld",
+  common_share_failed: "Delen mislukt",
+  common_unshare_success: "Lijst succesvol niet meer gedeeld",
+  common_unshare_failed: "Niet meer delen mislukt",
+  common_unshare_confirm: "Weet je zeker dat je deze lijst niet meer wilt delen vanuit {{circleName}}?",
+  common_sharing: "Bezig met delen...",
+  common_unsharing: "Bezig met ontkoppelen...",
+  common_something_went_wrong: "Er is iets misgegaan",
   common_loading: "Laden...",
   common_no_internet_title: "Geen internet",
   common_no_internet_desc: "Controleer je verbinding en probeer het opnieuw.",
@@ -444,6 +456,9 @@ const nl = {
   common_allow: "Toestaan",
   common_recently: "Onlangs",
   common_just_now: "Zojuist",
+  common_today: "Vandaag",
+  common_yesterday: "Gisteren",
+  common_type_comment: "Typ een opmerking...",
 
   // ── Leave Circle ──────────────────────────────────────────────────────────────
   circle_leave_btn: "Verlaten",
@@ -452,6 +467,18 @@ const nl = {
     "Als je deze cirkel verlaat, word je verwijderd uit alle gedeelde lijsten. Wil je doorgaan?",
   circle_leave_success_title: "Cirkel Verlaten",
   circle_leave_success_desc: "Je hebt de cirkel succesvol verlaten.",
+
+  // ── Circle Requests ───────────────────────────────────────────────────────────
+  circle_requests_title: "Alle Verzoeken",
+  circle_requests_search_placeholder: "Verzoek zoeken...",
+  circle_requests_empty: "Geen cirkelverzoeken",
+  circle_requests_empty_search: "Geen verzoeken gevonden voor \"{{query}}\"",
+  circle_requests_invited_by: "{{name}} heeft je uitgenodigd",
+  circle_requests_invited_you: "Uitgenodigd",
+  circle_requests_accept: "Accepteren",
+  circle_requests_reject: "Afwijzen",
+  circle_requests_dropdown_title: "Cirkelverzoeken",
+  circle_requests_see_all: "Bekijk alle cirkelverzoeken",
 };
 
 export default nl;

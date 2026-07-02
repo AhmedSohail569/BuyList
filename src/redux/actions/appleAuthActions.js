@@ -1,4 +1,4 @@
-import { createAsyncThunk } from "@reduxjs/toolkit";
+import {createAsyncThunk} from "@reduxjs/toolkit";
 import {
   getErrorMessage,
   getValidationErrors,
@@ -7,13 +7,13 @@ import {
   getDeviceInfo,
 } from "~utils";
 import axios from "~utils/axiosInstance";
-import { getPendingInvite, clearPendingInvite } from "~utils/deepLinking";
-import { joinCircleViaInvite } from "./inviteActions";
+import {getPendingInvite, clearPendingInvite} from "~utils/deepLinking";
+import {createInvite} from "./inviteActions";
 import Toast from "react-native-toast-message";
 
 export const appleLogin = createAsyncThunk(
   "auth/appleLogin",
-  async ({ token, fullName, email }, { rejectWithValue, dispatch }) => {
+  async ({token, fullName, email}, {rejectWithValue, dispatch}) => {
     try {
       const deviceInfo = await getDeviceInfo();
 
@@ -37,19 +37,19 @@ export const appleLogin = createAsyncThunk(
       if (pendingInvite) {
         setTimeout(async () => {
           try {
-            await dispatch(joinCircleViaInvite({ inviteCode: pendingInvite })).unwrap();
+            await dispatch(
+              createInvite({inviteCode: pendingInvite}),
+            ).unwrap();
             await clearPendingInvite();
-            Toast.show({
-              type: "success",
-              text1: "Joined Circle!",
-              text2: "You've been automatically added to the circle",
-            });
           } catch (error) {
             console.log("error joining circle", error);
             Toast.show({
               type: "error",
               text1: "Couldn't Join Circle",
-              text2: error?.message || error || "Already a member or circle doesn't exist",
+              text2:
+                error?.message ||
+                error ||
+                "Already a member or circle doesn't exist",
             });
           }
         }, 1000);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, {useState, useEffect, useCallback, useMemo, useRef} from "react";
 import {
   View,
   TouchableOpacity,
@@ -17,14 +17,14 @@ import {
   ListFilter,
   X,
 } from "lucide-react-native";
-import { useDispatch, useSelector } from "react-redux";
-import { useFocusEffect } from "@react-navigation/native";
+import {useDispatch, useSelector} from "react-redux";
+import {useFocusEffect} from "@react-navigation/native";
 import Toast from "react-native-toast-message";
 import Popover from "react-native-popover-view";
-import { Modal, ScrollView, Text } from "~components/Common";
+import {Modal, ScrollView, Text} from "~components/Common";
 import Header from "~components/Header";
-import { RFValue } from "react-native-responsive-fontsize";
-import { FontFamily } from "~theme/fonts";
+import {RFValue} from "react-native-responsive-fontsize";
+import {FontFamily} from "~theme/fonts";
 import useOnReconnect from "~hooks/useOnReconnect";
 import {
   fetchAllLists,
@@ -33,51 +33,62 @@ import {
   fetchArchivedLists,
   toggleArchiveList,
   duplicateList,
+  shareListToCircle,
 } from "~redux/actions/listActions";
-import { clearListsError } from "~redux/reducers/listReducer";
-import { useAlert } from "~context/AlertContext";
-import { useTheme } from "~context/ThemeContext";
+import {fetchCirclesPicker} from "~redux/actions/circleActions";
+import SelectionModal from "~containers/modals/SelectionModal";
+import {clearListsError} from "~redux/reducers/listReducer";
+import {useAlert} from "~context/AlertContext";
+import {useTheme} from "~context/ThemeContext";
 import useTranslation from "~hooks/useTranslation";
-import { hexToRgbStr } from "~utils";
+import {hexToRgbStr} from "~utils";
 
 // --- Sub Components ---
 
-const FilterTab = ({ label, count, isActive, onPress, colors, isDark }) => (
+const FilterTab = ({label, count, isActive, onPress, colors, isDark}) => (
   <TouchableOpacity
     onPress={onPress}
     style={[
       styles.filterTab,
       {
-        backgroundColor: isActive ? (isDark ? colors.primary : "#111827") : colors.card,
-        borderColor: isActive ? (isDark ? colors.primary : "#111827") : colors.border,
+        backgroundColor: isActive
+          ? isDark
+            ? colors.primary
+            : "#111827"
+          : colors.card,
+        borderColor: isActive
+          ? isDark
+            ? colors.primary
+            : "#111827"
+          : colors.border,
       },
     ]}>
     <Text
       style={[
         styles.filterText,
-        { color: isActive ? "#ffffff" : colors.textMuted },
+        {color: isActive ? "#ffffff" : colors.textMuted},
       ]}>
       {label} ({count})
     </Text>
   </TouchableOpacity>
 );
 
-const ProgressBar = ({ completed, total, color, label, percentage, colors }) => {
+const ProgressBar = ({completed, total, color, label, percentage, colors}) => {
   return (
     <View style={styles.progressContainer}>
       <View style={styles.progressTextRow}>
-        <Text style={[styles.progressStats, { color: colors.textSecondary }]}>
+        <Text style={[styles.progressStats, {color: colors.textSecondary}]}>
           {label}
         </Text>
-        <Text style={[styles.progressPercentage, { color: color }]}>
+        <Text style={[styles.progressPercentage, {color: color}]}>
           {percentage}%
         </Text>
       </View>
-      <View style={[styles.track, { backgroundColor: colors.progressTrack }]}>
+      <View style={[styles.track, {backgroundColor: colors.progressTrack}]}>
         <View
           style={[
             styles.fill,
-            { width: `${percentage}%`, backgroundColor: color },
+            {width: `${percentage}%`, backgroundColor: color},
           ]}
         />
       </View>
@@ -100,104 +111,151 @@ const ListCard = React.memo(
     onRequestDelete,
     onRequestArchive,
     onRequestDuplicate,
+    onRequestShare,
     profile,
     t,
   }) => {
     const pendingActionRef = React.useRef(null);
-    const { colors, isDark } = useTheme();
+    const {colors, isDark} = useTheme();
     const totalItems = item.progress?.total || 0;
     const completedItems = item.progress?.purchased || 0;
     const isCompleted = totalItems > 0 && completedItems === totalItems;
-    const progressColor = item.type === "personal" ? "#16A34A" : isCompleted ? "#22c55e" : "#0ea5e9";
+    console.log("ItemList", item);
+    const progressColor =
+      item.type === "personal"
+        ? "#16A34A"
+        : isCompleted
+        ? "#22c55e"
+        : "#0ea5e9";
     const stripColor = item.circle?.color || progressColor;
 
     const circleColor = item.circle?.color;
     const circleRgb = hexToRgbStr(circleColor);
-    const badgeBg = circleColor && circleRgb
-      ? `rgba(${circleRgb}, 0.15)`
-      : isDark ? "rgba(14, 165, 233, 0.2)" : "#e0f2fe";
+    const badgeBg =
+      circleColor && circleRgb
+        ? `rgba(${circleRgb}, 0.15)`
+        : isDark
+        ? "rgba(14, 165, 233, 0.2)"
+        : "#e0f2fe";
     const badgeTextColor = circleColor || colors.primary;
     const circleBadgeLabel = item.circle?.name || "Shared";
 
     return (
       <TouchableOpacity
         key={item.id || item._id}
-        style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}
+        style={[
+          styles.card,
+          {backgroundColor: colors.card, shadowColor: colors.shadowColor},
+        ]}
         onPress={onPress}
         disabled={isDeleting || isArchiving || isDuplicating}>
-        <View
-          style={[
-            styles.cardBorderStrip,
-            { backgroundColor: stripColor },
-          ]}
-        />
+        <View style={[styles.cardBorderStrip, {backgroundColor: stripColor}]} />
         <View style={styles.cardContent}>
           <View style={styles.cardHeader}>
             <View style={styles.titleRow}>
-              <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>{item.name}</Text>
+              <Text style={[styles.cardTitle, {color: colors.textPrimary}]}>
+                {item.name}
+              </Text>
               {item.type === "shared" && (
-                <View style={[styles.sharedBadge, { backgroundColor: badgeBg }]}>
-                  <Text style={[styles.sharedText, { color: badgeTextColor }]}>{circleBadgeLabel}</Text>
+                <View style={[styles.sharedBadge, {backgroundColor: badgeBg}]}>
+                  <Text style={[styles.sharedText, {color: badgeTextColor}]}>
+                    {circleBadgeLabel}
+                  </Text>
                 </View>
               )}
             </View>
-            {item.owner === profile._id && <Popover
-              isVisible={menuVisible}
-              onRequestClose={onCloseMenu}
-              onCloseComplete={() => {
-                // The custom patch removed the native unmount delay; we must delay the next modal here
-                if (pendingActionRef.current) {
-                  const action = pendingActionRef.current;
-                  setTimeout(() => {
-                    action();
-                  }, 400);
-                  pendingActionRef.current = null;
-                }
-              }}
-              from={(sourceRef, showPopover) => (
-                <TouchableOpacity
-                  ref={sourceRef}
-                  onPress={() => {
-                    showPopover();
-                    onOpenMenu();
-                  }}
-                  disabled={isDeleting || isArchiving || isDuplicating}>
-                  <MoreHorizontal size={20} color={colors.iconMuted} />
-                </TouchableOpacity>
-              )}
-              popoverStyle={[styles.menuContent, { backgroundColor: colors.card }]}>
-              <View style={{ paddingVertical: 4 }}>
-                <TouchableOpacity
-                  onPress={() => {
-                    pendingActionRef.current = () => onRequestArchive();
-                    onCloseMenu();
-                  }}
-                  style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-                  <Text style={[styles.menuItemArchive, { color: colors.textPrimary }]}>{isArchived ? t('common_unarchive') : t('common_archive')}</Text>
-                </TouchableOpacity>
-                {isArchived && (
+            {item.owner === profile._id && (
+              <Popover
+                isVisible={menuVisible}
+                onRequestClose={onCloseMenu}
+                onCloseComplete={() => {
+                  // The custom patch removed the native unmount delay; we must delay the next modal here
+                  if (pendingActionRef.current) {
+                    const action = pendingActionRef.current;
+                    setTimeout(() => {
+                      action();
+                    }, 400);
+                    pendingActionRef.current = null;
+                  }
+                }}
+                from={(sourceRef, showPopover) => (
                   <TouchableOpacity
+                    ref={sourceRef}
                     onPress={() => {
-                      pendingActionRef.current = () => onRequestDuplicate();
-                      onCloseMenu();
+                      showPopover();
+                      onOpenMenu();
                     }}
-                    style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-                    <Text style={[styles.menuItemArchive, { color: colors.primary }]}>{t('common_duplicate')}</Text>
+                    disabled={isDeleting || isArchiving || isDuplicating}>
+                    <MoreHorizontal size={20} color={colors.iconMuted} />
                   </TouchableOpacity>
                 )}
-                <TouchableOpacity
-                  onPress={() => {
-                    pendingActionRef.current = () => onRequestDelete();
-                    onCloseMenu();
-                  }}
-                  style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-                  <Text style={styles.menuItemDelete}>{t('common_delete')}</Text>
-                </TouchableOpacity>
-              </View>
-            </Popover>}
+                popoverStyle={[
+                  styles.menuContent,
+                  {backgroundColor: colors.card},
+                ]}>
+                <View style={{paddingVertical: 4}}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      pendingActionRef.current = () => onRequestArchive();
+                      onCloseMenu();
+                    }}
+                    style={{paddingHorizontal: 16, paddingVertical: 12}}>
+                    <Text
+                      style={[
+                        styles.menuItemArchive,
+                        {color: colors.textPrimary},
+                      ]}>
+                      {isArchived ? t("common_unarchive") : t("common_archive")}
+                    </Text>
+                  </TouchableOpacity>
+                  {isArchived && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        pendingActionRef.current = () => onRequestDuplicate();
+                        onCloseMenu();
+                      }}
+                      style={{paddingHorizontal: 16, paddingVertical: 12}}>
+                      <Text
+                        style={[
+                          styles.menuItemArchive,
+                          {color: colors.primary},
+                        ]}>
+                        {t("common_duplicate")}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  {!isArchived && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        pendingActionRef.current = () => onRequestShare();
+                        onCloseMenu();
+                      }}
+                      style={{paddingHorizontal: 16, paddingVertical: 12}}>
+                      <Text
+                        style={[
+                          styles.menuItemArchive,
+                          {color: colors.primary},
+                        ]}>
+                        {item.type === "shared" ? t("common_unshare") : t("common_share")}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity
+                    onPress={() => {
+                      pendingActionRef.current = () => onRequestDelete();
+                      onCloseMenu();
+                    }}
+                    style={{paddingHorizontal: 16, paddingVertical: 12}}>
+                    <Text style={styles.menuItemDelete}>
+                      {t("common_delete")}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </Popover>
+            )}
           </View>
 
-          <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+          <Text style={[styles.subtitle, {color: colors.textMuted}]}>
             {item.category} • {formatDate(item.updatedAt || item.createdAt)}
           </Text>
 
@@ -237,8 +295,6 @@ const ListCard = React.memo(
             </View>
           )}
 
-          
-
           <View style={styles.progressSection}>
             <ProgressBar
               completed={completedItems}
@@ -252,12 +308,16 @@ const ListCard = React.memo(
 
           <View style={styles.cardFooter}>
             {isCompleted && (
-              <View style={[styles.completedBadge, { backgroundColor: isDark ? "rgba(22, 163, 74, 0.2)" : "#dcfce7" }]}>
-                <Check
-                  size={12}
-                  color="#16a34a"
-                  style={{ marginRight: 4 }}
-                />
+              <View
+                style={[
+                  styles.completedBadge,
+                  {
+                    backgroundColor: isDark
+                      ? "rgba(22, 163, 74, 0.2)"
+                      : "#dcfce7",
+                  },
+                ]}>
+                <Check size={12} color="#16a34a" style={{marginRight: 4}} />
                 <Text style={styles.completedText}>Completed</Text>
               </View>
             )}
@@ -273,15 +333,18 @@ const ListCard = React.memo(
     return (
       prevProps.item.id === nextProps.item.id &&
       prevProps.item.items?.length === nextProps.item.items?.length &&
-      prevProps.item.progress?.purchased === nextProps.item.progress?.purchased &&
+      prevProps.item.progress?.purchased ===
+        nextProps.item.progress?.purchased &&
       prevProps.item.progress?.total === nextProps.item.progress?.total &&
-      prevProps.item.progress?.percentage === nextProps.item.progress?.percentage &&
+      prevProps.item.progress?.percentage ===
+        nextProps.item.progress?.percentage &&
       prevProps.item.circle?.color === nextProps.item.circle?.color &&
       prevProps.isDeleting === nextProps.isDeleting &&
       prevProps.isArchiving === nextProps.isArchiving &&
       prevProps.isDuplicating === nextProps.isDuplicating &&
       prevProps.isArchived === nextProps.isArchived &&
-      prevProps.menuVisible === nextProps.menuVisible
+      prevProps.menuVisible === nextProps.menuVisible &&
+      prevProps.onRequestShare === nextProps.onRequestShare
     );
   },
 );
@@ -303,7 +366,7 @@ const formatDate = date => {
   return `${Math.floor(diffDays / 7)}w ago`;
 };
 
-const ListsTab = ({ onQuickAction, navigation, route }) => {
+const ListsTab = ({onQuickAction, navigation, route}) => {
   const dispatch = useDispatch();
   const {profile} = useSelector(state => state.profile);
   const lists = useSelector(state => state.lists.lists);
@@ -311,9 +374,9 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
   const loading = useSelector(state => state.lists.loading);
   const error = useSelector(state => state.lists.error);
   const [filterVersion, setFilterVersion] = useState(0);
-  const { showAlert, showError } = useAlert();
-  const { colors, isDark } = useTheme();
-  const { t } = useTranslation();
+  const {showAlert, showError} = useAlert();
+  const {colors, isDark} = useTheme();
+  const {t} = useTranslation();
 
   console.log(route);
 
@@ -331,6 +394,19 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
   const [archivingListId, setArchivingListId] = useState(null);
   const [duplicatingListId, setDuplicatingListId] = useState(null);
 
+  // Share to circle state
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [sharingListId, setSharingListId] = useState(null);
+  const [isUnshareMode, setIsUnshareMode] = useState(false);
+  const [sharingListCircleName, setSharingListCircleName] = useState("");
+  const [isSharingList, setIsSharingList] = useState(false);
+  const pickerCircles = useSelector(state => state.circles.pickerCircles);
+  const pickerLoading = useSelector(state => state.circles.pickerLoading);
+
+  const circleOptions = pickerCircles.map(c => ({
+    label: c.name,
+    value: c._id || c.id,
+  }));
 
   const getActiveTabTitle = () => {
     switch (activeTab) {
@@ -348,7 +424,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
   };
   const listCounts = useMemo(() => {
     const totalLists = lists || [];
-    console.log('lists', lists);
+    console.log("lists", lists);
     return {
       all: totalLists.length,
       personal: totalLists.filter(item => item.type === "personal").length,
@@ -370,7 +446,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
       }
       if (shouldOpen) {
         // Clear the param so it doesn't re-open on every focus
-        navigation.setParams?.({ openCreateListModal: undefined });
+        navigation.setParams?.({openCreateListModal: undefined});
       }
     }, [route?.params?.openCreateListModal, isCreateListVisible, navigation]),
   );
@@ -388,7 +464,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
     useCallback(() => {
       if (route?.params?.listNameUpdated) {
         setFilterVersion(v => v + 1);
-        navigation.setParams({ listNameUpdated: undefined });
+        navigation.setParams({listNameUpdated: undefined});
       }
     }, [route?.params?.listNameUpdated, navigation]),
   );
@@ -432,9 +508,9 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
           setActiveTab("All Lists");
         }
         // Clear the filter param after processing to allow re-navigation
-        navigation.setParams?.({ filter: undefined });
+        navigation.setParams?.({filter: undefined});
       }
-    }, [route?.params?.filter, navigation])
+    }, [route?.params?.filter, navigation]),
   );
 
   // Handle API errors
@@ -450,69 +526,72 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
   }, [error, dispatch]);
 
   // Sort lists based on selected sort option
-  const sortLists = useCallback((listsToSort) => {
-    const sorted = [...listsToSort];
+  const sortLists = useCallback(
+    listsToSort => {
+      const sorted = [...listsToSort];
 
-    switch (sortOption) {
-      case "priority":
-        // Sort by priority (High > Medium > Low)
-        return sorted.sort((a, b) => {
-          const PRIORITY_VALUE = { high: 3, medium: 2, low: 1 };
-          const pA = PRIORITY_VALUE[a.priority?.toLowerCase()] || 0;
-          const pB = PRIORITY_VALUE[b.priority?.toLowerCase()] || 0;
+      switch (sortOption) {
+        case "priority":
+          // Sort by priority (High > Medium > Low)
+          return sorted.sort((a, b) => {
+            const PRIORITY_VALUE = {high: 3, medium: 2, low: 1};
+            const pA = PRIORITY_VALUE[a.priority?.toLowerCase()] || 0;
+            const pB = PRIORITY_VALUE[b.priority?.toLowerCase()] || 0;
 
-          if (pA !== pB) return pB - pA;
+            if (pA !== pB) return pB - pA;
 
-          // Secondary sort: Most recently updated
-          const dateA = new Date(a.updatedAt || a.createdAt || 0);
-          const dateB = new Date(b.updatedAt || b.createdAt || 0);
-          return dateB - dateA;
-        });
+            // Secondary sort: Most recently updated
+            const dateA = new Date(a.updatedAt || a.createdAt || 0);
+            const dateB = new Date(b.updatedAt || b.createdAt || 0);
+            return dateB - dateA;
+          });
 
-      case "createdOn":
-        // Sort by created date (oldest first)
-        return sorted.sort((a, b) => {
-          const dateA = new Date(a.createdAt || 0);
-          const dateB = new Date(b.createdAt || 0);
-          return dateA - dateB;
-        });
+        case "createdOn":
+          // Sort by created date (oldest first)
+          return sorted.sort((a, b) => {
+            const dateA = new Date(a.createdAt || 0);
+            const dateB = new Date(b.createdAt || 0);
+            return dateA - dateB;
+          });
 
-      case "recentlyUpdated":
-        // Sort by updated date (most recent first)
-        return sorted.sort((a, b) => {
-          const dateA = new Date(a.updatedAt || a.createdAt || 0);
-          const dateB = new Date(b.updatedAt || b.createdAt || 0);
-          return dateB - dateA;
-        });
+        case "recentlyUpdated":
+          // Sort by updated date (most recent first)
+          return sorted.sort((a, b) => {
+            const dateA = new Date(a.updatedAt || a.createdAt || 0);
+            const dateB = new Date(b.updatedAt || b.createdAt || 0);
+            return dateB - dateA;
+          });
 
-      case "alphabetical":
-        // Sort alphabetically A-Z
-        return sorted.sort((a, b) => {
-          const nameA = (a.name || "").toLowerCase();
-          const nameB = (b.name || "").toLowerCase();
-          return nameA.localeCompare(nameB);
-        });
+        case "alphabetical":
+          // Sort alphabetically A-Z
+          return sorted.sort((a, b) => {
+            const nameA = (a.name || "").toLowerCase();
+            const nameB = (b.name || "").toLowerCase();
+            return nameA.localeCompare(nameB);
+          });
 
-      case "mostItems":
-        // Sort by total items (most first)
-        return sorted.sort((a, b) => {
-          const totalA = a.progress?.total || a.items?.length || 0;
-          const totalB = b.progress?.total || b.items?.length || 0;
-          return totalB - totalA;
-        });
+        case "mostItems":
+          // Sort by total items (most first)
+          return sorted.sort((a, b) => {
+            const totalA = a.progress?.total || a.items?.length || 0;
+            const totalB = b.progress?.total || b.items?.length || 0;
+            return totalB - totalA;
+          });
 
-      case "leastItems":
-        // Sort by total items (least first)
-        return sorted.sort((a, b) => {
-          const totalA = a.progress?.total || a.items?.length || 0;
-          const totalB = b.progress?.total || b.items?.length || 0;
-          return totalA - totalB;
-        });
+        case "leastItems":
+          // Sort by total items (least first)
+          return sorted.sort((a, b) => {
+            const totalA = a.progress?.total || a.items?.length || 0;
+            const totalB = b.progress?.total || b.items?.length || 0;
+            return totalA - totalB;
+          });
 
-      default:
-        return sorted;
-    }
-  }, [sortOption]);
+        default:
+          return sorted;
+      }
+    },
+    [sortOption],
+  );
 
   // Filter and sort lists based on active tab and sort option
   const filteredData = useMemo(() => {
@@ -520,7 +599,11 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
       const source = archivedLists || [];
       if (searchQuery.trim() !== "") {
         const lowerQuery = searchQuery.toLowerCase();
-        return sortLists(source.filter(item => (item.name || "").toLowerCase().includes(lowerQuery)));
+        return sortLists(
+          source.filter(item =>
+            (item.name || "").toLowerCase().includes(lowerQuery),
+          ),
+        );
       }
       return sortLists(source);
     }
@@ -534,43 +617,102 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
     if (searchQuery.trim() !== "") {
       const lowerQuery = searchQuery.toLowerCase();
       filtered = filtered.filter(item =>
-        (item.name || "").toLowerCase().includes(lowerQuery)
+        (item.name || "").toLowerCase().includes(lowerQuery),
       );
     }
 
     return sortLists(filtered);
   }, [lists, archivedLists, activeTab, sortLists, searchQuery, filterVersion]);
 
-
-
   // Duplicate list handler (archived lists only)
-  const handleDuplicateList = useCallback(async (listId) => {
-    setDuplicatingListId(listId);
-    try {
-      await dispatch(duplicateList({ listId })).unwrap();
-      Toast.show({ type: "success", text1: "List duplicated" });
-      dispatch(fetchAllLists());
-    } catch {
-      // Error handled by useEffect
-    } finally {
-      setDuplicatingListId(null);
-    }
-  }, [dispatch]);
+  const handleDuplicateList = useCallback(
+    async listId => {
+      setDuplicatingListId(listId);
+      try {
+        await dispatch(duplicateList({listId})).unwrap();
+        Toast.show({type: "success", text1: "List duplicated"});
+        dispatch(fetchAllLists());
+      } catch {
+        // Error handled by useEffect
+      } finally {
+        setDuplicatingListId(null);
+      }
+    },
+    [dispatch],
+  );
+
+  // Share list to circle handler (personal → shared)
+  const handleShareList = useCallback(
+    async circleId => {
+      if (!sharingListId || !circleId) return;
+      setIsSharingList(true);
+      try {
+        await dispatch(
+          shareListToCircle({listId: sharingListId, circleId, type: "shared"}),
+        ).unwrap();
+        Toast.show({type: "success", text1: t("common_share_success")});
+        setShareModalVisible(false);
+        setSharingListId(null);
+        await dispatch(fetchAllLists()).unwrap();
+      } catch (err) {
+        Toast.show({
+          type: "error",
+          text1: t("common_share_failed"),
+          text2: typeof err === "string" ? err : t("common_something_went_wrong"),
+        });
+      } finally {
+        setIsSharingList(false);
+      }
+    },
+    [dispatch, sharingListId],
+  );
+
+  // Unshare list handler (shared → personal)
+  const handleUnshareList = useCallback(
+    async () => {
+      if (!sharingListId) return;
+      setIsSharingList(true);
+      try {
+        await dispatch(
+          shareListToCircle({listId: sharingListId, type: "personal"}),
+        ).unwrap();
+        Toast.show({type: "success", text1: t("common_unshare_success")});
+        setShareModalVisible(false);
+        setSharingListId(null);
+        await dispatch(fetchAllLists()).unwrap();
+      } catch (err) {
+        Toast.show({
+          type: "error",
+          text1: t("common_unshare_failed"),
+          text2: typeof err === "string" ? err : t("common_something_went_wrong"),
+        });
+      } finally {
+        setIsSharingList(false);
+      }
+    },
+    [dispatch, sharingListId],
+  );
 
   // Archive list handler
-  const handleArchiveList = useCallback(async (listId, isCurrentlyArchived) => {
-    setArchivingListId(listId);
-    try {
-      await dispatch(toggleArchiveList({ listId })).unwrap();
-      Toast.show({ type: "success", text1: isCurrentlyArchived ? "List unarchived" : "List archived" });
-      dispatch(fetchAllLists());
-      dispatch(fetchArchivedLists());
-    } catch {
-      // Error handled by useEffect
-    } finally {
-      setArchivingListId(null);
-    }
-  }, [dispatch]);
+  const handleArchiveList = useCallback(
+    async (listId, isCurrentlyArchived) => {
+      setArchivingListId(listId);
+      try {
+        await dispatch(toggleArchiveList({listId})).unwrap();
+        Toast.show({
+          type: "success",
+          text1: isCurrentlyArchived ? "List unarchived" : "List archived",
+        });
+        dispatch(fetchAllLists());
+        dispatch(fetchArchivedLists());
+      } catch {
+        // Error handled by useEffect
+      } finally {
+        setArchivingListId(null);
+      }
+    },
+    [dispatch],
+  );
 
   // Pull to refresh
   const handleRefresh = useCallback(async () => {
@@ -592,7 +734,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
     async listId => {
       setDeletingListId(listId);
       try {
-        await dispatch(deleteList({ listId })).unwrap();
+        await dispatch(deleteList({listId})).unwrap();
         Toast.show({
           type: "success",
           text1: t("lists_delete_success_title"),
@@ -611,10 +753,12 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
     (listId, listName) => {
       showAlert({
         title: t("lists_delete_title"),
-        message: `${t("lists_delete_message")} "${listName || t("lists_delete_this")}"?`,
+        message: `${t("lists_delete_message")} "${
+          listName || t("lists_delete_this")
+        }"?`,
         type: "confirm",
         buttons: [
-          { text: t("common_cancel"), style: "cancel" },
+          {text: t("common_cancel"), style: "cancel"},
           {
             text: t("common_delete"),
             style: "destructive",
@@ -657,7 +801,6 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
 
       setIsCreatingList(true);
 
-
       try {
         await dispatch(createList(data)).unwrap();
         Toast.show({
@@ -668,7 +811,6 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
         closeCreateListModal();
         // Optimistic update already handled, no refetch needed
       } catch (err) {
-
         // Error handled by useEffect
       } finally {
         setIsCreatingList(false);
@@ -680,7 +822,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
   // Navigate to list details
   const handleListPress = useCallback(
     listId => {
-      navigation.navigate("ListDetails", { listId });
+      navigation.navigate("ListDetails", {listId});
     },
     [navigation],
   );
@@ -700,16 +842,18 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
     // Toggle menu state
     setShowSortMenu(prev => !prev);
   }, [activeMenuListId]);
-  
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, {backgroundColor: colors.background}]}>
       <Header
         variant="title"
         title={t("lists_title")}
         rightAction={
-          <TouchableOpacity 
-            style={[styles.searchButton, { backgroundColor: colors.card, shadowColor: colors.shadowColor }]}
+          <TouchableOpacity
+            style={[
+              styles.searchButton,
+              {backgroundColor: colors.card, shadowColor: colors.shadowColor},
+            ]}
             onPress={() => {
               if (showSearchBar) {
                 setSearchQuery("");
@@ -717,8 +861,7 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
               } else {
                 setShowSearchBar(true);
               }
-            }}
-          >
+            }}>
             <Search size={RFValue(20)} color={colors.textPrimary} />
           </TouchableOpacity>
         }
@@ -735,40 +878,54 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
               colors={colors}
               isDark={isDark}
             />
-           {listCounts.personal > 0 && <FilterTab
-              label={t("lists_tab_personal")}
-              count={listCounts.personal}
-              isActive={activeTab === "Personal Lists"}
-              onPress={() => setActiveTab("Personal Lists")}
-              colors={colors}
-              isDark={isDark}
-            />}
-           {listCounts.shared > 0 && <FilterTab
-              label={t("lists_tab_shared")}
-              count={listCounts.shared}
-              isActive={activeTab === "Shared Lists"}
-              onPress={() => setActiveTab("Shared Lists")}
-              colors={colors}
-              isDark={isDark}
-            />}
-           {listCounts.archived > 0 && <FilterTab
-              label={t("lists_tab_archived")}
-              count={listCounts.archived}
-              isActive={activeTab === "Archived Lists"}
-              onPress={() => setActiveTab("Archived Lists")}
-              colors={colors}
-              isDark={isDark}
-            />}
+            {listCounts.personal > 0 && (
+              <FilterTab
+                label={t("lists_tab_personal")}
+                count={listCounts.personal}
+                isActive={activeTab === "Personal Lists"}
+                onPress={() => setActiveTab("Personal Lists")}
+                colors={colors}
+                isDark={isDark}
+              />
+            )}
+            {listCounts.shared > 0 && (
+              <FilterTab
+                label={t("lists_tab_shared")}
+                count={listCounts.shared}
+                isActive={activeTab === "Shared Lists"}
+                onPress={() => setActiveTab("Shared Lists")}
+                colors={colors}
+                isDark={isDark}
+              />
+            )}
+            {listCounts.archived > 0 && (
+              <FilterTab
+                label={t("lists_tab_archived")}
+                count={listCounts.archived}
+                isActive={activeTab === "Archived Lists"}
+                onPress={() => setActiveTab("Archived Lists")}
+                colors={colors}
+                isDark={isDark}
+              />
+            )}
           </RNScrollView>
         }
       />
 
       {showSearchBar && (
-        <View style={[styles.searchBarWrapper, { backgroundColor: colors.background }]}>
-          <View style={[styles.searchBarContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.searchBarWrapper,
+            {backgroundColor: colors.background},
+          ]}>
+          <View
+            style={[
+              styles.searchBarContainer,
+              {backgroundColor: colors.card, borderColor: colors.border},
+            ]}>
             <Search size={RFValue(16)} color={colors.iconMuted} />
             <TextInput
-              style={[styles.searchInput, { color: colors.textPrimary }]}
+              style={[styles.searchInput, {color: colors.textPrimary}]}
               placeholder={t("lists_search_placeholder")}
               placeholderTextColor={colors.textMuted}
               value={searchQuery}
@@ -826,7 +983,9 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
 
           {/* Section Header */}
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>{getActiveTabTitle().toUpperCase()}</Text>
+            <Text style={[styles.sectionTitle, {color: colors.textMuted}]}>
+              {getActiveTabTitle().toUpperCase()}
+            </Text>
             <Popover
               isVisible={showSortMenu}
               onRequestClose={() => {
@@ -839,17 +998,29 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
               from={(sourceRef, showPopover) => (
                 <TouchableOpacity
                   ref={sourceRef}
-                  style={[styles.sortButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+                  style={[
+                    styles.sortButton,
+                    {backgroundColor: colors.card, borderColor: colors.border},
+                  ]}
                   onPress={() => {
                     showPopover();
                     handleSortMenuToggle();
                   }}>
-                  <ListFilter size={14} color={colors.iconMuted} style={{ marginRight: 4 }} />
-                  <Text style={[styles.sortText, { color: colors.textMuted }]}>Sort</Text>
+                  <ListFilter
+                    size={14}
+                    color={colors.iconMuted}
+                    style={{marginRight: 4}}
+                  />
+                  <Text style={[styles.sortText, {color: colors.textMuted}]}>
+                    Sort
+                  </Text>
                 </TouchableOpacity>
               )}
-              popoverStyle={[styles.sortMenuContent, { backgroundColor: colors.card }]}>
-              <View style={{ paddingVertical: 4 }}>
+              popoverStyle={[
+                styles.sortMenuContent,
+                {backgroundColor: colors.card},
+              ]}>
+              <View style={{paddingVertical: 4}}>
                 <TouchableOpacity
                   onPress={() => {
                     isDismissingRef.current = true;
@@ -859,11 +1030,19 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
                       isDismissingRef.current = false;
                     }, 100);
                   }}
-                  style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-                  <Text style={[
-                    styles.sortMenuItem,
-                    { color: sortOption === "priority" ? colors.primary : colors.textPrimary },
-                  ]}>Priority</Text>
+                  style={{paddingHorizontal: 16, paddingVertical: 12}}>
+                  <Text
+                    style={[
+                      styles.sortMenuItem,
+                      {
+                        color:
+                          sortOption === "priority"
+                            ? colors.primary
+                            : colors.textPrimary,
+                      },
+                    ]}>
+                    Priority
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => {
@@ -874,11 +1053,19 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
                       isDismissingRef.current = false;
                     }, 100);
                   }}
-                  style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-                  <Text style={[
-                    styles.sortMenuItem,
-                    { color: sortOption === "createdOn" ? colors.primary : colors.textPrimary },
-                  ]}>Created On</Text>
+                  style={{paddingHorizontal: 16, paddingVertical: 12}}>
+                  <Text
+                    style={[
+                      styles.sortMenuItem,
+                      {
+                        color:
+                          sortOption === "createdOn"
+                            ? colors.primary
+                            : colors.textPrimary,
+                      },
+                    ]}>
+                    Created On
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => {
@@ -889,11 +1076,19 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
                       isDismissingRef.current = false;
                     }, 100);
                   }}
-                  style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-                  <Text style={[
-                    styles.sortMenuItem,
-                    { color: sortOption === "recentlyUpdated" ? colors.primary : colors.textPrimary },
-                  ]}>Recently Updated</Text>
+                  style={{paddingHorizontal: 16, paddingVertical: 12}}>
+                  <Text
+                    style={[
+                      styles.sortMenuItem,
+                      {
+                        color:
+                          sortOption === "recentlyUpdated"
+                            ? colors.primary
+                            : colors.textPrimary,
+                      },
+                    ]}>
+                    Recently Updated
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => {
@@ -904,11 +1099,19 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
                       isDismissingRef.current = false;
                     }, 100);
                   }}
-                  style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-                  <Text style={[
-                    styles.sortMenuItem,
-                    { color: sortOption === "alphabetical" ? colors.primary : colors.textPrimary },
-                  ]}>Alphabetical A-Z</Text>
+                  style={{paddingHorizontal: 16, paddingVertical: 12}}>
+                  <Text
+                    style={[
+                      styles.sortMenuItem,
+                      {
+                        color:
+                          sortOption === "alphabetical"
+                            ? colors.primary
+                            : colors.textPrimary,
+                      },
+                    ]}>
+                    Alphabetical A-Z
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => {
@@ -919,11 +1122,19 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
                       isDismissingRef.current = false;
                     }, 100);
                   }}
-                  style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-                  <Text style={[
-                    styles.sortMenuItem,
-                    { color: sortOption === "mostItems" ? colors.primary : colors.textPrimary },
-                  ]}>Most Items</Text>
+                  style={{paddingHorizontal: 16, paddingVertical: 12}}>
+                  <Text
+                    style={[
+                      styles.sortMenuItem,
+                      {
+                        color:
+                          sortOption === "mostItems"
+                            ? colors.primary
+                            : colors.textPrimary,
+                      },
+                    ]}>
+                    Most Items
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => {
@@ -934,11 +1145,19 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
                       isDismissingRef.current = false;
                     }, 100);
                   }}
-                  style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-                  <Text style={[
-                    styles.sortMenuItem,
-                    { color: sortOption === "leastItems" ? colors.primary : colors.textPrimary },
-                  ]}>Least Items</Text>
+                  style={{paddingHorizontal: 16, paddingVertical: 12}}>
+                  <Text
+                    style={[
+                      styles.sortMenuItem,
+                      {
+                        color:
+                          sortOption === "leastItems"
+                            ? colors.primary
+                            : colors.textPrimary,
+                      },
+                    ]}>
+                    Least Items
+                  </Text>
                 </TouchableOpacity>
               </View>
             </Popover>
@@ -957,9 +1176,28 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
                 menuVisible={activeMenuListId === (item.id || item._id)}
                 onOpenMenu={() => setActiveMenuListId(item.id || item._id)}
                 onCloseMenu={() => setActiveMenuListId(null)}
-                onRequestDelete={() => confirmDeleteList(item.id || item._id, item.name)}
-                onRequestArchive={() => handleArchiveList(item.id || item._id, activeTab === "Archived Lists")}
-                onRequestDuplicate={() => handleDuplicateList(item.id || item._id)}
+                onRequestDelete={() =>
+                  confirmDeleteList(item.id || item._id, item.name)
+                }
+                onRequestArchive={() =>
+                  handleArchiveList(
+                    item.id || item._id,
+                    activeTab === "Archived Lists",
+                  )
+                }
+                onRequestDuplicate={() =>
+                  handleDuplicateList(item.id || item._id)
+                }
+                onRequestShare={() => {
+                  setSharingListId(item.id || item._id);
+                  const isShared = item.type === "shared";
+                  setIsUnshareMode(isShared);
+                  setSharingListCircleName(item.circle?.name || "this circle");
+                  if (!isShared) {
+                    dispatch(fetchCirclesPicker());
+                  }
+                  setShareModalVisible(true);
+                }}
                 profile={profile}
                 t={t}
               />
@@ -967,20 +1205,23 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
 
             {filteredData.length === 0 && !loading && (
               <View style={styles.emptyState}>
-                <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+                <Text style={[styles.emptyText, {color: colors.textMuted}]}>
                   No lists found in this category.
                 </Text>
               </View>
             )}
           </View>
 
-          <View style={{ height: 80 }} />
+          <View style={{height: 80}} />
         </ScrollView>
       )}
 
       {/* Floating Action Button */}
       <TouchableOpacity
-        style={[styles.fab, { backgroundColor: colors.primary, shadowColor: colors.primary }]}
+        style={[
+          styles.fab,
+          {backgroundColor: colors.primary, shadowColor: colors.primary},
+        ]}
         onPress={() => setCreateListVisible(true)}>
         <Plus size={32} color="#fff" />
       </TouchableOpacity>
@@ -991,6 +1232,36 @@ const ListsTab = ({ onQuickAction, navigation, route }) => {
         onApply={handleCreateList}
         type="createList"
         loading={isCreatingList}
+      />
+
+      {/* Share / Unshare Circle Modal */}
+      <SelectionModal
+        isVisible={shareModalVisible}
+        onClose={() => {
+          setShareModalVisible(false);
+          setSharingListId(null);
+          setIsUnshareMode(false);
+        }}
+        onSave={isUnshareMode ? handleUnshareList : handleShareList}
+        title={isUnshareMode ? t("common_unshared_list") : t("common_select_circle")}
+        type={isUnshareMode ? "confirmation" : "selection"}
+        description={
+          isUnshareMode
+            ? t("common_unshare_confirm").replace("{{circleName}}", sharingListCircleName)
+            : ""
+        }
+        options={isUnshareMode ? [] : circleOptions}
+        initialValue={isUnshareMode ? undefined : circleOptions[0]?.value}
+        confirmLabel={
+          isSharingList
+            ? isUnshareMode
+              ? t("common_unsharing")
+              : t("common_sharing")
+            : isUnshareMode
+            ? t("common_unshare")
+            : t("common_share")
+        }
+        cancelLabel={t("common_cancel")}
       />
     </View>
   );
@@ -1013,7 +1284,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
@@ -1146,7 +1417,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
@@ -1287,7 +1558,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#0ea5e9",
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.4,
     shadowRadius: 10,
     elevation: 6,

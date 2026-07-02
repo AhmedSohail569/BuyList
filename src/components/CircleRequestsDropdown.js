@@ -25,8 +25,10 @@ import {useSelector, useDispatch} from "react-redux";
 import {Text} from "~components/Common";
 import {FontFamily} from "~theme/fonts";
 import {useTheme} from "~context/ThemeContext";
+import useTranslation from "~hooks/useTranslation";
+import {useLanguage} from "~context/LanguageContext";
 import {
-  // fetchCircleRequests, // commented out — using static data
+  fetchCircleRequests,
   acceptCircleRequest,
   rejectCircleRequest,
 } from "~redux/actions/circleActions";
@@ -53,30 +55,12 @@ const getInitials = name => {
 // ────────────────────────────────────────────────────────────────────────────────
 const CircleRequestsDropdown = ({visible, onClose, onSeeAll}) => {
   const {colors, isDark} = useTheme();
+  const {t} = useTranslation();
+  const {language} = useLanguage();
   const dispatch = useDispatch();
 
-  // const { circleRequests, circleRequestsLoading, circleRequestsActioning } =
-  //   useSelector(state => state.circles);
-
-  // ── Static mock data (remove when API is ready) ───────────────────────────
-  const circleRequestsLoading = false;
-  const circleRequestsActioning = {};
-  const circleRequests = [
-    {
-      _id: "req_1",
-      circleName: "Family Vacation",
-      circleImage: null,
-      senderName: "John Doe",
-      createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(), // 5 mins ago
-    },
-    {
-      _id: "req_2",
-      circleName: "Weekend BBQ",
-      circleImage: null,
-      senderName: "Sarah Smith",
-      createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(), // 1 hr ago
-    },
-  ];
+  const {circleRequests, circleRequestsLoading, circleRequestsActioning} =
+    useSelector(state => state.circles);
 
   // Animation refs
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -85,7 +69,7 @@ const CircleRequestsDropdown = ({visible, onClose, onSeeAll}) => {
   // ── Open / close animation ────────────────────────────────────────────────
   useEffect(() => {
     if (visible) {
-      // dispatch(fetchCircleRequests()); // commented out — using static data
+      dispatch(fetchCircleRequests());
       Animated.parallel([
         Animated.spring(slideAnim, {
           toValue: 1,
@@ -141,7 +125,10 @@ const CircleRequestsDropdown = ({visible, onClose, onSeeAll}) => {
       const circleName =
         item.circleName || item.circle?.name || item.name || "Circle";
       const circleImage =
-        item.circleImage || item.circle?.image || item.circle?.avatar || null;
+        item.circleImage ||
+        item.invitedBy?.profilePicture ||
+        item.circle?.avatar ||
+        null;
       const senderName =
         item.senderName ||
         item.sender?.username ||
@@ -191,7 +178,9 @@ const CircleRequestsDropdown = ({visible, onClose, onSeeAll}) => {
             <Text
               style={[styles.inviteSubtitle, {color: colors.textSecondary}]}
               numberOfLines={1}>
-              {senderName ? `${senderName} invited you` : "Invited you"}
+              {senderName
+                ? t("circle_requests_invited_by").replace("{{name}}", senderName)
+                : t("circle_requests_invited_you")}
             </Text>
 
             {/* Action buttons */}
@@ -200,6 +189,7 @@ const CircleRequestsDropdown = ({visible, onClose, onSeeAll}) => {
                 style={[
                   styles.acceptBtn,
                   {backgroundColor: colors.primary},
+                  language === "nl" && {width: undefined, minWidth: 64, paddingHorizontal: 12},
                   isActioning && styles.btnDisabled,
                 ]}
                 onPress={() => !isActioning && handleAccept(requestId)}
@@ -207,7 +197,7 @@ const CircleRequestsDropdown = ({visible, onClose, onSeeAll}) => {
                 {isActioning ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.acceptBtnText}>Accept</Text>
+                  <Text style={styles.acceptBtnText}>{t("circle_requests_accept")}</Text>
                 )}
               </TouchableOpacity>
 
@@ -218,6 +208,7 @@ const CircleRequestsDropdown = ({visible, onClose, onSeeAll}) => {
                     backgroundColor: isDark ? colors.surface : "#F3F4F6",
                     borderColor: isDark ? colors.border : "#E5E7EB",
                   },
+                  language === "nl" && {width: undefined, minWidth: 64, paddingHorizontal: 12},
                   isActioning && styles.btnDisabled,
                 ]}
                 onPress={() => !isActioning && handleReject(requestId)}
@@ -227,7 +218,7 @@ const CircleRequestsDropdown = ({visible, onClose, onSeeAll}) => {
                     styles.rejectBtnText,
                     {color: isDark ? "#CBD5E1" : "rgba(75, 85, 99, 1)"},
                   ]}>
-                  Reject
+                  {t("circle_requests_reject")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -235,7 +226,7 @@ const CircleRequestsDropdown = ({visible, onClose, onSeeAll}) => {
         </View>
       );
     },
-    [colors, isDark, circleRequestsActioning, handleAccept, handleReject],
+    [colors, isDark, circleRequestsActioning, handleAccept, handleReject, t, language],
   );
 
   // ── Empty state ───────────────────────────────────────────────────────────
@@ -249,7 +240,7 @@ const CircleRequestsDropdown = ({visible, onClose, onSeeAll}) => {
           color={colors.textMuted}
         />
         <Text style={[styles.emptyText, {color: colors.textMuted}]}>
-          No circle requests
+          {t("circle_requests_empty")}
         </Text>
       </View>
     );
@@ -308,7 +299,7 @@ const CircleRequestsDropdown = ({visible, onClose, onSeeAll}) => {
               {/* ── Header ────────────────────────────────────────────────── */}
               <View style={styles.dropdownHeader}>
                 <Text style={[styles.headerTitle, {color: colors.textPrimary}]}>
-                  Circle Requests
+                  {t("circle_requests_dropdown_title")}
                 </Text>
                 <TouchableOpacity
                   onPress={onClose}
@@ -359,7 +350,7 @@ const CircleRequestsDropdown = ({visible, onClose, onSeeAll}) => {
                   onSeeAll?.();
                 }}>
                 <Text style={[styles.seeAllText, {color: colors.textMuted}]}>
-                  See all circle requests
+                  {t("circle_requests_see_all")}
                 </Text>
               </TouchableOpacity>
             </Animated.View>

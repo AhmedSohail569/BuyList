@@ -1,13 +1,14 @@
-import { View, StyleSheet, Image, TouchableOpacity } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {View, StyleSheet, Image, TouchableOpacity} from "react-native";
+import {useSafeAreaInsets} from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Ionicons";
-import { Pencil } from "lucide-react-native";
-import { RFValue } from "react-native-responsive-fontsize";
-import { Text } from "~components/Common";
-import { FontFamily } from "~theme/fonts";
-import { useSelector } from "react-redux";
-import { useTheme } from "~context/ThemeContext";
-import { getInitials } from "~utils/display";
+import {Pencil} from "lucide-react-native";
+import {RFValue} from "react-native-responsive-fontsize";
+import {Text} from "~components/Common";
+import {FontFamily} from "~theme/fonts";
+import {useSelector} from "react-redux";
+import {useTheme} from "~context/ThemeContext";
+import {getInitials} from "~utils/display";
+import {Images} from "~assets";
 
 const Header = ({
   variant = "title",
@@ -33,14 +34,18 @@ const Header = ({
   // Badge
   notificationBadge = false,
 
+  // Circle requests (home variant)
+  circleRequestBadge = false,
+  onCircleRequestPress,
+  rightCircleImage,
+
   // Components
   showTabs,
 }) => {
   const insets = useSafeAreaInsets();
-  const { colors, isDark } = useTheme();
-  const { user } = useSelector(state => state.auth);
-  const { profile } = useSelector(state => state.profile);
-
+  const {colors, isDark} = useTheme();
+  const {user} = useSelector(state => state.auth);
+  const {profile} = useSelector(state => state.profile);
 
   return (
     <View
@@ -64,45 +69,72 @@ const Header = ({
                 style={[
                   styles.avatar,
                   styles.avatarFallback,
-                  { backgroundColor: colors.primaryLight },
+                  {backgroundColor: colors.primaryLight},
                 ]}>
-                <Text
-                  style={[
-                    styles.avatarInitials,
-                    { color: colors.primary },
-                  ]}>
+                <Text style={[styles.avatarInitials, {color: colors.primary}]}>
                   {getInitials(userName)}
                 </Text>
               </View>
             )}
-            <View style={{ marginLeft: 12 }}>
+            <View style={{marginLeft: 12}}>
               <Text variant="small" color="muted">
                 {greeting}
               </Text>
               <Text
                 variant="medium"
-                style={[styles.boldText, { color: colors.textPrimary, fontSize: RFValue(12) }]}>
+                style={[
+                  styles.boldText,
+                  {color: colors.textPrimary, fontSize: RFValue(12)},
+                ]}>
                 {userName}
               </Text>
             </View>
           </View>
 
-          {rightIcon && (
-            <TouchableOpacity onPress={onRightPress}>
-              <Icon name={rightIcon} size={25} color={colors.icon} />
-              {notificationBadge && (
-                <View
-                  style={[
-                    styles.notifBadge,
-                    {
-                      backgroundColor: colors.notificationBadge,
-                      borderColor: colors.headerBackground,
-                    },
-                  ]}
+          {/* Right icons: circle requests + notifications */}
+          <View style={styles.rightIcons}>
+            {/* Users / Circle Requests icon */}
+            {onCircleRequestPress && (
+              <TouchableOpacity
+                onPress={onCircleRequestPress}
+                style={styles.iconButton}>
+                <Image
+                  source={rightCircleImage || Images.users2}
+                  style={styles.circleRequestImg}
+                  resizeMode="contain"
                 />
-              )}
-            </TouchableOpacity>
-          )}
+                {circleRequestBadge && (
+                  <View
+                    style={[
+                      styles.notifBadge,
+                      {
+                        backgroundColor: colors.notificationBadge,
+                        borderColor: colors.headerBackground,
+                      },
+                    ]}
+                  />
+                )}
+              </TouchableOpacity>
+            )}
+
+            {/* Bell / Notifications icon */}
+            {rightIcon && (
+              <TouchableOpacity onPress={onRightPress}>
+                <Icon name={rightIcon} size={25} color={colors.icon} />
+                {notificationBadge && (
+                  <View
+                    style={[
+                      styles.notifBadge,
+                      {
+                        backgroundColor: colors.notificationBadge,
+                        borderColor: colors.headerBackground,
+                      },
+                    ]}
+                  />
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       )}
 
@@ -112,14 +144,14 @@ const Header = ({
           <View>
             <Text
               variant="sectionTitle"
-              style={[styles.title, { color: colors.textPrimary }]}>
+              style={[styles.title, {color: colors.textPrimary}]}>
               {title}
             </Text>
             {subtitle && (
               <Text
                 variant="bodySmall"
                 color="muted"
-                style={{ fontSize: RFValue(10) }}>
+                style={{fontSize: RFValue(10)}}>
                 {subtitle}
               </Text>
             )}
@@ -130,7 +162,7 @@ const Header = ({
               onPress={onRightPress}
               style={[
                 styles.iconButton,
-                { backgroundColor: isDark ? colors.surface : "#F2F6FF" },
+                {backgroundColor: isDark ? colors.surface : "#F2F6FF"},
               ]}>
               <Icon name={rightIcon} size={20} color={colors.primary} />
             </TouchableOpacity>
@@ -142,7 +174,7 @@ const Header = ({
 
       {variant === "screen" && (
         <View style={styles.row}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <View style={{flexDirection: "row", alignItems: "center", gap: 10}}>
             {onBack && (
               <TouchableOpacity onPress={onBack}>
                 <Icon name={"arrow-back"} size={25} color={colors.icon} />
@@ -164,7 +196,7 @@ const Header = ({
               onPress={onRightPress}
               style={[
                 styles.iconButton,
-                { backgroundColor: isDark ? colors.surface : "#F2F6FF" },
+                {backgroundColor: isDark ? colors.surface : "#F2F6FF"},
               ]}>
               <Icon name={rightIcon} size={20} color={colors.primary} />
             </TouchableOpacity>
@@ -185,10 +217,10 @@ const Header = ({
           <View style={styles.profileRow}>
             {profile?.profilePicture ? (
               <Image
-                source={{ uri: profile.profilePicture }}
+                source={{uri: profile.profilePicture}}
                 style={[
                   styles.profileAvatar,
-                  { backgroundColor: colors.avatarBackground },
+                  {backgroundColor: colors.avatarBackground},
                 ]}
               />
             ) : (
@@ -196,18 +228,14 @@ const Header = ({
                 style={[
                   styles.profileAvatar,
                   styles.avatarFallback,
-                  { backgroundColor: colors.primaryLight },
+                  {backgroundColor: colors.primaryLight},
                 ]}>
-                <Text
-                  style={[
-                    styles.avatarInitials,
-                    { color: colors.primary },
-                  ]}>
+                <Text style={[styles.avatarInitials, {color: colors.primary}]}>
                   {getInitials(profile?.username || user?.username)}
                 </Text>
               </View>
             )}
-            <View style={{ justifyContent: "center" }}>
+            <View style={{justifyContent: "center"}}>
               <Text
                 variant="body"
                 style={{
@@ -260,6 +288,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  rightIcons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
   avatar: {
     width: 44,
     height: 44,
@@ -278,6 +311,10 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
+  },
+  circleRequestImg: {
+    width: 22,
+    height: 22,
   },
   notifBadge: {
     position: "absolute",
@@ -322,7 +359,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 20,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 4,

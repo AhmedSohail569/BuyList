@@ -2,10 +2,10 @@
  * Lists Management Async Thunks
  * Handles all list-related API operations with optimistic updates
  */
-import { createAsyncThunk } from "@reduxjs/toolkit";
+import {createAsyncThunk} from "@reduxjs/toolkit";
 import axios from "~utils/axiosInstance";
-import { getErrorMessage } from "~utils";
-import { requireConnectivity } from "~utils/network";
+import {getErrorMessage} from "~utils";
+import {requireConnectivity} from "~utils/network";
 
 // ============================================
 // 1. CREATE LIST
@@ -13,7 +13,7 @@ import { requireConnectivity } from "~utils/network";
 // ============================================
 export const createList = createAsyncThunk(
   "lists/createList",
-  async (listData, { rejectWithValue }) => {
+  async (listData, {rejectWithValue}) => {
     try {
       const response = await axios.post("/lists/create-list", listData);
       return response.data?.data || response.data;
@@ -30,7 +30,7 @@ export const createList = createAsyncThunk(
 // ============================================
 export const fetchAllLists = createAsyncThunk(
   "lists/fetchAllLists",
-  async (_, { rejectWithValue }) => {
+  async (_, {rejectWithValue}) => {
     try {
       const response = await axios.get("/lists/get-all-list");
       return response.data?.data || response.data;
@@ -47,7 +47,7 @@ export const fetchAllLists = createAsyncThunk(
 // ============================================
 export const fetchListById = createAsyncThunk(
   "lists/fetchListById",
-  async ({ listId }, { rejectWithValue }) => {
+  async ({listId}, {rejectWithValue}) => {
     try {
       const response = await axios.get(`/lists/get-by-id/${listId}`);
       return {
@@ -67,14 +67,14 @@ export const fetchListById = createAsyncThunk(
 // ============================================
 export const addItemsToList = createAsyncThunk(
   "lists/addItemsToList",
-  async ({ listId, items }, { rejectWithValue, getState }) => {
+  async ({listId, items}, {rejectWithValue, getState}) => {
     // Store previous list state for rollback
     const state = getState().lists;
     const previousList = state.listById[listId] || null;
     const previousLists = [...state.lists];
 
     try {
-      const response = await axios.post(`/lists/add-item/${listId}`, { items });
+      const response = await axios.post(`/lists/add-item/${listId}`, {items});
       return {
         listId,
         items: response.data?.data?.items || response.data?.items || items,
@@ -91,7 +91,7 @@ export const addItemsToList = createAsyncThunk(
       });
     }
   },
-  { condition: requireConnectivity },
+  {condition: requireConnectivity},
 );
 
 // ============================================
@@ -100,7 +100,7 @@ export const addItemsToList = createAsyncThunk(
 // ============================================
 export const markItemAsPurchased = createAsyncThunk(
   "lists/markItemAsPurchased",
-  async ({ listId, itemId }, { rejectWithValue, getState }) => {
+  async ({listId, itemId}, {rejectWithValue, getState}) => {
     // Store previous list state for rollback
     const state = getState().lists;
     const previousList = state.listById[listId] || null;
@@ -127,7 +127,7 @@ export const markItemAsPurchased = createAsyncThunk(
       });
     }
   },
-  { condition: requireConnectivity },
+  {condition: requireConnectivity},
 );
 
 // ============================================
@@ -136,7 +136,7 @@ export const markItemAsPurchased = createAsyncThunk(
 // ============================================
 export const markItemAsUnpurchased = createAsyncThunk(
   "lists/markItemAsUnpurchased",
-  async ({ listId, itemId }, { rejectWithValue, getState }) => {
+  async ({listId, itemId}, {rejectWithValue, getState}) => {
     // Store previous list state for rollback
     const state = getState().lists;
     const previousList = state.listById[listId] || null;
@@ -162,7 +162,7 @@ export const markItemAsUnpurchased = createAsyncThunk(
       });
     }
   },
-  { condition: requireConnectivity },
+  {condition: requireConnectivity},
 );
 
 // ============================================
@@ -171,7 +171,7 @@ export const markItemAsUnpurchased = createAsyncThunk(
 // ============================================
 export const deleteItemFromList = createAsyncThunk(
   "lists/deleteItemFromList",
-  async ({ listId, itemId }, { rejectWithValue, getState }) => {
+  async ({listId, itemId}, {rejectWithValue, getState}) => {
     // Store previous list state for rollback
     const state = getState().lists;
     const previousList = state.listById[listId] || null;
@@ -194,7 +194,7 @@ export const deleteItemFromList = createAsyncThunk(
       });
     }
   },
-  { condition: requireConnectivity },
+  {condition: requireConnectivity},
 );
 
 // ============================================
@@ -203,10 +203,10 @@ export const deleteItemFromList = createAsyncThunk(
 // ============================================
 export const deleteList = createAsyncThunk(
   "lists/deleteList",
-  async ({ listId }, { rejectWithValue, getState }) => {
+  async ({listId}, {rejectWithValue, getState}) => {
     // Store previous lists for rollback
     const previousLists = [...getState().lists.lists];
-    const previousListById = { ...getState().lists.listById };
+    const previousListById = {...getState().lists.listById};
 
     try {
       await axios.delete(`/lists/delete-list/${listId}`);
@@ -224,7 +224,7 @@ export const deleteList = createAsyncThunk(
       });
     }
   },
-  { condition: requireConnectivity },
+  {condition: requireConnectivity},
 );
 
 // ============================================
@@ -233,12 +233,14 @@ export const deleteList = createAsyncThunk(
 // ============================================
 export const updateItemPriority = createAsyncThunk(
   "lists/updateItemPriority",
-  async ({ listId, itemId, priority }, { rejectWithValue, getState }) => {
+  async ({listId, itemId, priority}, {rejectWithValue, getState}) => {
     const previousList = getState().lists.listById[listId] || null;
 
     try {
-      await axios.patch(`/lists/update-item-priority/${listId}/${itemId}`, { priority });
-      return { listId, itemId, priority };
+      await axios.patch(`/lists/update-item-priority/${listId}/${itemId}`, {
+        priority,
+      });
+      return {listId, itemId, priority};
     } catch (err) {
       return rejectWithValue({
         message: getErrorMessage(err),
@@ -247,7 +249,7 @@ export const updateItemPriority = createAsyncThunk(
       });
     }
   },
-  { condition: requireConnectivity },
+  {condition: requireConnectivity},
 );
 
 // ============================================
@@ -256,16 +258,20 @@ export const updateItemPriority = createAsyncThunk(
 // ============================================
 export const updateItemName = createAsyncThunk(
   "lists/updateItemName",
-  async ({ listId, itemId, name }, { rejectWithValue, getState }) => {
+  async ({listId, itemId, name}, {rejectWithValue, getState}) => {
     const previousList = getState().lists.listById[listId] || null;
     try {
-      await axios.patch(`/lists/update-item-name/${listId}/${itemId}`, { name });
-      return { listId, itemId, name };
+      await axios.patch(`/lists/update-item-name/${listId}/${itemId}`, {name});
+      return {listId, itemId, name};
     } catch (err) {
-      return rejectWithValue({ message: getErrorMessage(err), previousList, listId });
+      return rejectWithValue({
+        message: getErrorMessage(err),
+        previousList,
+        listId,
+      });
     }
   },
-  { condition: requireConnectivity },
+  {condition: requireConnectivity},
 );
 
 // ============================================
@@ -274,7 +280,7 @@ export const updateItemName = createAsyncThunk(
 // ============================================
 export const fetchArchivedLists = createAsyncThunk(
   "lists/fetchArchivedLists",
-  async (_, { rejectWithValue }) => {
+  async (_, {rejectWithValue}) => {
     try {
       const response = await axios.get("/lists/archived");
       return response.data?.data || response.data;
@@ -290,12 +296,12 @@ export const fetchArchivedLists = createAsyncThunk(
 // ============================================
 export const toggleArchiveList = createAsyncThunk(
   "lists/toggleArchiveList",
-  async ({ listId }, { rejectWithValue, getState }) => {
+  async ({listId}, {rejectWithValue, getState}) => {
     const previousLists = [...getState().lists.lists];
-    const previousListById = { ...getState().lists.listById };
+    const previousListById = {...getState().lists.listById};
     try {
       const response = await axios.patch(`/lists/toggle-archive/${listId}`);
-      return { listId, data: response.data?.data || response.data };
+      return {listId, data: response.data?.data || response.data};
     } catch (err) {
       return rejectWithValue({
         message: getErrorMessage(err),
@@ -304,7 +310,7 @@ export const toggleArchiveList = createAsyncThunk(
       });
     }
   },
-  { condition: requireConnectivity },
+  {condition: requireConnectivity},
 );
 
 // ============================================
@@ -313,7 +319,7 @@ export const toggleArchiveList = createAsyncThunk(
 // ============================================
 export const duplicateList = createAsyncThunk(
   "lists/duplicateList",
-  async ({ listId }, { rejectWithValue }) => {
+  async ({listId}, {rejectWithValue}) => {
     try {
       const response = await axios.post(`/lists/duplicate/${listId}`);
       return response.data?.data || response.data;
@@ -321,7 +327,7 @@ export const duplicateList = createAsyncThunk(
       return rejectWithValue(getErrorMessage(err));
     }
   },
-  { condition: requireConnectivity },
+  {condition: requireConnectivity},
 );
 
 // ============================================
@@ -330,33 +336,102 @@ export const duplicateList = createAsyncThunk(
 // ============================================
 export const updateListName = createAsyncThunk(
   "lists/updateListName",
-  async ({ listId, name }, { rejectWithValue, getState }) => {
+  async ({listId, name}, {rejectWithValue, getState}) => {
     const previousLists = [...getState().lists.lists];
-    const previousListById = { ...getState().lists.listById };
+    const previousListById = {...getState().lists.listById};
     try {
-      const response = await axios.patch(`/lists/update-name/${listId}`, { name });
-      console.log("response", response)
-      return { listId, name, data: response.data?.data || response.data };
+      const response = await axios.patch(`/lists/update-name/${listId}`, {
+        name,
+      });
+      console.log("response", response);
+      return {listId, name, data: response.data?.data || response.data};
     } catch (err) {
-      console.log("err", err)
-      return rejectWithValue({ message: getErrorMessage(err), previousLists, previousListById, listId });
+      console.log("err", err);
+      return rejectWithValue({
+        message: getErrorMessage(err),
+        previousLists,
+        previousListById,
+        listId,
+      });
     }
   },
-  { condition: requireConnectivity },
+  {condition: requireConnectivity},
 );
 
 export const fetchRecentActivities = createAsyncThunk(
   "lists/fetchRecentActivities",
-  async (_, { rejectWithValue }) => {
+  async (_, {rejectWithValue}) => {
     try {
       const response = await axios.get("/activities/recent");
       console.log("response", response);
       // Handle nested data structure: response.data.data.data (array)
-      const activities = response.data?.data?.data || response.data?.data || response.data;
+      const activities =
+        response.data?.data?.data || response.data?.data || response.data;
       return Array.isArray(activities) ? activities : [];
     } catch (err) {
       const message = getErrorMessage(err);
       return rejectWithValue(message);
     }
   },
+);
+
+// ============================================
+// GET COMMENTS
+// GET /api/lists/get-comments/{listId}
+// ============================================
+export const getComments = createAsyncThunk(
+  "lists/getComments",
+  async ({listId}, {rejectWithValue}) => {
+    try {
+      const response = await axios.get(`/lists/get-comments/${listId}`);
+      console.log("getComments response.data:", response.data);
+      const comments = response.data?.data?.data || response.data?.data || [];
+      return {
+        listId,
+        comments,
+      };
+    } catch (err) {
+      return rejectWithValue(getErrorMessage(err));
+    }
+  },
+);
+
+// ============================================
+// SHARE / UNSHARE LIST
+// PATCH /api/lists/update-type/{listId}
+// Body: { type: "shared" | "personal", circleId? }
+// ============================================
+export const shareListToCircle = createAsyncThunk(
+  "lists/shareListToCircle",
+  async ({listId, circleId, type = "shared"}, {rejectWithValue}) => {
+    try {
+      const body = {type};
+      if (circleId) body.circleId = circleId;
+      const response = await axios.patch(`/lists/update-type/${listId}`, body);
+      return response.data?.data || response.data;
+    } catch (err) {
+      return rejectWithValue(getErrorMessage(err));
+    }
+  },
+  {condition: requireConnectivity},
+);
+
+// ============================================
+// ADD COMMENT
+// POST /api/lists/add-comment/{listId}
+// ============================================
+export const addComment = createAsyncThunk(
+  "lists/addComment",
+  async ({listId, text}, {rejectWithValue}) => {
+    try {
+      const response = await axios.post(`/lists/add-comment/${listId}`, {text});
+      return {
+        listId,
+        comment: response.data?.data || response.data,
+      };
+    } catch (err) {
+      return rejectWithValue(getErrorMessage(err));
+    }
+  },
+  {condition: requireConnectivity},
 );

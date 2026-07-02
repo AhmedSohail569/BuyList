@@ -61,8 +61,8 @@ export const getCircleInviteQR = createAsyncThunk(
  * POST /circles/join/{code}
  * Returns: Circle object with membership details
  */
-export const joinCircleViaInvite = createAsyncThunk(
-    "invite/joinCircle",
+export const createInvite = createAsyncThunk(
+    "invite/createInvite",
     async ({ inviteCode }, { rejectWithValue }) => {
         try {
             const response = await axios.post(`/circles/join/${inviteCode}`);

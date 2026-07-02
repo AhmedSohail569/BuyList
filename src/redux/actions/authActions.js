@@ -1,4 +1,4 @@
-import { createAsyncThunk } from "@reduxjs/toolkit";
+import {createAsyncThunk} from "@reduxjs/toolkit";
 
 import {
   getErrorMessage,
@@ -10,20 +10,20 @@ import {
   getDeviceInfo,
 } from "~utils";
 import axios from "~utils/axiosInstance";
-import { getPendingInvite, clearPendingInvite } from "~utils/deepLinking";
-import { joinCircleViaInvite } from "./inviteActions";
+import {getPendingInvite, clearPendingInvite} from "~utils/deepLinking";
+import {createInvite} from "./inviteActions";
 import Toast from "react-native-toast-message";
 
 export const checkPhoneExists = createAsyncThunk(
   "auth/checkPhoneExists",
-  async ({ phone }, { rejectWithValue }) => {
+  async ({phone}, {rejectWithValue}) => {
     try {
-      const response = await axios.post("/auth/check-phone", { phone });
+      const response = await axios.post("/auth/check-phone", {phone});
       return response.data; // Expected { exists: true/false } or similar
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
     }
-  }
+  },
 );
 
 // ============================================
@@ -32,7 +32,7 @@ export const checkPhoneExists = createAsyncThunk(
 
 export const loginUser = createAsyncThunk(
   "auth/loginUser",
-  async ({ email, password }, { rejectWithValue, dispatch }) => {
+  async ({email, password}, {rejectWithValue, dispatch}) => {
     try {
       const deviceInfo = await getDeviceInfo();
 
@@ -41,7 +41,6 @@ export const loginUser = createAsyncThunk(
         password,
         deviceInfo,
       });
-
 
       console.log("response loginUser", response);
 
@@ -56,20 +55,20 @@ export const loginUser = createAsyncThunk(
       if (pendingInvite) {
         setTimeout(async () => {
           try {
-            await dispatch(joinCircleViaInvite({ inviteCode: pendingInvite })).unwrap();
+            await dispatch(
+              createInvite({inviteCode: pendingInvite}),
+            ).unwrap();
             await clearPendingInvite();
-            Toast.show({
-              type: "success",
-              text1: "Joined Circle!",
-              text2: "You've been automatically added to the circle",
-            });
           } catch (error) {
             console.log("error joining circle", error);
 
             Toast.show({
               type: "error",
               text1: "Couldn't Join Circle",
-              text2: error?.message || error || "Already a member or circle doesn't exist",
+              text2:
+                error?.message ||
+                error ||
+                "Already a member or circle doesn't exist",
             });
           }
         }, 1000);
@@ -102,7 +101,7 @@ export const loginUser = createAsyncThunk(
 
 export const signupUser = createAsyncThunk(
   "auth/registerUser",
-  async ({ username, email, password, phone, zone, area }, { rejectWithValue }) => {
+  async ({username, email, password, phone, zone, area}, {rejectWithValue}) => {
     try {
       const response = await axios.post("/auth/signup", {
         username,
@@ -118,12 +117,11 @@ export const signupUser = createAsyncThunk(
         message: response.data?.message || "Account created successfully",
       };
     } catch (err) {
+      console.log("err", err);
 
-      console.log('err', err)
-
-            const errorData = err.response?.data;
+      const errorData = err.response?.data;
       console.log("errorData loginUser", errorData);
-    
+
       return rejectWithValue({
         message: getErrorMessage(err),
         fields: getValidationErrors(err),
@@ -134,9 +132,9 @@ export const signupUser = createAsyncThunk(
 
 export const verifyEmail = createAsyncThunk(
   "auth/verifyEmail",
-  async ({ email, otp }, { rejectWithValue }) => {
+  async ({email, otp}, {rejectWithValue}) => {
     try {
-      const response = await axios.post("/auth/verify-email", { email, otp });
+      const response = await axios.post("/auth/verify-email", {email, otp});
       return response.data;
     } catch (err) {
       return rejectWithValue({
@@ -149,9 +147,9 @@ export const verifyEmail = createAsyncThunk(
 
 export const forgotPassword = createAsyncThunk(
   "auth/forgotPassword",
-  async ({ email }, { rejectWithValue }) => {
+  async ({email}, {rejectWithValue}) => {
     try {
-      const response = await axios.post("/auth/forgot-password", { email });
+      const response = await axios.post("/auth/forgot-password", {email});
       return response.data;
     } catch (err) {
       return rejectWithValue({
@@ -164,9 +162,9 @@ export const forgotPassword = createAsyncThunk(
 
 export const verifyResetToken = createAsyncThunk(
   "auth/verifyResetToken",
-  async ({ email, otp }, { rejectWithValue }) => {
+  async ({email, otp}, {rejectWithValue}) => {
     try {
-      const response = await axios.post("/auth/verify-reset-otp", { email, otp });
+      const response = await axios.post("/auth/verify-reset-otp", {email, otp});
       return response.data;
     } catch (err) {
       return rejectWithValue({
@@ -179,7 +177,7 @@ export const verifyResetToken = createAsyncThunk(
 
 export const resetPassword = createAsyncThunk(
   "auth/resetPassword",
-  async ({ email, otp, newPassword, confirmPassword }, { rejectWithValue }) => {
+  async ({email, otp, newPassword, confirmPassword}, {rejectWithValue}) => {
     try {
       const response = await axios.post("/auth/reset-password", {
         email,
@@ -199,10 +197,11 @@ export const resetPassword = createAsyncThunk(
 
 export const resendOTP = createAsyncThunk(
   "auth/resendOTP",
-  async ({ email }, { rejectWithValue }) => {
+  async ({email}, {rejectWithValue}) => {
     try {
-      if (!email) return rejectWithValue({ message: "Email is required", fields: [] });
-      const response = await axios.post("/auth/resend-otp", { email });
+      if (!email)
+        return rejectWithValue({message: "Email is required", fields: []});
+      const response = await axios.post("/auth/resend-otp", {email});
       return response.data;
     } catch (err) {
       return rejectWithValue({
@@ -215,10 +214,11 @@ export const resendOTP = createAsyncThunk(
 
 export const resendResetOTP = createAsyncThunk(
   "auth/resendResetOTP",
-  async ({ email }, { rejectWithValue }) => {
+  async ({email}, {rejectWithValue}) => {
     try {
-      if (!email) return rejectWithValue({ message: "Email is required", fields: [] });
-      const response = await axios.post("/auth/resend-reset-otp", { email });
+      if (!email)
+        return rejectWithValue({message: "Email is required", fields: []});
+      const response = await axios.post("/auth/resend-reset-otp", {email});
       return response.data;
     } catch (err) {
       return rejectWithValue({
@@ -231,10 +231,10 @@ export const resendResetOTP = createAsyncThunk(
 
 export const deleteAccount = createAsyncThunk(
   "auth/deleteAccount",
-  async (_, { rejectWithValue }) => {
+  async (_, {rejectWithValue}) => {
     try {
       await axios.delete("/auth/delete-account");
-      return { success: true };
+      return {success: true};
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
     }
@@ -243,14 +243,14 @@ export const deleteAccount = createAsyncThunk(
 
 export const updateZone = createAsyncThunk(
   "auth/updateZone",
-  async ({ zone }, { rejectWithValue }) => {
+  async ({zone}, {rejectWithValue}) => {
     try {
       if (!zone?.trim()) return rejectWithValue("Location is required");
 
       const trimmedZone = zone.trim();
-      await axios.put("/auth/update-zone", { zone: trimmedZone });
+      await axios.put("/auth/update-zone", {zone: trimmedZone});
 
-      return { zone: trimmedZone };
+      return {zone: trimmedZone};
     } catch (err) {
       return rejectWithValue(getErrorMessage(err));
     }
@@ -263,22 +263,24 @@ export const updateZone = createAsyncThunk(
 // ============================================
 export const refreshAccessToken = createAsyncThunk(
   "auth/refreshAccessToken",
-  async (_, { rejectWithValue }) => {
+  async (_, {rejectWithValue}) => {
     try {
       const refreshToken = await getRefreshToken();
       if (!refreshToken) throw new Error("No refresh token available");
 
-      const response = await axios.post("/auth/refresh-token", { refreshToken });
+      const response = await axios.post("/auth/refresh-token", {refreshToken});
 
-      const newAccessToken = response.data?.data?.accessToken || response.data?.accessToken;
-      const newRefreshToken = response.data?.data?.refreshToken || response.data?.refreshToken;
+      const newAccessToken =
+        response.data?.data?.accessToken || response.data?.accessToken;
+      const newRefreshToken =
+        response.data?.data?.refreshToken || response.data?.refreshToken;
 
       if (!newAccessToken) throw new Error("No access token in response");
 
       await storeAccessToken(newAccessToken);
       if (newRefreshToken) await storeRefreshToken(newRefreshToken);
 
-      return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+      return {accessToken: newAccessToken, refreshToken: newRefreshToken};
     } catch (err) {
       await clearAllTokens();
       return rejectWithValue(getErrorMessage(err) || "Failed to refresh token");

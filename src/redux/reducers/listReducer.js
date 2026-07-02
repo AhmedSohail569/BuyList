@@ -19,6 +19,8 @@ import {
   duplicateList,
   updateListName,
   updateItemName,
+  getComments,
+  addComment,
 } from "../actions/listActions";
 import { logout } from "./authReducer";
 
@@ -37,6 +39,11 @@ const initialState = {
 
   // Archived lists
   archivedLists: [],
+
+  // Comments keyed by listId
+  comments: {},
+  commentsLoading: false,
+  commentsSending: false,
 
   // Loading states
   loading: false,
@@ -735,6 +742,62 @@ const listsSlice = createSlice({
       // Clear list state on logout
       .addCase(logout, () => {
         return initialState;
+      })
+
+      // ============================================
+      // 💬 GET COMMENTS
+      // ============================================
+      .addCase(getComments.pending, state => {
+        state.commentsLoading = true;
+      })
+      .addCase(getComments.fulfilled, (state, action) => {
+        state.commentsLoading = false;
+        const { listId, comments } = action.payload;
+        if (!state.comments) state.comments = {};
+        state.comments[listId] = Array.isArray(comments) ? comments : [];
+      })
+      .addCase(getComments.rejected, state => {
+        state.commentsLoading = false;
+      })
+
+      // ============================================
+      // 📨 ADD COMMENT (Optimistic)
+      // ============================================
+      .addCase(addComment.pending, (state, action) => {
+        state.commentsSending = true;
+        // Optimistically add a temporary comment
+        const { listId, text } = action.meta.arg;
+        const tempComment = {
+          _id: `temp-${Date.now()}`,
+          text,
+          isMine: true,
+          isOptimistic: true,
+          createdAt: new Date().toISOString(),
+          author: { username: "Me", profilePicture: null },
+        };
+        if (!state.comments) state.comments = {};
+        if (!state.comments[listId]) state.comments[listId] = [];
+        state.comments[listId] = [...state.comments[listId], tempComment];
+      })
+      .addCase(addComment.fulfilled, (state, action) => {
+        state.commentsSending = false;
+        const { listId, comment } = action.payload;
+        if (!state.comments) state.comments = {};
+        if (!state.comments[listId]) state.comments[listId] = [];
+        // Replace temp optimistic comment with real one
+        state.comments[listId] = [
+          ...state.comments[listId].filter(c => !c.isOptimistic),
+          comment,
+        ];
+      })
+      .addCase(addComment.rejected, (state, action) => {
+        state.commentsSending = false;
+        // Remove optimistic comment on failure
+        const { listId } = action.meta?.arg || {};
+        if (listId && state.comments && state.comments[listId]) {
+          state.comments[listId] = state.comments[listId].filter(c => !c.isOptimistic);
+        }
+        state.error = action.payload;
       });
   },
 });
