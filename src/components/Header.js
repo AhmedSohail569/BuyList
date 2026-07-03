@@ -99,7 +99,9 @@ const Header = ({
                 onPress={onCircleRequestPress}
                 style={styles.iconButton}>
                 <Image
-                  source={rightCircleImage || Images.users2}
+                  source={
+                    rightCircleImage || (isDark ? Images.users3 : Images.users2)
+                  }
                   style={styles.circleRequestImg}
                   resizeMode="contain"
                 />

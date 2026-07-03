@@ -7,6 +7,7 @@ export const Images = {
   location: require("./images/onboarding/location.png"),
   successIcon: require("./images/onboarding/successIcon.png"),
   users2: require("./images/home/users2.png"),
+  users3: require("./images/home/users3.png"),
   sendBtn: require("./images/home/sendBtn.png"),
 
   //home

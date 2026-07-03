@@ -103,7 +103,14 @@ const CircleRequestsDropdown = ({visible, onClose, onSeeAll}) => {
   // ── Accept ────────────────────────────────────────────────────────────────
   const handleAccept = useCallback(
     requestId => {
-      dispatch(acceptCircleRequest({requestId}));
+      dispatch(acceptCircleRequest({requestId}))
+        .unwrap()
+        .then(() => {
+          dispatch(fetchCircleRequests());
+        })
+        .catch(error => {
+          console.error("Accept request failed:", error);
+        });
     },
     [dispatch],
   );
@@ -111,7 +118,14 @@ const CircleRequestsDropdown = ({visible, onClose, onSeeAll}) => {
   // ── Reject ────────────────────────────────────────────────────────────────
   const handleReject = useCallback(
     requestId => {
-      dispatch(rejectCircleRequest({requestId}));
+      dispatch(rejectCircleRequest({requestId}))
+        .unwrap()
+        .then(() => {
+          dispatch(fetchCircleRequests());
+        })
+        .catch(error => {
+          console.error("Reject request failed:", error);
+        });
     },
     [dispatch],
   );
@@ -179,7 +193,10 @@ const CircleRequestsDropdown = ({visible, onClose, onSeeAll}) => {
               style={[styles.inviteSubtitle, {color: colors.textSecondary}]}
               numberOfLines={1}>
               {senderName
-                ? t("circle_requests_invited_by").replace("{{name}}", senderName)
+                ? t("circle_requests_invited_by").replace(
+                    "{{name}}",
+                    senderName,
+                  )
                 : t("circle_requests_invited_you")}
             </Text>
 
@@ -189,7 +206,11 @@ const CircleRequestsDropdown = ({visible, onClose, onSeeAll}) => {
                 style={[
                   styles.acceptBtn,
                   {backgroundColor: colors.primary},
-                  language === "nl" && {width: undefined, minWidth: 64, paddingHorizontal: 12},
+                  language === "nl" && {
+                    width: undefined,
+                    minWidth: 64,
+                    paddingHorizontal: 12,
+                  },
                   isActioning && styles.btnDisabled,
                 ]}
                 onPress={() => !isActioning && handleAccept(requestId)}
@@ -197,7 +218,9 @@ const CircleRequestsDropdown = ({visible, onClose, onSeeAll}) => {
                 {isActioning ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.acceptBtnText}>{t("circle_requests_accept")}</Text>
+                  <Text style={styles.acceptBtnText}>
+                    {t("circle_requests_accept")}
+                  </Text>
                 )}
               </TouchableOpacity>
 
@@ -208,7 +231,11 @@ const CircleRequestsDropdown = ({visible, onClose, onSeeAll}) => {
                     backgroundColor: isDark ? colors.surface : "#F3F4F6",
                     borderColor: isDark ? colors.border : "#E5E7EB",
                   },
-                  language === "nl" && {width: undefined, minWidth: 64, paddingHorizontal: 12},
+                  language === "nl" && {
+                    width: undefined,
+                    minWidth: 64,
+                    paddingHorizontal: 12,
+                  },
                   isActioning && styles.btnDisabled,
                 ]}
                 onPress={() => !isActioning && handleReject(requestId)}
@@ -226,7 +253,15 @@ const CircleRequestsDropdown = ({visible, onClose, onSeeAll}) => {
         </View>
       );
     },
-    [colors, isDark, circleRequestsActioning, handleAccept, handleReject, t, language],
+    [
+      colors,
+      isDark,
+      circleRequestsActioning,
+      handleAccept,
+      handleReject,
+      t,
+      language,
+    ],
   );
 
   // ── Empty state ───────────────────────────────────────────────────────────
