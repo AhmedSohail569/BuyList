@@ -23,6 +23,7 @@ import useScreenFetch from "~hooks/useScreenFetch";
 import {formatTimeAgo} from "~utils/time";
 import {useSafeAreaInsets} from "react-native-safe-area-context";
 import useTranslation from "~hooks/useTranslation";
+import {showSuccess, showError} from "~utils/toast";
 
 const getInitials = name => {
   if (!name) return "?";
@@ -73,10 +74,27 @@ const AllCircleRequestScreen = ({navigation}) => {
   }, [circleRequests, searchQuery]);
 
   const handleAccept = useCallback(
-    requestId => {
-      dispatch(acceptCircleRequest({requestId}));
+    (requestId, circleName) => {
+      dispatch(acceptCircleRequest({requestId}))
+        .unwrap()
+        .then(() => {
+          dispatch(fetchCircleRequests());
+          showSuccess(
+            t("circle_requests_accept_success_title"),
+            circleName
+              ? t("circle_requests_accept_success_body").replace(
+                  "{{name}}",
+                  circleName,
+                )
+              : undefined,
+          );
+        })
+        .catch(error => {
+          console.error("Accept request failed:", error);
+          showError(t("circle_requests_accept_error_title"));
+        });
     },
-    [dispatch],
+    [dispatch, t],
   );
 
   const handleReject = useCallback(
@@ -252,7 +270,7 @@ const AllCircleRequestScreen = ({navigation}) => {
                           {backgroundColor: colors.primary},
                           isActioning && styles.btnDisabled,
                         ]}
-                        onPress={() => !isActioning && handleAccept(requestId)}
+                        onPress={() => !isActioning && handleAccept(requestId, circleName)}
                         activeOpacity={0.8}>
                         {isActioning ? (
                           <ActivityIndicator size="small" color="#fff" />

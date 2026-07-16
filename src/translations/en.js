@@ -476,6 +476,9 @@ const en = {
   circle_requests_reject: "Reject",
   circle_requests_dropdown_title: "Circle Requests",
   circle_requests_see_all: "See all circle requests",
+  circle_requests_accept_success_title: "Added to Circle!",
+  circle_requests_accept_success_body: "You have been added to {{name}}.",
+  circle_requests_accept_error_title: "Failed to accept request",
 };
 
 export default en;

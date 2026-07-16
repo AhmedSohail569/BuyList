@@ -479,6 +479,9 @@ const nl = {
   circle_requests_reject: "Afwijzen",
   circle_requests_dropdown_title: "Cirkelverzoeken",
   circle_requests_see_all: "Bekijk alle cirkelverzoeken",
+  circle_requests_accept_success_title: "Toegevoegd aan cirkel!",
+  circle_requests_accept_success_body: "Je bent toegevoegd aan {{name}}.",
+  circle_requests_accept_error_title: "Verzoek accepteren mislukt",
 };
 
 export default nl;

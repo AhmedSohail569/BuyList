@@ -33,6 +33,8 @@ import {
   rejectCircleRequest,
 } from "~redux/actions/circleActions";
 import {formatTimeAgo} from "~utils/time";
+import {showSuccess, showError} from "~utils/toast";
+import {navigationRef} from "../navigation/RootNavigator";
 
 const {width: SCREEN_WIDTH, height: SCREEN_HEIGHT} = Dimensions.get("window");
 const DROPDOWN_WIDTH = SCREEN_WIDTH - 68;
@@ -102,17 +104,34 @@ const CircleRequestsDropdown = ({visible, onClose, onSeeAll}) => {
 
   // ── Accept ────────────────────────────────────────────────────────────────
   const handleAccept = useCallback(
-    requestId => {
+    (requestId, circleName) => {
       dispatch(acceptCircleRequest({requestId}))
         .unwrap()
         .then(() => {
           dispatch(fetchCircleRequests());
+          showSuccess(
+            t("circle_requests_accept_success_title"),
+            circleName
+              ? t("circle_requests_accept_success_body").replace(
+                  "{{name}}",
+                  circleName,
+                )
+              : undefined,
+          );
+          // Close dropdown then navigate to the Circle tab
+          onClose?.();
+          if (navigationRef.isReady()) {
+            navigationRef.navigate("AppTabNavigator", {
+              screen: "Circle",
+            });
+          }
         })
         .catch(error => {
           console.error("Accept request failed:", error);
+          showError(t("circle_requests_accept_error_title"));
         });
     },
-    [dispatch],
+    [dispatch, t, onClose],
   );
 
   // ── Reject ────────────────────────────────────────────────────────────────
@@ -213,7 +232,7 @@ const CircleRequestsDropdown = ({visible, onClose, onSeeAll}) => {
                   },
                   isActioning && styles.btnDisabled,
                 ]}
-                onPress={() => !isActioning && handleAccept(requestId)}
+                onPress={() => !isActioning && handleAccept(requestId, circleName)}
                 activeOpacity={0.8}>
                 {isActioning ? (
                   <ActivityIndicator size="small" color="#fff" />
@@ -366,6 +385,7 @@ const CircleRequestsDropdown = ({visible, onClose, onSeeAll}) => {
                 ListFooterComponent={renderFooter}
                 ListEmptyComponent={renderEmpty}
                 initialNumToRender={5}
+                extraData={circleRequestsActioning}
                 ItemSeparatorComponent={() => (
                   <View
                     style={[

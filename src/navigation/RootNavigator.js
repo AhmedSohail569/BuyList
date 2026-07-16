@@ -120,8 +120,8 @@ const RootNavigator = () => {
       if (!url || !isInviteLink(url)) return;
 
       // Prevent processing the same URL twice (e.g. initial + listener)
-      if (processedUrlRef.current === url) return;
-      processedUrlRef.current = url;
+      // if (processedUrlRef.current === url) return;
+      // processedUrlRef.current = url;
 
       const inviteCode = parseInviteLink(url);
       if (!inviteCode) {

@@ -682,19 +682,20 @@ const circleSlice = createSlice({
       })
 
       // ============================================
-      // 15. ACCEPT CIRCLE JOIN REQUEST (Optimistic)
+      // 15. ACCEPT CIRCLE JOIN REQUEST
       // ============================================
       .addCase(acceptCircleRequest.pending, (state, action) => {
         const {requestId} = action.meta.arg;
         state.circleRequestsActioning[requestId] = true;
-        // Optimistically remove from list
-        state.circleRequests = state.circleRequests.filter(
-          r => (r._id || r.id) !== requestId,
-        );
+        // Keep the item visible while API is in flight (do NOT remove optimistically)
       })
       .addCase(acceptCircleRequest.fulfilled, (state, action) => {
         const {requestId} = action.payload;
         delete state.circleRequestsActioning[requestId];
+        // Remove from list only after API succeeds
+        state.circleRequests = state.circleRequests.filter(
+          r => (r._id || r.id) !== requestId,
+        );
       })
       .addCase(acceptCircleRequest.rejected, (state, action) => {
         const {requestId} = action.meta.arg;
