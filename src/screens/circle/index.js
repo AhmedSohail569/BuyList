@@ -10,9 +10,7 @@ import {
   MapPin,
   Pencil,
   ShoppingBag,
-  UserPlus,
   Share2,
-  QrCode,
   ChevronRight,
   Shield,
   Plus,
@@ -175,6 +173,7 @@ const CircleTab = ({ navigation }) => {
   const pendingActionRef = useRef(null);
   const [leaveModalVisible, setLeaveModalVisible] = useState(false);
   const [circleToLeave, setCircleToLeave] = useState(null);
+  const [inviteCircleModalVisible, setInviteCircleModalVisible] = useState(false);
 
   const handleMenuToggle = useCallback(
     (circleId) => {
@@ -313,12 +312,30 @@ const CircleTab = ({ navigation }) => {
 
   const currentCircle = Array.isArray(sortedCircles) && sortedCircles.length > 0 ? sortedCircles[0] : null;
 
-  // Explicitly find the default circle for the "Grow Your Circle" section
-  const defaultCircle = useMemo(() => {
-    if (!Array.isArray(allCircles)) return null;
-    return allCircles.find(c => c.isDefault && c.owner?._id === user?._id) || 
-           allCircles.find(c => c.owner?._id === user?._id);
-  }, [allCircles, user?._id]);
+  const circleOptions = useMemo(
+    () => sortedCircles.map(c => ({value: c._id || c.id, label: c.name})),
+    [sortedCircles],
+  );
+
+  const handleInvitePress = useCallback(() => {
+    if (sortedCircles.length === 1) {
+      const c = sortedCircles[0];
+      navigation.navigate("ManageConnections", {
+        circleId: c._id || c.id,
+        tab: "Invite",
+      });
+    } else {
+      setInviteCircleModalVisible(true);
+    }
+  }, [sortedCircles, navigation]);
+
+  const handleCircleInviteSelect = useCallback(
+    circleId => {
+      setInviteCircleModalVisible(false);
+      navigation.navigate("ManageConnections", {circleId, tab: "Invite"});
+    },
+    [navigation],
+  );
 
   // Get circle name or default
   const circleName = currentCircle?.name || "Circle";
@@ -694,37 +711,18 @@ const CircleTab = ({ navigation }) => {
         </View>
 
         {/* Grow Your Circle Banner */}
-        {defaultCircle && (
-          <View style={[styles.growBanner, { backgroundColor: isDark ? "rgba(14, 165, 233, 0.15)" : "#eff6ff", borderColor: isDark ? "rgba(14, 165, 233, 0.3)" : "#dbeafe" }]}>
-            <View style={styles.growHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.growTitle, { color: colors.textPrimary }]}>{t("circle_grow_title")}</Text>
-                <Text style={[styles.growSubtitle, { color: colors.textMuted }]}>
-                  {t("circle_grow_desc", { name: defaultCircle.name })}
-                </Text>
-              </View>
-              <TouchableOpacity style={[styles.growIconBox, { backgroundColor: colors.primary }]} onPress={() =>
-                navigation.navigate("ManageConnections", { circleId: defaultCircle.id || defaultCircle._id, tab: "Invite" })
-              }>
-                <UserPlus size={20} color="#ffffff" />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.growActions}>
-              <TouchableOpacity
-                style={[styles.inviteLinkBtn, { backgroundColor: colors.card, borderColor: colors.primary }]}
-                onPress={() => navigation.navigate("ManageConnections", { circleId: defaultCircle.id || defaultCircle._id, tab: "Invite" })}
-              >
-                <Share2 size={16} color={colors.primary} style={{ marginRight: 8 }} />
-                <Text style={[styles.inviteLinkText, { color: colors.primary }]}>{t("circle_invite_link")}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.qrCodeBtn, { backgroundColor: colors.primary }]}
-                onPress={() => navigation.navigate("ManageConnections", { circleId: defaultCircle.id || defaultCircle._id, tab: "Invite" })}
-              >
-                <QrCode size={16} color="#ffffff" style={{ marginRight: 8 }} />
-                <Text style={styles.qrCodeText}>{t("circle_qr_code")}</Text>
-              </TouchableOpacity>
-            </View>
+        {sortedCircles.length > 0 && (
+          <View style={styles.growBanner}>
+            <Text style={styles.growTitle}>{t("circle_grow_title")}</Text>
+            <Text style={styles.growSubtitle}>
+              Anyone you invite can help add or manage lists.
+            </Text>
+            <TouchableOpacity style={styles.inviteLinkBtn} onPress={handleInvitePress}>
+              <Share2 size={16} color={colors.primary} style={{marginRight: 8}} />
+              <Text style={[styles.inviteLinkText, {color: colors.primary}]}>
+                {t("circle_invite_link")}
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -751,6 +749,17 @@ const CircleTab = ({ navigation }) => {
         description={t("circle_leave_confirm_desc")}
         danger
         confirmLabel={loading ? t("common_loading") : t("circle_leave_btn")}
+        cancelLabel={t("common_cancel")}
+      />
+
+      <SelectionModal
+        isVisible={inviteCircleModalVisible}
+        onClose={() => setInviteCircleModalVisible(false)}
+        onSave={handleCircleInviteSelect}
+        type="selection"
+        title="Select a Circle"
+        options={circleOptions}
+        confirmLabel="Invite"
         cancelLabel={t("common_cancel")}
       />
     </View>
@@ -1131,68 +1140,36 @@ const styles = StyleSheet.create({
 
   // Grow Banner
   growBanner: {
-    backgroundColor: "#3B82F6", // Blue
-    borderRadius: 16,
-    padding: 20,
-    overflow: "hidden",
-  },
-  growHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 20,
+    backgroundColor: "#4A90E2",
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 20,
+    marginBottom: 8,
   },
   growTitle: {
-    fontSize: RFValue(14),
+    fontSize: RFValue(15),
     fontFamily: FontFamily.bold,
     color: "#fff",
-    marginBottom: 4,
+    marginBottom: 6,
   },
   growSubtitle: {
-    fontSize: RFValue(10),
+    fontSize: RFValue(11),
     fontFamily: FontFamily.regular,
-    color: "rgba(255,255,255,0.8)",
-    maxWidth: "85%",
-  },
-  growIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  growActions: {
-    flexDirection: "row",
-    gap: 12,
+    color: "rgba(255,255,255,0.85)",
+    marginBottom: 20,
   },
   inviteLinkBtn: {
-    flex: 1,
     backgroundColor: "#fff",
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingVertical: 14,
+    borderRadius: 12,
   },
   inviteLinkText: {
-    fontSize: RFValue(10),
+    fontSize: RFValue(11),
     fontFamily: FontFamily.bold,
-    color: "#0ea5e9",
-  },
-  qrCodeBtn: {
-    flex: 1,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderRadius: 10,
-  },
-  qrCodeText: {
-    fontSize: RFValue(10),
-    fontFamily: FontFamily.bold,
-    color: "#fff",
   },
   plusCounter: {
     justifyContent: "center",

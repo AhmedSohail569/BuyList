@@ -13,10 +13,22 @@ import {requireConnectivity} from "~utils/network";
 // ============================================
 export const createList = createAsyncThunk(
   "lists/createList",
-  async (listData, {rejectWithValue}) => {
+  async (listData, {rejectWithValue, getState}) => {
     try {
       const response = await axios.post("/lists/create-list", listData);
-      return response.data?.data || response.data;
+      const newList = response.data?.data || response.data;
+
+      // The API returns circle as an unpopulated ID — enrich it from
+      // pickerCircles (already in store) so the color renders immediately.
+      if (newList && listData.circleId && !newList.circle?.color) {
+        const pickerCircles = getState().circles?.pickerCircles ?? [];
+        const circle = pickerCircles.find(
+          c => (c._id || c.id) === listData.circleId,
+        );
+        if (circle) newList.circle = circle;
+      }
+
+      return newList;
     } catch (err) {
       const message = getErrorMessage(err);
       return rejectWithValue(message);

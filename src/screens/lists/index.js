@@ -236,7 +236,9 @@ const ListCard = React.memo(
                           styles.menuItemArchive,
                           {color: colors.primary},
                         ]}>
-                        {item.type === "shared" ? t("common_unshare") : t("common_share")}
+                        {item.type === "shared"
+                          ? t("common_unshare")
+                          : t("common_share")}
                       </Text>
                     </TouchableOpacity>
                   )}
@@ -401,7 +403,6 @@ const ListsTab = ({onQuickAction, navigation, route}) => {
   const [sharingListCircleName, setSharingListCircleName] = useState("");
   const [isSharingList, setIsSharingList] = useState(false);
   const pickerCircles = useSelector(state => state.circles.pickerCircles);
-  const pickerLoading = useSelector(state => state.circles.pickerLoading);
 
   const circleOptions = pickerCircles.map(c => ({
     label: c.name,
@@ -523,7 +524,7 @@ const ListsTab = ({onQuickAction, navigation, route}) => {
       });
       dispatch(clearListsError());
     }
-  }, [error, dispatch]);
+  }, [error, dispatch, t]);
 
   // Sort lists based on selected sort option
   const sortLists = useCallback(
@@ -658,40 +659,38 @@ const ListsTab = ({onQuickAction, navigation, route}) => {
         Toast.show({
           type: "error",
           text1: t("common_share_failed"),
-          text2: typeof err === "string" ? err : t("common_something_went_wrong"),
+          text2:
+            typeof err === "string" ? err : t("common_something_went_wrong"),
         });
       } finally {
         setIsSharingList(false);
       }
     },
-    [dispatch, sharingListId],
+    [dispatch, sharingListId, t],
   );
 
   // Unshare list handler (shared → personal)
-  const handleUnshareList = useCallback(
-    async () => {
-      if (!sharingListId) return;
-      setIsSharingList(true);
-      try {
-        await dispatch(
-          shareListToCircle({listId: sharingListId, type: "personal"}),
-        ).unwrap();
-        Toast.show({type: "success", text1: t("common_unshare_success")});
-        setShareModalVisible(false);
-        setSharingListId(null);
-        await dispatch(fetchAllLists()).unwrap();
-      } catch (err) {
-        Toast.show({
-          type: "error",
-          text1: t("common_unshare_failed"),
-          text2: typeof err === "string" ? err : t("common_something_went_wrong"),
-        });
-      } finally {
-        setIsSharingList(false);
-      }
-    },
-    [dispatch, sharingListId],
-  );
+  const handleUnshareList = useCallback(async () => {
+    if (!sharingListId) return;
+    setIsSharingList(true);
+    try {
+      await dispatch(
+        shareListToCircle({listId: sharingListId, type: "personal"}),
+      ).unwrap();
+      Toast.show({type: "success", text1: t("common_unshare_success")});
+      setShareModalVisible(false);
+      setSharingListId(null);
+      await dispatch(fetchAllLists()).unwrap();
+    } catch (err) {
+      Toast.show({
+        type: "error",
+        text1: t("common_unshare_failed"),
+        text2: typeof err === "string" ? err : t("common_something_went_wrong"),
+      });
+    } finally {
+      setIsSharingList(false);
+    }
+  }, [dispatch, sharingListId, t]);
 
   // Archive list handler
   const handleArchiveList = useCallback(
@@ -746,7 +745,7 @@ const ListsTab = ({onQuickAction, navigation, route}) => {
         setDeletingListId(null);
       }
     },
-    [dispatch],
+    [dispatch, t],
   );
 
   const confirmDeleteList = useCallback(
@@ -773,7 +772,7 @@ const ListsTab = ({onQuickAction, navigation, route}) => {
         ],
       });
     },
-    [showAlert, showError, handleDeleteList],
+    [showAlert, showError, handleDeleteList, t],
   );
 
   // Create list handler
@@ -816,7 +815,7 @@ const ListsTab = ({onQuickAction, navigation, route}) => {
         setIsCreatingList(false);
       }
     },
-    [dispatch, isCreatingList, closeCreateListModal],
+    [dispatch, isCreatingList, closeCreateListModal, t],
   );
 
   // Navigate to list details
@@ -1243,11 +1242,16 @@ const ListsTab = ({onQuickAction, navigation, route}) => {
           setIsUnshareMode(false);
         }}
         onSave={isUnshareMode ? handleUnshareList : handleShareList}
-        title={isUnshareMode ? t("common_unshared_list") : t("common_select_circle")}
+        title={
+          isUnshareMode ? t("common_unshared_list") : t("common_select_circle")
+        }
         type={isUnshareMode ? "confirmation" : "selection"}
         description={
           isUnshareMode
-            ? t("common_unshare_confirm").replace("{{circleName}}", sharingListCircleName)
+            ? t("common_unshare_confirm").replace(
+                "{{circleName}}",
+                sharingListCircleName,
+              )
             : ""
         }
         options={isUnshareMode ? [] : circleOptions}

@@ -1,4 +1,4 @@
-import {useState, useEffect, useCallback, useMemo, useRef} from "react";
+import {useState, useEffect, useCallback, useMemo, useRef, memo} from "react";
 import {
   View,
   StyleSheet,
@@ -11,13 +11,7 @@ import {
   Platform,
   Keyboard,
 } from "react-native";
-import {
-  Share2,
-  MoreVertical,
-  Plus,
-  Check,
-  MoreHorizontal,
-} from "lucide-react-native";
+import {MoreVertical, Plus, Check, MoreHorizontal} from "lucide-react-native";
 import Popover from "react-native-popover-view";
 import {useDispatch, useSelector} from "react-redux";
 import {useFocusEffect, CommonActions} from "@react-navigation/native";
@@ -48,6 +42,40 @@ import useTranslation from "~hooks/useTranslation";
 import {Images} from "~assets";
 import {useSafeAreaInsets} from "react-native-safe-area-context";
 
+const ItemPopoverMenu = memo(
+  ({
+    isVisible,
+    onOpen,
+    onRequestClose,
+    onCloseComplete,
+    isPending,
+    iconColor,
+    popoverStyle,
+    children,
+  }) => {
+    const anchorRef = useRef(null);
+    return (
+      <>
+        <TouchableOpacity
+          ref={anchorRef}
+          onPress={onOpen}
+          hitSlop={10}
+          disabled={isPending}>
+          <MoreHorizontal size={20} color={iconColor} />
+        </TouchableOpacity>
+        <Popover
+          isVisible={isVisible}
+          from={anchorRef}
+          onRequestClose={onRequestClose}
+          onCloseComplete={onCloseComplete}
+          popoverStyle={popoverStyle}>
+          {children}
+        </Popover>
+      </>
+    );
+  },
+);
+
 const ListDetailsScreen = ({navigation, route}) => {
   const dispatch = useDispatch();
   const {
@@ -55,8 +83,6 @@ const ListDetailsScreen = ({navigation, route}) => {
     loading,
     error,
     comments = {},
-    commentsLoading,
-    commentsSending,
   } = useSelector(state => state.lists);
   const {profile} = useSelector(state => state.profile);
   const {showAlert, showError} = useAlert();
@@ -74,6 +100,7 @@ const ListDetailsScreen = ({navigation, route}) => {
   // Tracks the intended status for in-flight toggles so concurrent API responses
   // don't cause items to flash back to their previous state mid-batch.
   const optimisticStatusRef = useRef({});
+  const headerMenuAnchorRef = useRef(null);
 
   const handleGoBack = useCallback(() => {
     if (listRenamedRef.current) {
@@ -140,7 +167,7 @@ const ListDetailsScreen = ({navigation, route}) => {
   useOnReconnect(() => {
     if (listId) dispatch(fetchListById({listId}));
   });
-  console.log("listId", listId);
+  // console.log("listId", listId);
   // Handle errors
   useEffect(() => {
     if (error) {
@@ -151,7 +178,7 @@ const ListDetailsScreen = ({navigation, route}) => {
       });
       dispatch(clearListsError());
     }
-  }, [error, dispatch]);
+  }, [error, dispatch, t]);
 
   // Prevent duplicate actions
   const isActionPending = useCallback(
@@ -198,7 +225,7 @@ const ListDetailsScreen = ({navigation, route}) => {
         });
       }
     },
-    [dispatch, listId, list?.name, navigation],
+    [dispatch, listId, list?.name],
   );
 
   const handleRenameItem = useCallback(
@@ -256,7 +283,7 @@ const ListDetailsScreen = ({navigation, route}) => {
         text2: t("listdetails_deleted_desc"),
       });
       navigation.goBack();
-    } catch (e) {
+    } catch {
       showError("Error", "Failed to delete list. Please try again.");
     } finally {
       setActionPending(actionKey, false);
@@ -268,6 +295,7 @@ const ListDetailsScreen = ({navigation, route}) => {
     navigation,
     setActionPending,
     showError,
+    t,
   ]);
 
   const confirmDeleteThisList = useCallback(() => {
@@ -288,7 +316,7 @@ const ListDetailsScreen = ({navigation, route}) => {
         },
       ],
     });
-  }, [handleDeleteThisList, list?.name, showAlert]);
+  }, [handleDeleteThisList, list?.name, showAlert, t]);
 
   // Statistics
   const {totalItems, purchasedItems, progressPercent} = useMemo(() => {
@@ -345,143 +373,143 @@ const ListDetailsScreen = ({navigation, route}) => {
     setMessageText("");
   }, [messageText, listId, dispatch]);
 
-  const renderMessageItem = useCallback(({item, index}) => {
-    const prevItem = index > 0 ? messages[index - 1] : null;
-    const showDateHeader =
-      !prevItem ||
-      new Date(item.createdAt).toDateString() !==
-        new Date(prevItem.createdAt).toDateString();
+  const renderMessageItem = useCallback(
+    ({item, index}) => {
+      const prevItem = index > 0 ? messages[index - 1] : null;
+      const showDateHeader =
+        !prevItem ||
+        new Date(item.createdAt).toDateString() !==
+          new Date(prevItem.createdAt).toDateString();
 
-    let dateHeaderText = "";
-    if (showDateHeader) {
-      const date = new Date(item.createdAt);
-      const now = new Date();
-      const yesterday = new Date(now);
-      yesterday.setDate(yesterday.getDate() - 1);
+      let dateHeaderText = "";
+      if (showDateHeader) {
+        const date = new Date(item.createdAt);
+        const now = new Date();
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
 
-      if (date.toDateString() === now.toDateString()) {
-        dateHeaderText = t("common_today") || "Today";
-      } else if (date.toDateString() === yesterday.toDateString()) {
-        dateHeaderText = t("common_yesterday") || "Yesterday";
-      } else {
-        dateHeaderText = date.toLocaleDateString(undefined, {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        });
+        if (date.toDateString() === now.toDateString()) {
+          dateHeaderText = t("common_today") || "Today";
+        } else if (date.toDateString() === yesterday.toDateString()) {
+          dateHeaderText = t("common_yesterday") || "Yesterday";
+        } else {
+          dateHeaderText = date.toLocaleDateString(undefined, {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          });
+        }
       }
-    }
 
-    const author = item.author || {username: "Unknown"};
-    const timeString = new Date(item.createdAt).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const initial = author.username
-      ? author.username.charAt(0).toUpperCase()
-      : "U";
+      const author = item.author || {username: "Unknown"};
+      const timeString = new Date(item.createdAt).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      const initial = author.username
+        ? author.username.charAt(0).toUpperCase()
+        : "U";
 
-    const messageRow = item.isMine ? (
-      <View style={styles.myMsgRow}>
-        <View
-          style={[
-            styles.myMsgBubble,
-            {backgroundColor: colors.msgMyBubble},
-          ]}>
-          <View style={styles.myMsgHeader}>
-            <Text style={[styles.myMsgName, {color: colors.msgMyName}]}>
-              Me
-            </Text>
-            <Text style={[styles.myMsgTime, {color: colors.msgTimestamp}]}>
-              {timeString}
+      const messageRow = item.isMine ? (
+        <View style={styles.myMsgRow}>
+          <View
+            style={[styles.myMsgBubble, {backgroundColor: colors.msgMyBubble}]}>
+            <View style={styles.myMsgHeader}>
+              <Text style={[styles.myMsgName, {color: colors.msgMyName}]}>
+                Me
+              </Text>
+              <Text style={[styles.myMsgTime, {color: colors.msgTimestamp}]}>
+                {timeString}
+              </Text>
+            </View>
+            <Text style={[styles.myMsgText, {color: colors.msgMyText}]}>
+              {item.text}
             </Text>
           </View>
-          <Text style={[styles.myMsgText, {color: colors.msgMyText}]}>
-            {item.text}
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.avatarCircle,
-            {backgroundColor: colors.primary, overflow: "hidden"},
-          ]}>
-          {profile?.profilePicture || author.profilePicture ? (
-            <Image
-              source={{
-                uri: profile?.profilePicture || author.profilePicture,
-              }}
-              style={{width: "100%", height: "100%"}}
-            />
-          ) : (
-            <Text style={[styles.avatarInitial, {color: colors.textInverse}]}>
-              {initial}
-            </Text>
-          )}
-        </View>
-      </View>
-    ) : (
-      <View style={styles.otherMsgRow}>
-        <View
-          style={[
-            styles.avatarCircle,
-            {backgroundColor: colors.card, overflow: "hidden"},
-          ]}>
-          {author.profilePicture ? (
-            <Image
-              source={{uri: author.profilePicture}}
-              style={{width: "100%", height: "100%"}}
-            />
-          ) : (
-            <Text style={[styles.avatarInitial, {color: colors.textPrimary}]}>
-              {initial}
-            </Text>
-          )}
-        </View>
-        <View
-          style={[
-            styles.otherMsgBubble,
-            {
-              backgroundColor: colors.card,
-              shadowColor: colors.shadowColor || "#000",
-            },
-          ]}>
-          <View style={styles.otherMsgHeader}>
-            <Text style={[styles.otherMsgName, {color: colors.textPrimary}]}>
-              {author.username}
-            </Text>
-            <Text style={[styles.otherMsgTime, {color: colors.msgTimestamp}]}>
-              {timeString}
-            </Text>
-          </View>
-          <Text style={[styles.otherMsgText, {color: colors.msgOtherText}]}>
-            {item.text}
-          </Text>
-        </View>
-      </View>
-    );
-
-    if (showDateHeader) {
-      return (
-        <View style={{width: "100%"}}>
-          <Text
+          <View
             style={[
-              styles.dateHeaderText,
+              styles.avatarCircle,
+              {backgroundColor: colors.primary, overflow: "hidden"},
+            ]}>
+            {profile?.profilePicture || author.profilePicture ? (
+              <Image
+                source={{
+                  uri: profile?.profilePicture || author.profilePicture,
+                }}
+                style={{width: "100%", height: "100%"}}
+              />
+            ) : (
+              <Text style={[styles.avatarInitial, {color: colors.textInverse}]}>
+                {initial}
+              </Text>
+            )}
+          </View>
+        </View>
+      ) : (
+        <View style={styles.otherMsgRow}>
+          <View
+            style={[
+              styles.avatarCircle,
+              {backgroundColor: colors.card, overflow: "hidden"},
+            ]}>
+            {author.profilePicture ? (
+              <Image
+                source={{uri: author.profilePicture}}
+                style={{width: "100%", height: "100%"}}
+              />
+            ) : (
+              <Text style={[styles.avatarInitial, {color: colors.textPrimary}]}>
+                {initial}
+              </Text>
+            )}
+          </View>
+          <View
+            style={[
+              styles.otherMsgBubble,
               {
-                color: colors.textSecondary,
-                width: "100%",
-                textAlign: "center",
-                marginVertical: 12,
+                backgroundColor: colors.card,
+                shadowColor: colors.shadowColor || "#000",
               },
             ]}>
-            {dateHeaderText}
-          </Text>
-          {messageRow}
+            <View style={styles.otherMsgHeader}>
+              <Text style={[styles.otherMsgName, {color: colors.textPrimary}]}>
+                {author.username}
+              </Text>
+              <Text style={[styles.otherMsgTime, {color: colors.msgTimestamp}]}>
+                {timeString}
+              </Text>
+            </View>
+            <Text style={[styles.otherMsgText, {color: colors.msgOtherText}]}>
+              {item.text}
+            </Text>
+          </View>
         </View>
       );
-    }
 
-    return messageRow;
-  }, [messages, t, colors, profile]);
+      if (showDateHeader) {
+        return (
+          <View style={{width: "100%"}}>
+            <Text
+              style={[
+                styles.dateHeaderText,
+                {
+                  color: colors.textSecondary,
+                  width: "100%",
+                  textAlign: "center",
+                  marginVertical: 12,
+                },
+              ]}>
+              {dateHeaderText}
+            </Text>
+            {messageRow}
+          </View>
+        );
+      }
+
+      return messageRow;
+    },
+    [messages, t, colors, profile],
+  );
 
   // Scroll to bottom when keyboard opens
   useEffect(() => {
@@ -497,14 +525,6 @@ const ListDetailsScreen = ({navigation, route}) => {
     );
     return () => keyboardListener.remove();
   }, [mainTab]);
-
-  // Display items based on active tab
-  // "All Items" shows only pending items, purchased items appear in separate section below
-  const displayItems = useMemo(() => {
-    // Both tabs show only pending items in main list
-    // Purchased items are shown separately in "Purchased" section
-    return pendingItems;
-  }, [pendingItems]);
 
   // Add item handler
   const handleAddItem = useCallback(async () => {
@@ -526,7 +546,7 @@ const ListDetailsScreen = ({navigation, route}) => {
         }),
       ).unwrap();
       // Optimistic update handled by reducer
-    } catch (err) {
+    } catch {
       // Error handled by useEffect, rollback automatic
       setNewItemText(itemName); // Restore text on error
     } finally {
@@ -583,7 +603,7 @@ const ListDetailsScreen = ({navigation, route}) => {
           }),
         ).unwrap();
         // Optimistic update handled by reducer
-      } catch (err) {
+      } catch {
         // Error handled by useEffect, rollback automatic
       } finally {
         setActionPending(`delete-${itemId}`, false);
@@ -685,11 +705,11 @@ const ListDetailsScreen = ({navigation, route}) => {
           </View>
 
           {!isViewer && (
-            <Popover
+            <ItemPopoverMenu
               isVisible={isMenuOpen}
+              onOpen={() => setActiveItemMenuId(itemId)}
               onRequestClose={() => setActiveItemMenuId(null)}
               onCloseComplete={() => {
-                // The custom patch removed the native unmount delay; we must delay the next modal here
                 if (pendingActionRef.current) {
                   const action = pendingActionRef.current;
                   setTimeout(() => {
@@ -698,22 +718,9 @@ const ListDetailsScreen = ({navigation, route}) => {
                   pendingActionRef.current = null;
                 }
               }}
-              from={(sourceRef, showPopover) => (
-                <TouchableOpacity
-                  ref={sourceRef}
-                  onPress={() => {
-                    showPopover();
-                    setActiveItemMenuId(itemId);
-                  }}
-                  hitSlop={10}
-                  disabled={isPending}>
-                  <MoreHorizontal size={20} color={colors.iconMuted} />
-                </TouchableOpacity>
-              )}
-              popoverStyle={[
-                styles.menuContent,
-                {backgroundColor: colors.card},
-              ]}>
+              isPending={isPending}
+              iconColor={colors.iconMuted}
+              popoverStyle={[styles.menuContent, {backgroundColor: colors.card}]}>
               <View style={{paddingVertical: 4}}>
                 {effectiveStatus !== "purchased" && (
                   <TouchableOpacity
@@ -778,7 +785,7 @@ const ListDetailsScreen = ({navigation, route}) => {
                   <Text style={styles.menuItemTitleDelete}>Delete</Text>
                 </TouchableOpacity>
               </View>
-            </Popover>
+            </ItemPopoverMenu>
           )}
         </View>
       );
@@ -790,7 +797,7 @@ const ListDetailsScreen = ({navigation, route}) => {
       isActionPending,
       colors,
       isViewer,
-      renameItemModal,
+      list,
     ],
   );
 
@@ -833,11 +840,15 @@ const ListDetailsScreen = ({navigation, route}) => {
           rightAction={
             !isViewer ? (
               <View style={styles.headerActions}>
-                {/* <TouchableOpacity style={styles.iconButton}>
-                <Share2 size={22} color={colors.icon} />
-              </TouchableOpacity> */}
+                <TouchableOpacity
+                  ref={headerMenuAnchorRef}
+                  style={styles.iconButton}
+                  onPress={handleHeaderMenuToggle}>
+                  <MoreVertical size={22} color={colors.icon} />
+                </TouchableOpacity>
                 <Popover
                   isVisible={showHeaderMenu}
+                  from={headerMenuAnchorRef}
                   onRequestClose={() => {
                     isHeaderMenuDismissingRef.current = true;
                     setShowHeaderMenu(false);
@@ -854,17 +865,6 @@ const ListDetailsScreen = ({navigation, route}) => {
                       pendingActionRef.current = null;
                     }
                   }}
-                  from={(sourceRef, showPopover) => (
-                    <TouchableOpacity
-                      ref={sourceRef}
-                      style={styles.iconButton}
-                      onPress={() => {
-                        showPopover();
-                        handleHeaderMenuToggle();
-                      }}>
-                      <MoreVertical size={22} color={colors.icon} />
-                    </TouchableOpacity>
-                  )}
                   popoverStyle={[
                     styles.menuContent,
                     {backgroundColor: colors.card},
@@ -1098,9 +1098,9 @@ const ListDetailsScreen = ({navigation, route}) => {
             {/* Item List */}
             <View style={styles.listContainer}>
               {activeTab === "To Do" ? (
-                displayItems.length > 0 ? (
+                pendingItems.length > 0 ? (
                   <FlatList
-                    data={displayItems}
+                    data={pendingItems}
                     renderItem={renderItem}
                     keyExtractor={item => String(item.id || item._id)}
                     scrollEnabled={false}
@@ -1132,9 +1132,9 @@ const ListDetailsScreen = ({navigation, route}) => {
               ) : (
                 <>
                   {/* Pending items (may be empty) */}
-                  {displayItems.length > 0 ? (
+                  {pendingItems.length > 0 ? (
                     <FlatList
-                      data={displayItems}
+                      data={pendingItems}
                       renderItem={renderItem}
                       keyExtractor={item => String(item.id || item._id)}
                       scrollEnabled={false}
@@ -1173,7 +1173,7 @@ const ListDetailsScreen = ({navigation, route}) => {
                   ) : null}
 
                   {/* Empty state when there are no items at all */}
-                  {displayItems.length === 0 && doneItems.length === 0 ? (
+                  {pendingItems.length === 0 && doneItems.length === 0 ? (
                     <Text style={[styles.emptyText, {color: colors.textMuted}]}>
                       No items in this list.
                     </Text>
@@ -1207,7 +1207,7 @@ const ListDetailsScreen = ({navigation, route}) => {
               keyExtractor={item => item._id || item.id}
               contentContainerStyle={styles.messagesList}
               showsVerticalScrollIndicator={false}
-              ListEmptyComponent={() => (
+              ListEmptyComponent={
                 <View style={styles.emptyMessagesContainer}>
                   <Text
                     style={[
@@ -1217,7 +1217,7 @@ const ListDetailsScreen = ({navigation, route}) => {
                     No messages yet. Be the first to say hi! 👋
                   </Text>
                 </View>
-              )}
+              }
               renderItem={renderMessageItem}
               ListFooterComponent={<View style={{height: 10}} />}
             />
@@ -1264,7 +1264,7 @@ const ListDetailsScreen = ({navigation, route}) => {
         isVisible={priorityModal.visible}
         currentPriority={priorityModal.current}
         onClose={() => setPriorityModal(prev => ({...prev, visible: false}))}
-        onSave={newPriority => handleSetPriority(newPriority)}
+        onSave={handleSetPriority}
       />
       <SelectionModal
         isVisible={renameModalVisible}
@@ -1628,12 +1628,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     resizeMode: "contain",
-  },
-  dateHeaderContainer: {
-    width: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-    marginVertical: 12,
   },
   dateHeaderText: {
     fontSize: RFValue(10),

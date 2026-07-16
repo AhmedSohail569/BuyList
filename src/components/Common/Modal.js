@@ -19,7 +19,7 @@ import {FontFamily} from "~theme/fonts";
 import {useTheme} from "~context/ThemeContext";
 import useTranslation from "~hooks/useTranslation";
 import {useSelector, useDispatch} from "react-redux";
-import {fetchCirclesPicker} from "~redux/actions/circleActions";
+import {fetchCirclesPicker, createCircle} from "~redux/actions/circleActions";
 
 const {width, height} = Dimensions.get("window");
 
@@ -78,6 +78,12 @@ export const BottomModal = ({
     useState("down");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCircleId, setSelectedCircleId] = useState(null);
+
+  // --- STATE: Create Circle Sub-Modal (inside createList flow) ---
+  const [showCreateCircleSubModal, setShowCreateCircleSubModal] = useState(false);
+  const [subCircleName, setSubCircleName] = useState("");
+  const [subCircleColor, setSubCircleColor] = useState(CIRCLE_COLORS[0]);
+  const [subCircleCreating, setSubCircleCreating] = useState(false);
 
   // --- STATE: Create Circle Mode ---
   const [circleName, setCircleName] = useState("");
@@ -138,12 +144,35 @@ export const BottomModal = ({
       setShowCircleDropdown(false);
       setListNameError("");
       setItemsError("");
+      setShowCreateCircleSubModal(false);
+      setSubCircleName("");
+      setSubCircleColor(CIRCLE_COLORS[0]);
     }
     if (!isVisible && type === "createCircle") {
       setCircleName("");
       setSelectedColor(CIRCLE_COLORS[0]);
     }
   }, [isVisible, type]);
+
+  const handleCreateSubCircle = async () => {
+    if (!subCircleName.trim() || subCircleCreating) return;
+    setSubCircleCreating(true);
+    try {
+      const result = await dispatch(
+        createCircle({name: subCircleName.trim(), color: subCircleColor}),
+      ).unwrap();
+      dispatch(fetchCirclesPicker());
+      const newId = result?._id || result?.id || result?.circle?._id;
+      if (newId) setSelectedCircleId(newId);
+      setShowCreateCircleSubModal(false);
+      setSubCircleName("");
+      setSubCircleColor(CIRCLE_COLORS[0]);
+    } catch {
+      // error handled by Redux / toast upstream
+    } finally {
+      setSubCircleCreating(false);
+    }
+  };
 
   const handleAddItem = () => {
     const trimmedItem = newItem.trim();
@@ -496,13 +525,26 @@ export const BottomModal = ({
                 {t("modal_share_loading")}
               </Text>
             ) : pickerCircles.length === 0 ? (
-              <Text
-                style={[
-                  styles.circlePickerLoading,
-                  {color: colors.textMuted, marginLeft: 0, marginBottom: 16},
-                ]}>
-                {t("modal_share_no_circles")}
-              </Text>
+              <>
+                <Text
+                  style={[
+                    styles.circlePickerLoading,
+                    {color: colors.textMuted, marginLeft: 0, marginBottom: 12},
+                  ]}>
+                  {t("modal_share_no_circles")}
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.newCircleBtn,
+                    {borderColor: colors.primary},
+                  ]}
+                  onPress={() => setShowCreateCircleSubModal(true)}>
+                  <Plus size={14} color={colors.primary} />
+                  <Text style={[styles.newCircleBtnText, {color: colors.primary}]}>
+                    New Circle
+                  </Text>
+                </TouchableOpacity>
+              </>
             ) : (
               <>
                 <TouchableOpacity
@@ -512,7 +554,7 @@ export const BottomModal = ({
                     {
                       backgroundColor: colors.surfaceSecondary,
                       borderColor: colors.border,
-                      marginBottom: 16,
+                      marginBottom: 10,
                     },
                   ]}
                   onPress={() => {
@@ -631,6 +673,15 @@ export const BottomModal = ({
                     </View>
                   </>
                 )}
+
+                <TouchableOpacity
+                  style={[styles.newCircleBtn, {borderColor: colors.primary, marginBottom: 6}]}
+                  onPress={() => setShowCreateCircleSubModal(true)}>
+                  <Plus size={14} color={colors.primary} />
+                  <Text style={[styles.newCircleBtnText, {color: colors.primary}]}>
+                    New Circle
+                  </Text>
+                </TouchableOpacity>
               </>
             )}
           </View>
@@ -849,6 +900,103 @@ export const BottomModal = ({
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Create Circle Sub-Modal — stacked on top of the create list modal */}
+      <Modal
+        visible={showCreateCircleSubModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCreateCircleSubModal(false)}>
+        <KeyboardAvoidingView
+          behavior="height"
+          style={[styles.modalOverlay, {backgroundColor: colors.modalOverlay}]}
+          enabled>
+          <TouchableWithoutFeedback onPress={() => setShowCreateCircleSubModal(false)}>
+            <View style={styles.modalBackdrop} />
+          </TouchableWithoutFeedback>
+
+          <View
+            style={[
+              styles.modalContent,
+              {backgroundColor: colors.modalBackground, shadowColor: colors.shadowColor},
+            ]}>
+            {/* Header */}
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, {color: colors.textPrimary}]}>
+                {t("circle_create_title")}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowCreateCircleSubModal(false)}
+                hitSlop={10}>
+                <X size={24} color={colors.iconMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{flexGrow: 1, paddingBottom: 20}}>
+              {/* Circle Name */}
+              <Text style={[styles.inputLabel, {color: colors.textMuted, marginBottom: 8}]}>
+                {t("circle_create_name_label")}
+              </Text>
+              <View
+                style={[
+                  styles.inputContainer,
+                  {
+                    backgroundColor: colors.surfaceSecondary,
+                    borderColor: colors.border,
+                    marginBottom: 20,
+                  },
+                ]}>
+                <TextInput
+                  style={[styles.textInput, {color: colors.textPrimary}]}
+                  placeholder={t("circle_create_name_placeholder")}
+                  placeholderTextColor={colors.inputPlaceholder}
+                  value={subCircleName}
+                  onChangeText={setSubCircleName}
+                  autoFocus
+                />
+              </View>
+
+              {/* Color Grid */}
+              <Text style={[styles.inputLabel, {color: colors.textMuted, marginBottom: 10}]}>
+                {t("circle_create_color_label")}
+              </Text>
+              <View style={styles.colorGrid}>
+                {CIRCLE_COLORS.map(color => (
+                  <TouchableOpacity
+                    key={color}
+                    style={[styles.colorOption, {backgroundColor: color}]}
+                    onPress={() => setSubCircleColor(color)}>
+                    {subCircleColor === color && (
+                      <Check size={RFValue(14)} color="#fff" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <View style={[styles.modalFooterSingle, {marginTop: 20}]}>
+                <TouchableOpacity
+                  style={[
+                    styles.createButton,
+                    {backgroundColor: colors.primary},
+                    (subCircleCreating || !subCircleName.trim()) &&
+                      styles.createButtonDisabled,
+                  ]}
+                  onPress={handleCreateSubCircle}
+                  disabled={subCircleCreating || !subCircleName.trim()}>
+                  <Text style={styles.createButtonText}>
+                    {subCircleCreating
+                      ? t("circle_create_btn_loading")
+                      : t("circle_create_btn")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </>
   );
 
@@ -1350,6 +1498,23 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     justifyContent: "center",
     alignItems: "center",
+  },
+
+  // --- New Circle Button ---
+  newCircleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    marginBottom: 16,
+  },
+  newCircleBtnText: {
+    fontSize: RFValue(11),
+    fontFamily: FontFamily.bold,
   },
 
   // --- Circle Picker Styles ---
